@@ -31,6 +31,8 @@
   },
   "type": "module",
   "dependencies": {
+    "@chrisoakman/chessboardjs": "^1.0.0",
+    "kokopu": "^4.8.0",
     "o1js": "0.*"
   }
 }

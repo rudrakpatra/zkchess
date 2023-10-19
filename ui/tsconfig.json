@@ -13,6 +13,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowJs": true,
+    "checkJs": false,
     "declaration": true,
     "sourceMap": true,
     "noFallthroughCasesInSwitch": true,
