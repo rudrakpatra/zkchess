@@ -9,100 +9,109 @@ import {
   Struct,
   Provable,
   PublicKey,
-  UInt32
+  UInt32,
 } from 'o1js';
 
 export { Board, ChessGame };
 
-const Piece = {
-  BlackPawn: Field(0),
-  WhitePawn: Field(1),
-  BlackKnight: Field(2),
-  WhiteKnight: Field(3),
-  BlackBishop: Field(4),
-  WhiteBishop: Field(5),
-  BlackRook: Field(6),
-  WhiteRook: Field(7),
-  BlackQueen: Field(8),
-  WhiteQueen: Field(9),
-  BlackKing: Field(10),
-  WhiteKing: Field(11),
-  Empty: Field(12),
+const PieceType=  {
+  King: UInt32.from(0),
+  Queen: UInt32.from(1),
+  Bishop: UInt32.from(2),
+  Knight: UInt32.from(3),
+  Rook: UInt32.from(4),
+  Pawn: UInt32.from(5),
 }
-
-class Board extends Struct({
-  value: Provable.Array(Provable.Array(Field, 8), 8),
-}) {
-  static fromEncoded(part0: Field, part1:Field ): Board {
-    // TODO later
-    return Board.startBoard();
-  }
-  public encode(): [Field, Field] {
-    return [this.value[0][0], this.value[0][1]]; // TODO
-  }
-  static from(value: Field[][] ): Board {
-    return new Board({ value });
-  }
-  static startBoard() {
-    return this.from([
-      [Piece.BlackRook, Piece.BlackKnight, Piece.BlackBishop, Piece.BlackQueen, Piece.BlackKing, Piece.BlackBishop, Piece.BlackKnight, Piece.BlackRook],
-      [Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn, Piece.BlackPawn],
-      [Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty],
-      [Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty],
-      [Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty],
-      [Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty, Piece.Empty],
-      [Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn, Piece.WhitePawn],
-      [Piece.WhiteRook, Piece.WhiteKnight, Piece.WhiteBishop, Piece.WhiteQueen, Piece.WhiteKing, Piece.WhiteBishop, Piece.WhiteKnight, Piece.WhiteRook],
-    ]);
-  }
-}
-
 class Position extends Struct({
   x: UInt32,
   y: UInt32,
 }) {
-  static from(x: number, y:number) {
+  static from(x: number, y: number) {
     return new Position({ x: UInt32.from(x), y: UInt32.from(y) });
+  }
+  public set(position: Position) {
+    this.x=position.x;
+    this.y=position.y;
+  }
+}
+class Piece extends Struct({
+  position: Position,
+  captured: Bool,
+  type: UInt32,
+}) {
+  static from(position: Position, captured: Bool, type: UInt32) {
+    return new Piece({ position, captured, type });
+  }
+  public toFields(): [Field] {
+    // TODO later
+    //(6 bit position + 1 bit captured + 6 bits piece type) = 13 bits
+    return [Field(0)]; // TODO
+  }
+  static fromEncoded(value: Field): Piece {
+    // TODO later
+    //(6 bit position + 1 bit captured + 6 bits piece type) = 13 bits
+    return Piece.from(Position.from(0, 0), Bool(false),PieceType.Pawn);
   }
 }
 
-class ChessGame extends SmartContract {
-  @state(Field) boardState0 = State<Field>();
-  @state(Field) boardState1 = State<Field>();
-  @state(Bool) whitesMove = State<Bool>();
-  @state(PublicKey) white = State<PublicKey>();
-  @state(PublicKey) black = State<PublicKey>();
+class Board extends Struct({
+  whitePieces: Provable.Array(Piece, 16),
+  blackPieces: Provable.Array(Piece, 16),
+}) {
+  static fromEncoded(whitePieces: Field, blackPieces: Field): Board {
+    // TODO later
+    return Board.startBoard();
+  }
+  public encode(): [Field, Field] {
+    //for White and Black
+    //unit# to position 16 pieces * 13(Piece) = 16*13 = 208 bits for each player
+    return [Field(0), Field(0)]; // TODO
+  }
+  static startBoard() {
+    return Board.fromEncoded(Field(0), Field(0));
+  }
 
+}
+
+
+class ChessGame extends SmartContract {
+  @state(Field) whitePieces = State<Field>();
+  @state(Field) blackPieces = State<Field>();
+  @state(Bool) whitesMove = State<Bool>();
+  @state(PublicKey) whiteKey = State<PublicKey>();
+  @state(PublicKey) blackKey = State<PublicKey>();
   @method init() {
     super.init();
   }
 
-  @method startGame(white:PublicKey, black:PublicKey) {
+  @method startGame(whiteKey: PublicKey, blackKey: PublicKey) {
     this.whitesMove.set(Bool(true));
-    this.white.set(white);
-    this.black.set(black);
+    this.whiteKey.set(whiteKey);
+    this.blackKey.set(blackKey);
   }
 
-  @method moveKing(nextBoard: Board, position:Position, nexPosition:Position) {
-    nexPosition.x.assertLessThan(UInt32.from(8));
-    nexPosition.y.assertLessThan(UInt32.from(8));
-    const boardState0 = this.boardState0.getAndAssertEquals();
-    const boardState1 = this.boardState1.getAndAssertEquals();
-    const board = Board.fromEncoded(boardState0, boardState1);
-    let piece = board.value[Number(position.x.toBigint())][Number(position.y.toBigint())];
-    Provable.if(this.whitesMove.get(), piece.equals(Piece.WhiteKing), piece.equals(Piece.BlackKing)).assertTrue('not your turn');
+  @method move(id:number,newPosition: Position) {
+    const board= Board.fromEncoded(this.whitePieces.getAndAssertEquals(), this.blackPieces.getAndAssertEquals());
+    const piece=Provable.if(this.whitesMove.getAndAssertEquals(),board.whitePieces[id],board.blackPieces[id]);
+    piece.captured.assertFalse();
+    //verify:
+    //1.piece does not capture own piece
+    //2.piece does pass through other pieces
+    //3.move does not put own king in check
 
-    let diffX = Provable.if(position.x.lessThan(nexPosition.x), nexPosition.x.sub(position.x), position.x.sub(nexPosition.x));
-    let diffY = Provable.if(position.y.lessThan(nexPosition.y), nexPosition.y.sub(position.y), position.y.sub(nexPosition.y));
-    // (diffX + diffY) should be 1 or 2
-    (diffX.add(diffY)).equals(UInt32.from(1))
-    .or((diffX.add(diffY)).equals(UInt32.from(2)))
-    .assertTrue('invalid move');
+    //update board
+    piece.position.set(newPosition);
+    let [a,b]=board.encode();
+    this.whitePieces.set(a);
+    this.blackPieces.set(b);
+    this.whitesMove.set(this.whitesMove.get().not());
   }
 
-  @method moveKnight(nextBoard: Board, position:Position, nexPosition:Position) {}
-  @method moveBishop(nextBoard: Board, position:Position, nexPosition:Position) {}
-  @method moveRook(nextBoard: Board, position:Position, nexPosition:Position) {}
-  @method moveQueen(nextBoard: Board, position:Position, nexPosition:Position) {}
-  @method movePawn(nextBoard: Board, position:Position, nexPosition:Position) {}
+  @method moveKnight(newPosition: Position) {
+
+  }
+  @method moveBishop(nextPieces: Pieces, position: Position, newPosition: Position) { }
+  @method moveRook(nextPieces: Pieces, position: Position, newPosition: Position) { }
+  @method moveQueen(nextBoard: Board, position: Position, newPosition: Position) { }
+  @method movePawn(nextBoard: Board, position: Position, newPosition: Position) { }
 }
