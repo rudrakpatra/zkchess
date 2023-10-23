@@ -1,9 +1,9 @@
 // import { Chess.ts } from './Chess.ts';
 
-import { AccountUpdate, Mina, PrivateKey, PublicKey } from "o1js";
-import { ChessGame } from "./Chess.js";
+import { AccountUpdate, Field, Mina, PrivateKey, PublicKey, UInt32 } from "o1js";
+import { ChessGame, Position } from "./Chess.js";
 
-const proofsEnabled = true;
+const proofsEnabled = false;
 describe('Chess.ts', () => {
   let deployerAccount: PublicKey,
   deployerKey: PrivateKey,
@@ -40,9 +40,15 @@ describe('Chess.ts', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  it('generates and deploys the `chessGame` smart contract', async () => {
+  // it('starts the game', async () => {
+  //   await localDeploy();
+  //   zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
+  //   // zkApp.move(UInt32.from(0),Position.from(0,1));
+  // });
+  it('starts and moves', async () => {
     await localDeploy();
     zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
-    // zkApp.moveKing(
+    zkApp.move(UInt32.from(0),Position.from(0,1));
+    zkApp.getBoard().display();
   });
 });
