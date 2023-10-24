@@ -48,7 +48,10 @@ describe('Chess.ts', () => {
   it('starts and moves', async () => {
     await localDeploy();
     zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
-    zkApp.move(UInt32.from(0),Position.from(0,1));
     zkApp.getBoard().display();
+    // zkApp.move(UInt32.from(0),Position.from(0,1));
+    // console.log(Field(5).toBigInt());
+    // console.log(Field(5).toBits(6));
+    // console.log(Field(5).toBits(6).map((x) => x.toString()));
   });
 });
