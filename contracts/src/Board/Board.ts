@@ -100,18 +100,6 @@ export class Board extends Struct({
       .lessThan(UInt32.from(8))
       .and(position.y.lessThan(UInt32.from(8)));
   }
-  public myPieces(turn: Bool[]): Piece[] {
-    return Provable.switch(turn, Provable.Array(Piece, 16), [
-      this.whitePieces,
-      this.blackPieces,
-    ]);
-  }
-  public oppPieces(turn: Bool[]): Piece[] {
-    return Provable.switch(turn, Provable.Array(Piece, 16), [
-      this.blackPieces,
-      this.whitePieces,
-    ]);
-  }
   static startBoard(position: string[] = startingPositions): Board {
     let whitePieces: Piece[] = [];
     let blackPieces: Piece[] = [];

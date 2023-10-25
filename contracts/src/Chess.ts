@@ -21,7 +21,7 @@ export { ChessGame };
 class ChessGame extends SmartContract {
   @state(Field) whitePieces = State<Field>();
   @state(Field) blackPieces = State<Field>();
-  @state(UInt32) turn = State<UInt32>();
+  @state(Bool) whiteToPlay = State<Bool>();
   @state(PublicKey) whiteKey = State<PublicKey>();
   @state(PublicKey) blackKey = State<PublicKey>();
 
@@ -30,7 +30,7 @@ class ChessGame extends SmartContract {
   }
 
   @method startGame(whiteKey: PublicKey, blackKey: PublicKey) {
-    this.turn.set(UInt32.from(1));
+    this.whiteToPlay.set(Bool(true));
     this.whiteKey.set(whiteKey);
     this.blackKey.set(blackKey);
     const board = Board.startBoard();
@@ -40,17 +40,31 @@ class ChessGame extends SmartContract {
   }
 
   @method move(id: UInt32, newPosition: Position) {
-    const turnMask = this.turn.getAndAssertEquals().value.toBits(2);
-    const pieces = [
-      this.whitePieces.getAndAssertEquals(),
-      this.blackPieces.getAndAssertEquals(),
-    ];
-    const board = Board.fromEncoded(pieces);
-    const myPiece = Provable.switch(
-      id.value.toBits(16),
-      Piece,
-      board.myPieces(turnMask)
+    const whiteToPlay = this.whiteToPlay.getAndAssertEquals();
+    const whitePieces = this.whitePieces.getAndAssertEquals();
+    const blackPieces = this.blackPieces.getAndAssertEquals();
+    const piecesArray = [whitePieces, blackPieces];
+    const board = Board.fromEncoded(piecesArray);
+
+    const myPieces = Provable.switch(
+      [whiteToPlay, whiteToPlay.not()],
+      Provable.Array(Piece, 16),
+      [board.whitePieces, board.blackPieces]
     );
+    const oppPieces = Provable.switch(
+      [whiteToPlay.not(), whiteToPlay],
+      Provable.Array(Piece, 16),
+      [board.whitePieces, board.blackPieces]
+    );
+
+    //find my piece
+    const myPiece = [...Array(16).keys()]
+      .map((i) => UInt32.from(i))
+      .reduce(
+        (acc, u, i) => Provable.if(id.equals(u), myPieces[i], acc),
+        Piece.from(Position.from(0, 0), Bool(false), Field.from(0))
+      );
+
     //verify:
     //piece should not be captured
     myPiece.captured.assertFalse('piece is captured');
@@ -63,8 +77,8 @@ class ChessGame extends SmartContract {
     myPiece
       .canMoveTo(newPosition)
       .assertTrue('piece cannot move to the new position');
-    //piece does not capture own piece
-    board.myPieces(this.turn.get().value.toBits(2)).forEach((piece) => {
+    // piece does not capture own piece
+    myPieces.forEach((piece) => {
       piece.position.equals(newPosition).assertFalse();
     }, 'piece cannot capture own piece');
     //piece does not pass through other pieces
@@ -72,13 +86,18 @@ class ChessGame extends SmartContract {
     //move does not put own king in check
 
     //update board
-    myPiece.position.set(newPosition);
+    [...Array(16).keys()]
+      .map((i) => UInt32.from(i))
+      .forEach((u, i) => {
+        board.whitePieces[i].position.set(
+          Provable.if(id.equals(u), newPosition, board.whitePieces[i].position)
+        );
+      });
+    //update the state
     let [a, b] = board.encode();
     this.whitePieces.set(a);
     this.blackPieces.set(b);
-    this.turn.set(
-      Provable.switch(turnMask, UInt32, [UInt32.from(1), UInt32.from(2)])
-    );
+    this.whiteToPlay.set(whiteToPlay.not());
   }
   getBoard(): Board {
     const pieces = [this.whitePieces.get(), this.blackPieces.get()];

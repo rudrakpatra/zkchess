@@ -27,6 +27,9 @@ export class Position extends Struct({
   public encode(): Bool[] {
     return this.x.value.toBits(3).concat(this.y.value.toBits(3));
   }
+  public toFields(): Field[] {
+    return [Field.fromBits(this.encode())];
+  }
   public equals(position: Position): Bool {
     return this.x.equals(position.x).and(this.y.equals(position.y));
   }

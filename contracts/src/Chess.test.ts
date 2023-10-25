@@ -66,7 +66,7 @@ describe('Chess.ts', () => {
     await txn.sign([whitePlayerKey]).send();
     console.log(zkApp.getBoard().display());
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.move(UInt32.from(1 << 2), Position.from(4, 5));
+      zkApp.move(UInt32.from(4), Position.from(4, 4)); // white play kings pawn 2 spaces forward
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();

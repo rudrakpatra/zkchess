@@ -61,6 +61,11 @@ export class Piece extends Struct({
       .concat(this.captured)
       .concat(this.rank.toBits(6));
   }
+
+  public toFields(): Field[] {
+    return [Field.fromBits(this.encode())];
+  }
+
   static fromEncoded(bits: Bool[]): Piece {
     //(6 bit position +1bit + 6 bits rank) = 13 bits
     return Piece.from(
