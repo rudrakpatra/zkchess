@@ -10,47 +10,51 @@ describe('Piece', () => {
   });
   it('should be able to be created from encoded', () => {
     expect(
-      Piece.fromEncoded([
-        false,
-        true,
-        true,
+      Piece.fromEncoded(
+        [
+          false,
+          true,
+          true,
 
-        true,
-        true,
-        false,
+          true,
+          true,
+          false,
 
-        false,
+          false,
 
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-      ])
-    ).toEqual(Piece.from(Position.from(3, 6), Bool(false), Field.from(1)));
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+        ].map((x) => Bool(x))
+      )
+    ).toEqual(Piece.from(Position.from(6, 3), Bool(false), Field.from(1)));
   });
   it('should be able to be encoded', () => {
     expect(
-      Piece.from(Position.from(1, 6), Bool(false), Field.from(2)).encode()
-    ).toEqual([
-      false,
-      false,
-      true,
+      Piece.from(Position.from(4, 6), Bool(false), Field.from(2)).encode()
+    ).toEqual(
+      [
+        false,
+        false,
+        true,
 
-      true,
-      true,
-      false,
+        false,
+        true,
+        true,
 
-      false,
+        false,
 
-      false,
-      false,
-      false,
-      false,
-      true,
-      false,
-    ]);
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+      ].map((x) => Bool(x))
+    );
   });
   it('should be able to be displayed', () => {
     expect(

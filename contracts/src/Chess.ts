@@ -12,13 +12,19 @@ import {
   UInt32,
 } from 'o1js';
 
-export { Board, ChessGame };
+import { Position } from './Board/Position/Position';
+import { Board } from './Board/Board';
+import { Piece } from './Board/Piece/Piece';
+
+export { ChessGame };
+
 class ChessGame extends SmartContract {
   @state(Field) whitePieces = State<Field>();
   @state(Field) blackPieces = State<Field>();
   @state(UInt32) turn = State<UInt32>();
   @state(PublicKey) whiteKey = State<PublicKey>();
   @state(PublicKey) blackKey = State<PublicKey>();
+
   @method init() {
     super.init();
   }
@@ -35,16 +41,16 @@ class ChessGame extends SmartContract {
 
   @method move(id: UInt32, newPosition: Position) {
     const turnMask = this.turn.getAndAssertEquals().value.toBits(2);
-    const board = Board.fromEncoded(
+    const pieces = [
       this.whitePieces.getAndAssertEquals(),
-      this.blackPieces.getAndAssertEquals()
-    );
+      this.blackPieces.getAndAssertEquals(),
+    ];
+    const board = Board.fromEncoded(pieces);
     const myPiece = Provable.switch(
       id.value.toBits(16),
       Piece,
       board.myPieces(turnMask)
     );
-
     //verify:
     //piece should not be captured
     myPiece.captured.assertFalse('piece is captured');
@@ -75,6 +81,7 @@ class ChessGame extends SmartContract {
     );
   }
   getBoard(): Board {
-    return Board.fromEncoded(this.whitePieces.get(), this.blackPieces.get());
+    const pieces = [this.whitePieces.get(), this.blackPieces.get()];
+    return Board.fromEncoded(pieces);
   }
 }

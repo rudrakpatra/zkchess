@@ -19,17 +19,13 @@ export class Position extends Struct({
   static from(x: number | Field, y: number | Field) {
     return new Position({ x: UInt32.from(x), y: UInt32.from(y) });
   }
-  static fromEncoded(bits: boolean[]): Position {
-    const x = Field.fromBits(bits.slice(0, 3).reverse());
-    const y = Field.fromBits(bits.slice(3, 6).reverse());
+  static fromEncoded(bits: Bool[]): Position {
+    const x = Field.fromBits(bits.slice(0, 3));
+    const y = Field.fromBits(bits.slice(3, 6));
     return Position.from(x, y);
   }
-  public encode(): boolean[] {
-    return this.x.value
-      .toBits(3)
-      .reverse()
-      .concat(this.y.value.toBits(3).reverse())
-      .map((x) => x.toString() === 'true');
+  public encode(): Bool[] {
+    return this.x.value.toBits(3).concat(this.y.value.toBits(3));
   }
   public equals(position: Position): Bool {
     return this.x.equals(position.x).and(this.y.equals(position.y));

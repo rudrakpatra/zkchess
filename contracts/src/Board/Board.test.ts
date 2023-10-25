@@ -1,5 +1,6 @@
-import { Field } from 'o1js';
+import { Bool, Field } from 'o1js';
 import { Board, startingPositions } from './Board';
+import { Position } from './Position/Position';
 describe('Board', () => {
   it('should be able to be created', () => {
     expect(Board.startBoard()).toBeTruthy();
@@ -7,32 +8,26 @@ describe('Board', () => {
   it('should be able to display', () => {
     expect(Board.startBoard().display()).toEqual(startingPositions);
   });
-  it('should be able to encode', () => {
+  it('should be able to encode and decode', () => {
     const positions = [
-      'p.......',
+      'pppppppp',
+      'kqbnrppp',
       '........',
       '........',
       '........',
       '........',
-      '........',
-      '........',
-      '........',
+      'PPPPPPPP',
+      'PPPPPPPP',
     ];
-    expect(Board.startBoard(positions).encode()).toEqual([Field(0), Field(0)]);
+    const encoded = Board.startBoard(positions).encode();
+    expect(Board.fromEncoded(encoded).display()).toEqual(positions);
   });
-  it('should be able to decode', () => {
-    const positions = [
-      'p.......',
-      '........',
-      '........',
-      '........',
-      '........',
-      '........',
-      '........',
-      '........',
-    ];
-    expect(
-      Board.fromEncoded(Board.startBoard(positions).encode()).display()
-    ).toEqual(positions);
+  it('contains', () => {
+    expect(Board.startBoard().contains(Position.from(3, 3))).toEqual(
+      Bool(true)
+    );
+    expect(Board.startBoard().contains(Position.from(8, 8))).toEqual(
+      Bool(false)
+    );
   });
 });

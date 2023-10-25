@@ -53,22 +53,20 @@ export class Piece extends Struct({
   canMoveTo(newPosition: Position): Bool {
     return Bool(true);
   }
-  public encode(): boolean[] {
+  public encode(): Bool[] {
     //(6 bit position +1bit + 6 bits rank) = 13 bits
     return this.position.x.value
       .toBits(3)
-      .reverse()
-      .concat(this.position.y.value.toBits(3).reverse())
+      .concat(this.position.y.value.toBits(3))
       .concat(this.captured)
-      .concat(this.rank.toBits(6).reverse())
-      .map((x) => x.toString() === 'true');
+      .concat(this.rank.toBits(6));
   }
-  static fromEncoded(bits: boolean[]): Piece {
+  static fromEncoded(bits: Bool[]): Piece {
     //(6 bit position +1bit + 6 bits rank) = 13 bits
     return Piece.from(
       Position.fromEncoded(bits.slice(0, 6)),
       Bool(bits[6]),
-      Field.fromBits(bits.slice(7, 13).reverse())
+      Field.fromBits(bits.slice(7, 13))
     );
   }
   public toString() {

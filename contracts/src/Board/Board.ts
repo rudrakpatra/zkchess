@@ -16,14 +16,14 @@ import { Piece, MaskFromName } from './Piece/Piece';
 import { Position } from './Position/Position';
 
 export const startingPositions = [
-  'rnbqkbnr',
-  'pppppppp',
+  'rnbqkbnr', //0
+  'pppppppp', //1
   '........',
   '........',
   '........',
   '........',
   'PPPPPPPP',
-  'RNBQKBNR',
+  'RNBQKBNR', //7
 ];
 
 const FieldFromChar = (ch: string) => {
@@ -75,24 +75,20 @@ export class Board extends Struct({
     const stream = whitePieces.toBits(208);
     let whitePiecesDecoded: Piece[] = [];
     for (let i = 0; i < 16; i++) {
-      let piece = Piece.fromEncoded(
-        stream.slice(i * 13, (i + 1) * 13).map((x) => x.toString() === 'true')
-      );
+      let piece = Piece.fromEncoded(stream.slice(i * 13, (i + 1) * 13));
       whitePiecesDecoded.push(piece);
     }
     const stream2 = blackPieces.toBits(208);
     let blackPiecesDecoded: Piece[] = [];
     for (let i = 0; i < 16; i++) {
-      let piece = Piece.fromEncoded(
-        stream2.slice(i * 13, (i + 1) * 13).map((x) => x.toString() === 'true')
-      );
+      let piece = Piece.fromEncoded(stream2.slice(i * 13, (i + 1) * 13));
       blackPiecesDecoded.push(piece);
     }
     return Board.from(whitePiecesDecoded, blackPiecesDecoded);
   }
   public encode(): [Field, Field] {
     const whitePiecesEncoded = Field.fromBits(
-      this.blackPieces.flatMap((piece) => piece.encode())
+      this.whitePieces.flatMap((piece) => piece.encode())
     );
     const blackPiecesEncoded = Field.fromBits(
       this.blackPieces.flatMap((piece) => piece.encode())
@@ -119,15 +115,18 @@ export class Board extends Struct({
   static startBoard(position: string[] = startingPositions): Board {
     let whitePieces: Piece[] = [];
     let blackPieces: Piece[] = [];
-    (position || startingPositions).forEach((row, y) => {
-      row.split('').forEach((ch, x) => {
+    (position || startingPositions).forEach((row, x) => {
+      row.split('').forEach((ch, y) => {
         if (ch !== '.') {
           const position = Position.from(x, y);
           const captured = Bool(false);
           const rank = FieldFromChar(ch.toUpperCase());
-          ch.match(/[A-Z]/)
-            ? whitePieces.push(Piece.from(position, captured, rank))
-            : blackPieces.push(Piece.from(position, captured, rank));
+          const piece = Piece.from(position, captured, rank);
+          if (ch.match(/[A-Z]/)) {
+            whitePieces.push(piece);
+          } else {
+            blackPieces.push(piece);
+          }
         }
       });
     });
@@ -144,14 +143,14 @@ export class Board extends Struct({
     this.whitePieces.forEach((piece) => {
       const str = piece.toString();
       if (str[2] == '+')
-        grid[Number(str[1])][Number(str[0])] = charFromName(
+        grid[Number(str[0])][Number(str[1])] = charFromName(
           str.substring(3)
         ).toUpperCase();
     });
     this.blackPieces.forEach((piece) => {
       const str = piece.toString();
       if (str[2] == '+')
-        grid[Number(str[1])][Number(str[0])] = charFromName(
+        grid[Number(str[0])][Number(str[1])] = charFromName(
           str.substring(3)
         ).toLowerCase();
     });

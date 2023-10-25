@@ -1,19 +1,27 @@
-// import { Chess.ts } from './Chess.ts';
+import {
+  AccountUpdate,
+  Bool,
+  Field,
+  Mina,
+  PrivateKey,
+  PublicKey,
+  UInt32,
+} from 'o1js';
 
-import { AccountUpdate, Field, Mina, PrivateKey, PublicKey, UInt32 } from "o1js";
-import { ChessGame, Position } from "./Chess.js";
+import { ChessGame } from './Chess.js';
+import { Position } from './Board/Position/Position.js';
 
 const proofsEnabled = false;
 describe('Chess.ts', () => {
   let deployerAccount: PublicKey,
-  deployerKey: PrivateKey,
-  whitePlayerAccount: PublicKey,
-  whitePlayerKey: PrivateKey,
-  blackPlayerAccount: PublicKey,
-  blackPlayerKey: PrivateKey,
-  zkAppAddress: PublicKey,
-  zkAppPrivateKey: PrivateKey,
-  zkApp: ChessGame;
+    deployerKey: PrivateKey,
+    whitePlayerAccount: PublicKey,
+    whitePlayerKey: PrivateKey,
+    blackPlayerAccount: PublicKey,
+    blackPlayerKey: PrivateKey,
+    zkAppAddress: PublicKey,
+    zkAppPrivateKey: PrivateKey,
+    zkApp: ChessGame;
 
   beforeAll(async () => {
     if (proofsEnabled) await ChessGame.compile();
@@ -22,9 +30,12 @@ describe('Chess.ts', () => {
   beforeEach(() => {
     const Local = Mina.LocalBlockchain({ proofsEnabled });
     Mina.setActiveInstance(Local);
-    ({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
-    ({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
-    ({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
+    ({ privateKey: deployerKey, publicKey: deployerAccount } =
+      Local.testAccounts[0]);
+    ({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } =
+      Local.testAccounts[1]);
+    ({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } =
+      Local.testAccounts[2]);
     zkAppPrivateKey = PrivateKey.random();
     zkAppAddress = zkAppPrivateKey.toPublicKey();
     zkApp = new ChessGame(zkAppAddress);
@@ -43,15 +54,22 @@ describe('Chess.ts', () => {
   // it('starts the game', async () => {
   //   await localDeploy();
   //   zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
-  //   // zkApp.move(UInt32.from(0),Position.from(0,1));
   // });
+
   it('starts and moves', async () => {
     await localDeploy();
-    zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
-    zkApp.getBoard().display();
-    // zkApp.move(UInt32.from(0),Position.from(0,1));
-    // console.log(Field(5).toBigInt());
-    // console.log(Field(5).toBits(6));
-    // console.log(Field(5).toBits(6).map((x) => x.toString()));
+
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getBoard().display());
+    const txn2 = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.move(UInt32.from(1 << 2), Position.from(4, 5));
+    });
+    await txn2.prove();
+    await txn2.sign([whitePlayerKey]).send();
+    console.log(zkApp.getBoard().display());
   });
 });

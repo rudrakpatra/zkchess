@@ -1,3 +1,4 @@
+import { Bool } from 'o1js';
 import { Position } from './Position';
 
 describe('Position', () => {
@@ -6,17 +7,14 @@ describe('Position', () => {
   });
   it('should be able to be created from encoded', () => {
     expect(
-      Position.fromEncoded([false, true, true, false, true, false])
+      Position.fromEncoded(
+        [true, true, false, false, true, false].map((x) => Bool(x))
+      )
     ).toEqual(Position.from(3, 2));
   });
   it('should be able to be encoded', () => {
-    expect(Position.from(1, 6).encode()).toEqual([
-      false,
-      false,
-      true,
-      true,
-      true,
-      false,
-    ]);
+    expect(Position.from(1, 3).encode()).toEqual(
+      [true, false, false, true, true, false].map((x) => Bool(x))
+    );
   });
 });
