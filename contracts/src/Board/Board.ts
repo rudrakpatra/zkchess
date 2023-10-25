@@ -12,7 +12,7 @@ import {
   UInt32,
 } from 'o1js';
 
-import { Piece, MaskFromName } from './Piece/Piece';
+import { Piece, RANKS } from './Piece/Piece';
 import { Position } from './Position/Position';
 
 export const startingPositions = [
@@ -29,17 +29,17 @@ export const startingPositions = [
 const FieldFromChar = (ch: string) => {
   switch (ch) {
     case 'P':
-      return Field.fromBits(MaskFromName.PAWN);
+      return Field(RANKS.PAWN);
     case 'R':
-      return Field.fromBits(MaskFromName.ROOK);
+      return Field(RANKS.ROOK);
     case 'N':
-      return Field.fromBits(MaskFromName.KNIGHT);
+      return Field(RANKS.KNIGHT);
     case 'B':
-      return Field.fromBits(MaskFromName.BISHOP);
+      return Field(RANKS.BISHOP);
     case 'Q':
-      return Field.fromBits(MaskFromName.QUEEN);
+      return Field(RANKS.QUEEN);
     case 'K':
-      return Field.fromBits(MaskFromName.KING);
+      return Field(RANKS.KING);
     default:
       return Field(0n);
   }

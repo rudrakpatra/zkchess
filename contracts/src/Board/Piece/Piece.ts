@@ -15,14 +15,13 @@ import {
 
 import { Position } from '../Position/Position';
 
-export const MaskFromName = {
-  PAWN: [true, false, false, false, false, false],
-  ROOK: [false, true, false, false, false, false],
-  KNIGHT: [false, false, true, false, false, false],
-  BISHOP: [false, false, false, true, false, false],
-  QUEEN: [false, false, false, false, true, false],
-  KING: [false, false, false, false, false, true],
-  UNKNOWN: [false, false, false, false, false, false],
+export const RANKS = {
+  PAWN: 1n,
+  ROOK: 2n,
+  KNIGHT: 4n,
+  BISHOP: 8n,
+  QUEEN: 16n,
+  KING: 32n,
 };
 
 export const NameFromRank = (rank: bigint) => {
