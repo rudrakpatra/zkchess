@@ -10,6 +10,7 @@ import {
   Provable,
   PublicKey,
   UInt32,
+  Int64,
 } from 'o1js';
 
 import { Position } from '../Position/Position';
@@ -21,6 +22,7 @@ export const MaskFromName = {
   BISHOP: [false, false, false, true, false, false],
   QUEEN: [false, false, false, false, true, false],
   KING: [false, false, false, false, false, true],
+  UNKNOWN: [false, false, false, false, false, false],
 };
 
 export const NameFromRank = (rank: bigint) => {
@@ -51,7 +53,41 @@ export class Piece extends Struct({
     return new Piece({ position, captured, rank });
   }
   canMoveTo(newPosition: Position): Bool {
-    return Bool(true);
+    const xf = this.position.x.toFields()[0];
+    const yf = this.position.y.toFields()[0];
+    const nxf = newPosition.x.toFields()[0];
+    const nyf = newPosition.y.toFields()[0];
+    const dx = xf.sub(nxf);
+    const dy = yf.sub(nyf);
+
+    const movedDiagonally = dx.equals(dy).or(dx.add(dy).equals(Field(0)));
+    const movedStraight = this.position.x
+      .equals(newPosition.x)
+      .or(this.position.y.equals(newPosition.y));
+
+    //knights move in L shape
+    //dx^2+dy^2=5
+
+    const Pawn = Bool(true);
+    const Rook = movedStraight;
+    const Knight = dx.mul(dx).add(dy.mul(dy)).equals(Field(5));
+    const Bishop = movedDiagonally;
+    const Queen = movedDiagonally.or(movedStraight);
+    const King = dx.mul(dx).add(dy.mul(dy)).lessThanOrEqual(Field(2));
+
+    return this.position
+      .equals(newPosition)
+      .not()
+      .and(
+        Provable.switch(this.rank.toBits(6), Bool, [
+          Pawn,
+          Rook,
+          Knight,
+          Bishop,
+          Queen,
+          King,
+        ])
+      );
   }
   public encode(): Bool[] {
     //(6 bit position +1bit + 6 bits rank) = 13 bits
