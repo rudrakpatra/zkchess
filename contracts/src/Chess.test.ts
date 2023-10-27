@@ -8,7 +8,7 @@ import {
   UInt32,
 } from 'o1js';
 
-import { ChessGame } from './Chess.js';
+import { ChessGame, Path } from './Chess.js';
 import { Position } from './Board/Position/Position.js';
 
 const proofsEnabled = false;
@@ -60,13 +60,17 @@ describe('Chess.ts', () => {
     await localDeploy();
 
     const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
+      zkApp.start(whitePlayerAccount, blackPlayerAccount);
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
     console.log(zkApp.getBoard().display());
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.move(UInt32.from(4), Position.from(4, 4)); // white play kings pawn 2 spaces forward
+      const id = UInt32.from(9);
+      const p0 = Position.from(7, 1);
+      const p1 = Position.from(5, 2);
+      const path = Path.from([p0, p0, p0, p0, p0, p0, p0, p1]);
+      zkApp.move(id, path); // play the left knight out
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();

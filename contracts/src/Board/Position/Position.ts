@@ -13,11 +13,11 @@ import {
 } from 'o1js';
 
 export class Position extends Struct({
-  x: UInt32,
-  y: UInt32,
+  x: Field,
+  y: Field,
 }) {
   static from(x: number | Field, y: number | Field) {
-    return new Position({ x: UInt32.from(x), y: UInt32.from(y) });
+    return new Position({ x: Field.from(x), y: Field.from(y) });
   }
   static fromEncoded(bits: Bool[]): Position {
     const x = Field.fromBits(bits.slice(0, 3));
@@ -25,7 +25,7 @@ export class Position extends Struct({
     return Position.from(x, y);
   }
   public encode(): Bool[] {
-    return this.x.value.toBits(3).concat(this.y.value.toBits(3));
+    return this.x.toBits(3).concat(this.y.toBits(3));
   }
   public toFields(): Field[] {
     return [Field.fromBits(this.encode())];

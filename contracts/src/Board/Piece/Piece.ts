@@ -52,12 +52,8 @@ export class Piece extends Struct({
     return new Piece({ position, captured, rank });
   }
   canMoveTo(newPosition: Position): Bool {
-    const xf = this.position.x.toFields()[0];
-    const yf = this.position.y.toFields()[0];
-    const nxf = newPosition.x.toFields()[0];
-    const nyf = newPosition.y.toFields()[0];
-    const dx = xf.sub(nxf);
-    const dy = yf.sub(nyf);
+    const dx = this.position.x.sub(newPosition.x);
+    const dy = this.position.y.sub(newPosition.y);
 
     const movedDiagonally = dx.equals(dy).or(dx.add(dy).equals(Field(0)));
     const movedStraight = this.position.x
@@ -90,9 +86,9 @@ export class Piece extends Struct({
   }
   public encode(): Bool[] {
     //(6 bit position +1bit + 6 bits rank) = 13 bits
-    return this.position.x.value
+    return this.position.x
       .toBits(3)
-      .concat(this.position.y.value.toBits(3))
+      .concat(this.position.y.toBits(3))
       .concat(this.captured)
       .concat(this.rank.toBits(6));
   }
@@ -111,9 +107,9 @@ export class Piece extends Struct({
   }
   public toString() {
     return (
-      this.position.x.value.toString() +
-      this.position.y.value.toString() +
-      (this.captured.value.toString() == 'true' ? '-' : '+') +
+      this.position.x.toString() +
+      this.position.y.toString() +
+      (this.captured.toString() == 'true' ? '-' : '+') +
       NameFromRank(this.rank.toBigInt())
     );
   }

@@ -97,8 +97,10 @@ export class Board extends Struct({
   }
   public contains(position: Position): Bool {
     return position.x
-      .lessThan(UInt32.from(8))
-      .and(position.y.lessThan(UInt32.from(8)));
+      .greaterThanOrEqual(Field.from(0))
+      .and(position.x.lessThan(Field.from(8)))
+      .and(position.y.greaterThanOrEqual(Field.from(0)))
+      .and(position.y.lessThan(Field.from(8)));
   }
   static startBoard(position: string[] = startingPositions): Board {
     let whitePieces: Piece[] = [];
