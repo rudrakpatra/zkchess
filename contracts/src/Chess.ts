@@ -47,7 +47,7 @@ class ChessGame extends SmartContract {
     this.blackPieces.set(b);
   }
 
-  @method move(id: UInt32, path: Path) {
+  @method move(id: Field, path: Path) {
     // this.sender.assertEquals(Provable.switch()
     const whiteToPlay = this.whiteToPlay.getAndAssertEquals();
     const whitePieces = this.whitePieces.getAndAssertEquals();
@@ -67,19 +67,20 @@ class ChessGame extends SmartContract {
       Provable.Array(Piece, 16),
       [board.whitePieces, board.blackPieces]
     );
-
+    const fields_0to15 = [...Array(16).keys()].map((i) => Field(i));
     //find my piece
-    const myPiece = [...Array(16).keys()]
-      .map((i) => UInt32.from(i))
-      .reduce(
-        (acc, u, i) => Provable.if(id.equals(u), myPieces[i], acc),
-        Piece.from(Position.from(0, 0), Bool(false), Field.from(0))
-      );
+    const myPiece = fields_0to15.reduce(
+      (acc, u, i) => Provable.if(id.equals(u), myPieces[i], acc),
+      Piece.from(Position.from(0, 0), Bool(false), Field(0))
+    );
 
     //verify:
     // piece should not be captured
     myPiece.captured.assertFalse('piece must not be captured');
 
+    myPiece.position
+      .equals(finalPosition)
+      .assertFalse('piece cannot move to its own position');
     // no path positions move out of the board
     path.positions
       .map((p) => board.contains(p))
@@ -87,50 +88,71 @@ class ChessGame extends SmartContract {
       .assertTrue('piece cannot move out of the board');
 
     // piece does not capture own piece
+    function thereIsOneOfMyPiecesAt(pos: Position) {
+      return [...Array(16).keys()]
+        .map((k) => {
+          //checking if any uncaptured my piece is at pos
+          const myPieceOnPath = myPieces[k].captured
+            .not()
+            .and(myPieces[k].position.equals(pos));
+          return myPieceOnPath;
+        })
+        .reduce(Bool.or);
+    }
+    function thereIsOneOfOppPiecesAt(pos: Position) {
+      return [...Array(16).keys()]
+        .map((k) => {
+          //checking if any uncaptured opponent piece is at pos
+          const oppPieceOnPath = oppPieces[k].captured
+            .not()
+            .and(oppPieces[k].position.equals(pos));
+          return oppPieceOnPath;
+        })
+        .reduce(Bool.or);
+    }
+    function thereIsAPieceAt(pos: Position) {
+      return thereIsOneOfMyPiecesAt(pos).or(thereIsOneOfOppPiecesAt(pos));
+    }
 
-    // path must be continuous
-    // adjacent positions must be close to each other
-    // 8 neighbouring positions
-    // X X X
-    // X P X
-    // X X X
-    // create adjacent pairs
-
-    const distSquared = (p: Position, q: Position) => {
+    function getDistSquared(p: Position, q: Position) {
       const dx = p.x.sub(q.x);
       const dy = p.y.sub(q.y);
       return dx.mul(dx).add(dy.mul(dy));
-    };
+    }
+    // PATH HELPERS
 
+    // Path is empty
+    const pathIsEmpty = path.positions
+      .slice(0, 6)
+      .map(thereIsAPieceAt)
+      .concat(thereIsOneOfMyPiecesAt(finalPosition))
+      .reduce(Bool.or)
+      .not();
+
+    // path is continous
     const rightShifted = [myPiece.position, ...path.positions];
     const pathIsContinous = path.positions
       .map((p, i) => {
         const q = rightShifted[i];
-        return distSquared(p, q).lessThanOrEqual(Field(2));
+        return getDistSquared(p, q).lessThanOrEqual(Field(2));
       })
       .reduce(Bool.and);
-    Provable.switch(myPiece.rank.toBits(6), Bool, [
-      Bool(true),
-      pathIsContinous,
-      Bool(true),
-      pathIsContinous,
-      pathIsContinous,
-      Bool(true),
-    ]).assertTrue('piece must move according to its rank');
 
-    //the piece moves according to its rank
+    // vertical path
     const sameX = path.positions
       .map((p) => myPiece.position.x.equals(p.x))
       .reduce(Bool.and);
+    // horizontal path
     const sameY = path.positions
       .map((p) => myPiece.position.y.equals(p.y))
       .reduce(Bool.and);
-    const sameAddDiag = path.positions
+    // diagonal paths
+    const sameXaddY = path.positions
       .map((p) =>
         p.x.add(p.y).equals(myPiece.position.y.add(myPiece.position.y))
       )
       .reduce(Bool.and);
-    const sameSubDiag = path.positions
+    const sameXsubY = path.positions
       .map((p) =>
         myPiece.position.x
           .sub(myPiece.position.x)
@@ -138,22 +160,50 @@ class ChessGame extends SmartContract {
       )
       .reduce(Bool.and);
 
-    const rookPattern = sameX.or(sameY);
-    const bishopPattern = sameAddDiag.or(sameSubDiag);
-    const queenPattern = rookPattern.or(bishopPattern);
-
-    const kingPattern = distSquared(
+    const distSquaredToFinalPosition = getDistSquared(
       myPiece.position,
       finalPosition
-    ).lessThanOrEqual(Field(2));
+    );
+    // piece moves according to its rank
 
-    const knightPattern = distSquared(myPiece.position, finalPosition).equals(
-      Field(5)
+    //pawn wants to move
+    const pawnHasNotMoved = Provable.if(
+      whiteToPlay,
+      myPiece.position.x.equals(Field(6)),
+      myPiece.position.x.equals(Field(1))
     );
 
-    const pawnPattern = myPiece.rank
-      .equals(RANKS.PAWN)
-      .and(myPiece.position.x.equals(finalPosition.x));
+    const pawnMoveDiagonally = sameXaddY
+      .or(sameXsubY)
+      .and(distSquaredToFinalPosition.equals(Field(2)));
+
+    const pawnMovesVertically = sameY
+      .and(
+        distSquaredToFinalPosition.lessThanOrEqual(
+          Provable.if(pawnHasNotMoved, Field(4), Field(1))
+        )
+      )
+      .and(pathIsEmpty);
+
+    const movesUp = myPiece.position.x.greaterThan(finalPosition.x); //x reduces as you go up
+    const movesDown = myPiece.position.x.lessThan(finalPosition.x); //x increases as you go down
+
+    const pawnPattern = Provable.if(whiteToPlay, movesUp, movesDown).and(
+      pawnMovesVertically
+        .and(thereIsAPieceAt(finalPosition).not())
+        .or(pawnMoveDiagonally.and(thereIsOneOfOppPiecesAt(finalPosition)))
+    );
+
+    const pathIsValid = pathIsContinous.and(pathIsEmpty);
+
+    const rookPattern = sameX.or(sameY).and(pathIsValid);
+    const bishopPattern = sameXaddY.or(sameXsubY).and(pathIsValid);
+    const queenPattern = rookPattern.or(bishopPattern);
+
+    const kingPattern = distSquaredToFinalPosition.lessThanOrEqual(Field(2));
+
+    const knightPattern = distSquaredToFinalPosition.equals(Field(5));
+
     // console.log(myPiece.toString());
     Provable.switch(myPiece.rank.toBits(6), Bool, [
       pawnPattern,
@@ -164,81 +214,48 @@ class ChessGame extends SmartContract {
       kingPattern,
     ]).assertTrue('piece must move according to its rank');
 
-    //Path Position should be empty except for the last one (which could be occupied by opponent piece)
-    const pathIsEmpty = path.positions
-      .map((pos, i) => {
-        return [...Array(16).keys()]
-          .map((k) => {
-            //neither myPiece nor oppPiece should be at pos
-            const myPieceOnPath = myPieces[k].captured
-              .not()
-              .and(myPieces[k].position.equals(pos));
-
-            const oppPieceAtPath = oppPieces[k].captured
-              .not()
-              .and(oppPieces[k].position.equals(pos));
-
-            // eslint-disable-next-line o1js/no-ternary-in-circuit
-            return i < 7 ? myPieceOnPath.or(oppPieceAtPath) : oppPieceAtPath;
-          })
-          .reduce(Bool.or);
-      })
-      .reduce(Bool.or);
-
-    myPiece.rank
-      .equals(RANKS.KNIGHT)
-      .or(pathIsEmpty)
-      .assertTrue('Path must be empty');
-
     //NOT CHECKING move does not put own king in check
-    //KING can be captured
+    //KING can be captured which declares win or loss
 
     //update board
     // console.log('updating board');
     // console.log(finalPosition.x.toString(), finalPosition.y.toString());
     //move myPiece to final position
-    [...Array(16).keys()]
-      .map((i) => UInt32.from(i))
-      .forEach((u, i) => {
-        board.whitePieces[i] = Provable.if(
-          whiteToPlay,
-          Piece.from(
-            Provable.if(u.equals(id), finalPosition, myPieces[i].position),
-            myPieces[i].captured,
-            myPieces[i].rank
-          ),
-          board.whitePieces[i]
-        );
-        board.blackPieces[i] = Provable.if(
-          whiteToPlay.not(),
-          Piece.from(
-            Provable.if(
-              u.equals(UInt32.from(i)),
-              finalPosition,
-              myPieces[i].position
-            ),
-            myPieces[i].captured,
-            myPieces[i].rank
-          ),
-          board.blackPieces[i]
-        );
-      });
+
+    fields_0to15.forEach((u, i) => {
+      board.whitePieces[i] = Provable.if(
+        whiteToPlay,
+        Piece.from(
+          Provable.if(u.equals(id), finalPosition, myPieces[i].position),
+          myPieces[i].captured,
+          myPieces[i].rank
+        ),
+        board.whitePieces[i]
+      );
+      board.blackPieces[i] = Provable.if(
+        whiteToPlay.not(),
+        Piece.from(
+          Provable.if(u.equals(id), finalPosition, myPieces[i].position),
+          myPieces[i].captured,
+          myPieces[i].rank
+        ),
+        board.blackPieces[i]
+      );
+    });
     //capture opponent piece if any
-    [...Array(16).keys()]
-      .map((i) => UInt32.from(i))
-      .forEach((u, i) => {
-        const captured = oppPieces[i].position.equals(finalPosition);
-        board.whitePieces[i] = Provable.if(
-          whiteToPlay.not(),
-          Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
-          board.whitePieces[i]
-        );
-        board.blackPieces[i] = Provable.if(
-          whiteToPlay,
-          Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
-          board.blackPieces[i]
-        );
-      });
+    fields_0to15.forEach((u, i) => {
+      const captured = oppPieces[i].position.equals(finalPosition);
+      board.whitePieces[i] = Provable.if(
+        whiteToPlay.not(),
+        Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
+        board.whitePieces[i]
+      );
+      board.blackPieces[i] = Provable.if(
+        whiteToPlay,
+        Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
+        board.blackPieces[i]
+      );
+    });
 
     //update the state
     let [a, b] = board.encode();
