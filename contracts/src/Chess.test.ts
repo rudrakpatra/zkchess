@@ -10,6 +10,7 @@ import {
 
 import { ChessGame, Path } from './Chess.js';
 import { Position } from './Board/Position/Position.js';
+import { RANKS } from './Board/Piece/Piece.js';
 
 const proofsEnabled = false;
 describe('Chess.ts', () => {
@@ -70,7 +71,7 @@ describe('Chess.ts', () => {
       const p0 = Position.from(7, 1);
       const p1 = Position.from(5, 0);
       const path = Path.from([p0, p0, p0, p0, p0, p1, p1, p1]);
-      zkApp.move(id, path); // play the left knight out
+      zkApp.move(id, path, Field(RANKS.QUEEN)); // play the left knight out
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();
@@ -81,7 +82,7 @@ describe('Chess.ts', () => {
       const p0 = Position.from(0, 1);
       const p1 = Position.from(2, 0);
       const path = Path.from([p0, p0, p0, p0, p0, p1, p1, p1]);
-      zkApp.move(id, path); // play the left knight out
+      zkApp.move(id, path, Field(RANKS.QUEEN)); // play the left knight out
     });
     await txn3.prove();
     await txn3.sign([blackPlayerKey]).send();
@@ -92,7 +93,7 @@ describe('Chess.ts', () => {
       const p0 = Position.from(5, 2);
       const p1 = Position.from(4, 2);
       const path = Path.from([p0, p0, p0, p0, p0, p0, p0, p1]);
-      zkApp.move(id, path); // play the left knight out
+      zkApp.move(id, path, Field(RANKS.QUEEN)); //play the pawn
     });
     await txn4.prove();
     await txn4.sign([whitePlayerKey]).send();

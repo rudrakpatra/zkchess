@@ -47,7 +47,7 @@ class ChessGame extends SmartContract {
     this.blackPieces.set(b);
   }
 
-  @method move(id: Field, path: Path) {
+  @method move(id: Field, path: Path, newRank: Field) {
     // this.sender.assertEquals(Provable.switch()
     const whiteToPlay = this.whiteToPlay.getAndAssertEquals();
     const whitePieces = this.whitePieces.getAndAssertEquals();
@@ -55,7 +55,7 @@ class ChessGame extends SmartContract {
     const piecesArray = [whitePieces, blackPieces];
     const board = Board.fromEncoded(piecesArray);
 
-    const finalPosition = path.positions[7];
+    const finalPos = path.positions[7];
 
     const myPieces = Provable.switch(
       [whiteToPlay, whiteToPlay.not()],
@@ -79,7 +79,7 @@ class ChessGame extends SmartContract {
     myPiece.captured.assertFalse('piece must not be captured');
 
     myPiece.position
-      .equals(finalPosition)
+      .equals(finalPos)
       .assertFalse('piece cannot move to its own position');
     // no path positions move out of the board
     path.positions
@@ -125,7 +125,7 @@ class ChessGame extends SmartContract {
     const pathIsEmpty = path.positions
       .slice(0, 6)
       .map(thereIsAPieceAt)
-      .concat(thereIsOneOfMyPiecesAt(finalPosition))
+      .concat(thereIsOneOfMyPiecesAt(finalPos))
       .reduce(Bool.or)
       .not();
 
@@ -164,7 +164,7 @@ class ChessGame extends SmartContract {
 
     const distSquaredToFinalPosition = getDistSquared(
       myPiece.position,
-      finalPosition
+      finalPos
     );
     // piece moves according to its rank
 
@@ -177,19 +177,19 @@ class ChessGame extends SmartContract {
     const pawnCapturesDiagonally = sameXaddY
       .or(sameXsubY)
       .and(distSquaredToFinalPosition.equals(Field(2)))
-      .and(thereIsOneOfOppPiecesAt(finalPosition));
+      .and(thereIsOneOfOppPiecesAt(finalPos));
 
     const pawnMovesVertically = sameY
       .and(pathIsValid)
-      .and(thereIsAPieceAt(finalPosition).not())
+      .and(thereIsAPieceAt(finalPos).not())
       .and(
         distSquaredToFinalPosition.lessThanOrEqual(
           Provable.if(pawnHasNotMoved, Field(4), Field(1))
         )
       );
 
-    const movesUpWards = myPiece.position.x.greaterThan(finalPosition.x); //x reduces as you go up
-    const movesDownWards = myPiece.position.x.lessThan(finalPosition.x); //x increases as you go down
+    const movesUpWards = myPiece.position.x.greaterThan(finalPos.x); //x reduces as you go up
+    const movesDownWards = myPiece.position.x.lessThan(finalPos.x); //x increases as you go down
 
     const pawnPattern = Provable.if(
       whiteToPlay,
@@ -214,33 +214,46 @@ class ChessGame extends SmartContract {
       kingPattern,
     ]).assertTrue('piece must move according to its rank');
 
-    //NOT CHECKING move does not put own king in check
+    //NOT CHECKING if move puts own king in check
     //KING can be captured which declares win or loss
+
+    //PAWN PROMOTION
+    //no need to check for black or white pawns.
+    const newRankIsValid = newRank
+      .equals(RANKS.QUEEN)
+      .or(newRank.equals(RANKS.ROOK))
+      .or(newRank.equals(RANKS.KNIGHT))
+      .or(newRank.equals(RANKS.BISHOP));
+
+    const updateRank = myPiece.rank
+      .equals(RANKS.PAWN)
+      .and(finalPos.x.equals(Field(0)).or(finalPos.x.equals(Field(7))))
+      .and(newRankIsValid);
 
     //update board
     fields_0to15.forEach((u, i) => {
       board.whitePieces[i] = Provable.if(
         whiteToPlay,
         Piece.from(
-          Provable.if(u.equals(id), finalPosition, myPieces[i].position),
+          Provable.if(u.equals(id), finalPos, myPieces[i].position),
           myPieces[i].captured,
-          myPieces[i].rank
+          Provable.if(u.equals(id).and(updateRank), newRank, myPieces[i].rank)
         ),
         board.whitePieces[i]
       );
       board.blackPieces[i] = Provable.if(
         whiteToPlay.not(),
         Piece.from(
-          Provable.if(u.equals(id), finalPosition, myPieces[i].position),
+          Provable.if(u.equals(id), finalPos, myPieces[i].position),
           myPieces[i].captured,
-          myPieces[i].rank
+          Provable.if(u.equals(id).and(updateRank), newRank, myPieces[i].rank)
         ),
         board.blackPieces[i]
       );
     });
     //capture opponent piece if any
     fields_0to15.forEach((u, i) => {
-      const captured = oppPieces[i].position.equals(finalPosition);
+      const captured = oppPieces[i].position.equals(finalPos);
       board.whitePieces[i] = Provable.if(
         whiteToPlay.not(),
         Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
