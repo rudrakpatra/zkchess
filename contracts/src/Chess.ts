@@ -138,6 +138,8 @@ class ChessGame extends SmartContract {
       })
       .reduce(Bool.and);
 
+    const pathIsValid = pathIsContinous.and(pathIsEmpty);
+
     // vertical path
     const sameX = path.positions
       .map((p) => myPiece.position.x.equals(p.x))
@@ -166,35 +168,34 @@ class ChessGame extends SmartContract {
     );
     // piece moves according to its rank
 
-    //pawn wants to move
     const pawnHasNotMoved = Provable.if(
       whiteToPlay,
       myPiece.position.x.equals(Field(6)),
       myPiece.position.x.equals(Field(1))
     );
 
-    const pawnMoveDiagonally = sameXaddY
+    const pawnCapturesDiagonally = sameXaddY
       .or(sameXsubY)
-      .and(distSquaredToFinalPosition.equals(Field(2)));
+      .and(distSquaredToFinalPosition.equals(Field(2)))
+      .and(thereIsOneOfOppPiecesAt(finalPosition));
 
     const pawnMovesVertically = sameY
+      .and(pathIsValid)
+      .and(thereIsAPieceAt(finalPosition).not())
       .and(
         distSquaredToFinalPosition.lessThanOrEqual(
           Provable.if(pawnHasNotMoved, Field(4), Field(1))
         )
-      )
-      .and(pathIsEmpty);
+      );
 
-    const movesUp = myPiece.position.x.greaterThan(finalPosition.x); //x reduces as you go up
-    const movesDown = myPiece.position.x.lessThan(finalPosition.x); //x increases as you go down
+    const movesUpWards = myPiece.position.x.greaterThan(finalPosition.x); //x reduces as you go up
+    const movesDownWards = myPiece.position.x.lessThan(finalPosition.x); //x increases as you go down
 
-    const pawnPattern = Provable.if(whiteToPlay, movesUp, movesDown).and(
-      pawnMovesVertically
-        .and(thereIsAPieceAt(finalPosition).not())
-        .or(pawnMoveDiagonally.and(thereIsOneOfOppPiecesAt(finalPosition)))
-    );
-
-    const pathIsValid = pathIsContinous.and(pathIsEmpty);
+    const pawnPattern = Provable.if(
+      whiteToPlay,
+      movesUpWards,
+      movesDownWards
+    ).and(pawnMovesVertically.or(pawnCapturesDiagonally));
 
     const rookPattern = sameX.or(sameY).and(pathIsValid);
     const bishopPattern = sameXaddY.or(sameXsubY).and(pathIsValid);
@@ -204,7 +205,6 @@ class ChessGame extends SmartContract {
 
     const knightPattern = distSquaredToFinalPosition.equals(Field(5));
 
-    // console.log(myPiece.toString());
     Provable.switch(myPiece.rank.toBits(6), Bool, [
       pawnPattern,
       rookPattern,
@@ -218,10 +218,6 @@ class ChessGame extends SmartContract {
     //KING can be captured which declares win or loss
 
     //update board
-    // console.log('updating board');
-    // console.log(finalPosition.x.toString(), finalPosition.y.toString());
-    //move myPiece to final position
-
     fields_0to15.forEach((u, i) => {
       board.whitePieces[i] = Provable.if(
         whiteToPlay,

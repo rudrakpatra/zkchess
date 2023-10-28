@@ -86,5 +86,16 @@ describe('Chess.ts', () => {
     await txn3.prove();
     await txn3.sign([blackPlayerKey]).send();
     console.log(zkApp.getBoard().display());
+
+    const txn4 = await Mina.transaction(whitePlayerAccount, () => {
+      const id = Field(2);
+      const p0 = Position.from(5, 2);
+      const p1 = Position.from(4, 2);
+      const path = Path.from([p0, p0, p0, p0, p0, p0, p0, p1]);
+      zkApp.move(id, path); // play the left knight out
+    });
+    await txn4.prove();
+    await txn4.sign([whitePlayerKey]).send();
+    console.log(zkApp.getBoard().display());
   });
 });
