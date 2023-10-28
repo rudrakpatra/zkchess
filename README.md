@@ -18,11 +18,12 @@ The smart contract has 4 methods.
 1. takes in the public keys of the white and black players.
 2. starts the game with the initial starting positions (configurable).
 
-### 🚚 `move(id: UInt32, path: Position[])`
+### 🚚 `move(id: UInt32, path: Position[], newRank:Field)`
 1. verifies whether the current move is valid or not.
-3. the id refers to the piece index to be moved.
-4. the path is an ordered list of all positions/squares the piece passes through while moving.
-6. finally updates the piece's position to the end of the path.
+2. the id refers to the piece index to be moved.
+3. the path is an ordered list of all positions/squares the piece passes through while moving.
+4. newRank is used for promoting a pawn to knight/bishop/rook/queen.
+5. finally updates the piece's position to the end of the path.
 
    ### A possible way of handling Draws and Stalemates
      If a player has no valid move to play and its king is not in check, then it's a stalemate and the game is a draw.
@@ -30,7 +31,7 @@ The smart contract has 4 methods.
      For this, a move will also take a `possibleNextMove` of the other player which proves that a stalement cannot occur.
       
      ```
-     type Move={id: UInt32, path: Position[]}
+     type Move={id: UInt32, path: Position[], newRank:Field}
      move(myMove:Move, possibleNextMove:Move, offerDraw:Bool )
      
      if (offerDraw is true)
