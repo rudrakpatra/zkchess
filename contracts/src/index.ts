@@ -1,3 +1,3 @@
-import { Add } from './Add.js';
+import { Chess } from './Chess.js';
 
-export { Add };
+export { Chess as ChessGame };

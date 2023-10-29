@@ -9,14 +9,13 @@ import {
   Struct,
   Provable,
   PublicKey,
-  UInt32,
 } from 'o1js';
 
 import { Position } from './Board/Position/Position';
 import { Board } from './Board/Board';
 import { Piece, RANKS } from './Board/Piece/Piece';
 
-export { ChessGame };
+export { Chess };
 
 export class Path extends Struct({
   positions: Provable.Array(Position, 8),
@@ -26,7 +25,7 @@ export class Path extends Struct({
   }
 }
 
-class ChessGame extends SmartContract {
+class Chess extends SmartContract {
   @state(Field) whitePieces = State<Field>();
   @state(Field) blackPieces = State<Field>();
   @state(Bool) whiteToPlay = State<Bool>();
@@ -47,14 +46,14 @@ class ChessGame extends SmartContract {
     this.blackPieces.set(b);
   }
 
-  @method move(id: Field, path: Path, newRank: Field) {
+  @method move(path: Path, promotion: Field) {
     // this.sender.assertEquals(Provable.switch()
     const whiteToPlay = this.whiteToPlay.getAndAssertEquals();
     const whitePieces = this.whitePieces.getAndAssertEquals();
     const blackPieces = this.blackPieces.getAndAssertEquals();
     const piecesArray = [whitePieces, blackPieces];
     const board = Board.fromEncoded(piecesArray);
-
+    const startPos = path.positions[0];
     const finalPos = path.positions[7];
 
     const myPieces = Provable.switch(
@@ -68,10 +67,18 @@ class ChessGame extends SmartContract {
       [board.whitePieces, board.blackPieces]
     );
     const fields_0to15 = [...Array(16).keys()].map((i) => Field(i));
+    const ID = fields_0to15.reduce(
+      (acc, u, i) =>
+        Provable.if(myPieces[i].position.equals(startPos), Field(i), acc),
+      Field(-1)
+    );
+    ID.equals(Field(-1)).assertFalse('piece must exist at start position');
+
     //find my piece
+    // const myPiece = myPieces[ID];
     const myPiece = fields_0to15.reduce(
-      (acc, u, i) => Provable.if(id.equals(u), myPieces[i], acc),
-      Piece.from(Position.from(0, 0), Bool(false), Field(0))
+      (acc, u, i) => Provable.if(u.equals(ID), myPieces[i], acc),
+      myPieces[0]
     );
 
     //verify:
@@ -113,18 +120,20 @@ class ChessGame extends SmartContract {
     function thereIsAPieceAt(pos: Position) {
       return thereIsOneOfMyPiecesAt(pos).or(thereIsOneOfOppPiecesAt(pos));
     }
-
     function getDistSquared(p: Position, q: Position) {
       const dx = p.x.sub(q.x);
       const dy = p.y.sub(q.y);
       return dx.mul(dx).add(dy.mul(dy));
     }
+
+    function isIntermediatePosition(pos: Position) {
+      return pos.equals(startPos).or(pos.equals(finalPos)).not();
+    }
     // PATH HELPERS
 
     // Path is empty
     const pathIsEmpty = path.positions
-      .slice(0, 6)
-      .map(thereIsAPieceAt)
+      .map((p) => isIntermediatePosition(p).and(thereIsAPieceAt(p)))
       .concat(thereIsOneOfMyPiecesAt(finalPos))
       .reduce(Bool.or)
       .not();
@@ -151,14 +160,12 @@ class ChessGame extends SmartContract {
     // diagonal paths
     const sameXaddY = path.positions
       .map((p) =>
-        p.x.add(p.y).equals(myPiece.position.y.add(myPiece.position.y))
+        p.x.add(p.y).equals(myPiece.position.x.add(myPiece.position.y))
       )
       .reduce(Bool.and);
     const sameXsubY = path.positions
       .map((p) =>
-        myPiece.position.x
-          .sub(myPiece.position.x)
-          .equals(myPiece.position.y.sub(myPiece.position.y))
+        p.x.sub(p.y).equals(myPiece.position.x.sub(myPiece.position.y))
       )
       .reduce(Bool.and);
 
@@ -179,7 +186,7 @@ class ChessGame extends SmartContract {
       .and(distSquaredToFinalPosition.equals(Field(2)))
       .and(thereIsOneOfOppPiecesAt(finalPos));
 
-    const pawnMovesVertically = sameY
+    const pawnMovesVerticallyForward = sameY
       .and(pathIsValid)
       .and(thereIsAPieceAt(finalPos).not())
       .and(
@@ -195,7 +202,7 @@ class ChessGame extends SmartContract {
       whiteToPlay,
       movesUpWards,
       movesDownWards
-    ).and(pawnMovesVertically.or(pawnCapturesDiagonally));
+    ).and(pawnMovesVerticallyForward.or(pawnCapturesDiagonally));
 
     const rookPattern = sameX.or(sameY).and(pathIsValid);
     const bishopPattern = sameXaddY.or(sameXsubY).and(pathIsValid);
@@ -219,11 +226,11 @@ class ChessGame extends SmartContract {
 
     //PAWN PROMOTION
     //no need to check for black or white pawns.
-    const newRankIsValid = newRank
+    const newRankIsValid = promotion
       .equals(RANKS.QUEEN)
-      .or(newRank.equals(RANKS.ROOK))
-      .or(newRank.equals(RANKS.KNIGHT))
-      .or(newRank.equals(RANKS.BISHOP));
+      .or(promotion.equals(RANKS.ROOK))
+      .or(promotion.equals(RANKS.KNIGHT))
+      .or(promotion.equals(RANKS.BISHOP));
 
     const updateRank = myPiece.rank
       .equals(RANKS.PAWN)
@@ -235,18 +242,18 @@ class ChessGame extends SmartContract {
       board.whitePieces[i] = Provable.if(
         whiteToPlay,
         Piece.from(
-          Provable.if(u.equals(id), finalPos, myPieces[i].position),
+          Provable.if(u.equals(ID), finalPos, myPieces[i].position),
           myPieces[i].captured,
-          Provable.if(u.equals(id).and(updateRank), newRank, myPieces[i].rank)
+          Provable.if(u.equals(ID).and(updateRank), promotion, myPieces[i].rank)
         ),
         board.whitePieces[i]
       );
       board.blackPieces[i] = Provable.if(
         whiteToPlay.not(),
         Piece.from(
-          Provable.if(u.equals(id), finalPos, myPieces[i].position),
+          Provable.if(u.equals(ID), finalPos, myPieces[i].position),
           myPieces[i].captured,
-          Provable.if(u.equals(id).and(updateRank), newRank, myPieces[i].rank)
+          Provable.if(u.equals(ID).and(updateRank), promotion, myPieces[i].rank)
         ),
         board.blackPieces[i]
       );
