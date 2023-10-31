@@ -15,9 +15,9 @@ import { Position } from './Board/Position/Position';
 import { Board } from './Board/Board';
 import { Piece, RANKS } from './Board/Piece/Piece';
 
-export { Chess };
+export { Chess,Path };
 
-export class Path extends Struct({
+class Path extends Struct({
   positions: Provable.Array(Position, 8),
 }) {
   static from(path: Position[]) {

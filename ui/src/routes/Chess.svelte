@@ -4,10 +4,9 @@
 	import { Chess as ChessUI } from 'svelte-chess';
 	import type { Move } from 'svelte-chess/dist/api';
 	import { Position } from '../../../contracts/src/Board/Position/Position';
-
-	import type { Chess } from '../../../contracts/src/Chess';
-
 	import { onMount } from 'svelte';
+
+	import ZkappWorkerClient from '$lib/zkappWorkerClient';
 
 	const rankFrom = (piece: string) => {
 		switch (piece) {
@@ -62,50 +61,9 @@
 		console.log(promotion);
 	};
 
+	let move;
 	onMount(async () => {
-		const { Chess } = await import('../../../contracts/build/src/Chess.js');
-
-		let deployerAccount: PublicKey,
-			deployerKey: PrivateKey,
-			whitePlayerAccount: PublicKey,
-			whitePlayerKey: PrivateKey,
-			blackPlayerAccount: PublicKey,
-			blackPlayerKey: PrivateKey,
-			zkAppAddress: PublicKey,
-			zkAppPrivateKey: PrivateKey,
-			zkApp: Chess;
-
-		let proofsEnabled = false;
-
-		const Local = Mina.LocalBlockchain({ proofsEnabled });
-		Mina.setActiveInstance(Local);
-		({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
-		({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
-		({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
-
-		zkAppPrivateKey = PrivateKey.random();
-		zkAppAddress = zkAppPrivateKey.toPublicKey();
-		zkApp = new Chess(zkAppAddress);
-
-		async function localDeploy() {
-			const txn = await Mina.transaction(deployerAccount, () => {
-				AccountUpdate.fundNewAccount(deployerAccount);
-				zkApp.deploy();
-			});
-			await txn.prove();
-			// this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
-			await txn.sign([deployerKey, zkAppPrivateKey]).send();
-		}
-
-		await localDeploy();
-
-		const txn = await Mina.transaction(whitePlayerAccount, () => {
-			console.log('starting game');
-			zkApp.start(whitePlayerAccount, blackPlayerAccount);
-		});
-		await txn.prove();
-		await txn.sign([whitePlayerKey]).send();
-		console.log(zkApp.getBoard().display());
+		const zkappWorkerClient = new ZkappWorkerClient();
 	});
 </script>
 

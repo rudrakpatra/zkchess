@@ -14,3 +14,18 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+button{
+  cursor: pointer;
+  padding: .5rem 1rem;
+  border: none;
+  border-radius: .5rem;
+  background-color: #8a8;
+  color: #fff;
+}
+button:hover{
+  background-color: #686;
+}
+button:active{
+  background-color: #242;
+}

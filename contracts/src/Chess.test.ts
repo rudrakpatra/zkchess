@@ -68,8 +68,9 @@ describe('Chess.ts', () => {
     console.log(zkApp.getBoard().display());
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
       const p0 = Position.from(7, 1);
-      const p1 = Position.from(5, 0);
-      const path = Path.from([p0, p0, p0, p0, p0, p1, p1, p1]);
+      const p1 = Position.from(6, 1);
+      const p2 = Position.from(5, 0);
+      const path = Path.from([p0, p0, p0, p0, p0, p0, p1, p2]);
       zkApp.move(path, Field(RANKS.QUEEN)); // play the left knight out
     });
     await txn2.prove();
@@ -77,10 +78,11 @@ describe('Chess.ts', () => {
     console.log(zkApp.getBoard().display());
 
     const txn3 = await Mina.transaction(blackPlayerAccount, () => {
-      const p0 = Position.from(0, 1);
-      const p1 = Position.from(2, 0);
-      const path = Path.from([p0, p0, p0, p0, p0, p1, p1, p1]);
-      zkApp.move(path, Field(RANKS.QUEEN)); // play the left knight out
+      const p0 = Position.from(0, 6);
+      const p1 = Position.from(1, 6);
+      const p2 = Position.from(2, 5);
+      const path = Path.from([p0, p0, p0, p0, p0, p0, p1, p2]);
+      zkApp.move(path, Field(RANKS.QUEEN)); // play the right knight out
     });
     await txn3.prove();
     await txn3.sign([blackPlayerKey]).send();

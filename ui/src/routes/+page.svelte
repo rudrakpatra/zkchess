@@ -1,81 +1,179 @@
-<script>
-	import { onMount } from 'svelte';
-	import { Mina, PublicKey } from 'o1js';
-	import Chess from './Chess.svelte';
+<script lang="ts">
+	import { AccountUpdate, Field, Mina, PrivateKey, PublicKey } from 'o1js';
+	import { Chess as ChessBoard } from 'svelte-chess';
+	import type { Move } from 'svelte-chess/dist/api';
+	import type { Chess } from '../../../contracts/build/src';
+	import { getMoveFromUIEvent } from './Move';
 
-	onMount(async () => {
-		const { Chess } = await import('../../../contracts/build/src/Chess.js');
-		// Update this to use the address (public key) for your zkApp account.
-		// To try it out, you can try this address for an example "Add" smart contract that we've deployed to
-		// Berkeley Testnet B62qkwohsqTBPsvhYE8cPZSpzJMgoKn4i1LQRuBAtVXWpaT4dgH6WoA .
-		const zkAppAddress = '';
-		// This should be removed once the zkAppAddress is updated.
-		// if (!zkAppAddress) {
-		// 	console.error(
-		// 		'The following error is caused because the zkAppAddress has an empty string as the public key. Update the zkAppAddress with the public key for your zkApp account, or try this address for an example "Add" smart contract that we deployed to Berkeley Testnet: B62qkwohsqTBPsvhYE8cPZSpzJMgoKn4i1LQRuBAtVXWpaT4dgH6WoA'
-		// 	);
-		// }
-		//const zkApp = new Add(PublicKey.fromBase58(zkAppAddress))
-	});
+	let disableMove = true;
+
+	let msg = 'Open the console for msgs. Press init ';
+	$: console.log('msg:', msg);
+
+	let deployerAccount: PublicKey,
+		deployerKey: PrivateKey,
+		whitePlayerAccount: PublicKey,
+		whitePlayerKey: PrivateKey,
+		blackPlayerAccount: PublicKey,
+		blackPlayerKey: PrivateKey,
+		zkAppAddress: PublicKey,
+		zkAppPrivateKey: PrivateKey,
+		zkApp: Chess;
+
+	// _____________________________________
+	const switchPlayer = (e: CustomEvent<Move>) => {
+		return e.detail.color === 'w'
+			? { playerAccount: whitePlayerAccount, playerKey: whitePlayerKey }
+			: { playerAccount: blackPlayerAccount, playerKey: blackPlayerKey };
+	};
+	// _____________________________________
+
+	let proofsEnabled = true;
+	const init = async () => {
+		msg = 'importing contract...';
+		const { Chess } = await import('../../../contracts/build/src');
+
+		msg = 'compiling...';
+		await Chess.compile();
+		msg = 'compiled!';
+
+		msg = 'setting up local blockchain...';
+		const Local = Mina.LocalBlockchain({ proofsEnabled });
+		Mina.setActiveInstance(Local);
+		({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
+		({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
+		({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
+
+		zkAppPrivateKey = PrivateKey.random();
+		zkAppAddress = zkAppPrivateKey.toPublicKey();
+		msg = 'setting up zkApp...';
+		zkApp = new Chess(zkAppAddress);
+
+		msg = 'setting up zkApp deploy transaction...';
+		const deployTxn = await Mina.transaction(deployerAccount, () => {
+			AccountUpdate.fundNewAccount(deployerAccount);
+			zkApp.deploy();
+		});
+		msg = 'proving transaction...';
+		await deployTxn.prove();
+		// this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
+		msg = 'signing transaction...';
+		await deployTxn.sign([deployerKey, zkAppPrivateKey]).send();
+		msg = 'deployed! press start';
+	};
+	const start = async () => {
+		msg = 'starting the game';
+		const startTxn = await Mina.transaction(whitePlayerAccount, () => {
+			zkApp.start(whitePlayerAccount, blackPlayerAccount);
+		});
+		msg = 'proving transaction...';
+		await startTxn.prove();
+		msg = 'signing transaction...';
+		await startTxn.sign([whitePlayerKey]).send();
+		msg = 'game started!';
+		console.log('board:', zkApp.getBoard().display());
+		disableMove = false;
+	};
+
+	const move = async (e: CustomEvent<Move>) => {
+		disableMove = true;
+		msg = 'moving...';
+		const { playerAccount, playerKey } = switchPlayer(e);
+		const { path, promotion } = getMoveFromUIEvent(e);
+		const txn = await Mina.transaction(playerAccount, () => {
+			zkApp.move(path, promotion);
+		});
+		msg = 'proving transaction...';
+		await txn.prove();
+		msg = 'signing transaction...';
+		await txn.sign([playerKey]).send();
+		msg = 'moved!';
+		disableMove = false;
+	};
+
+	const draw = async () => {
+		disableMove = true;
+		msg = 'drawing...';
+	};
+	const resign = async () => {
+		disableMove = true;
+		msg = 'resigning...';
+	};
+	const getState = async () => {
+		disableMove = true;
+		msg = 'getting state...';
+		console.log(await zkApp.getBoard().display());
+		disableMove = false;
+	};
 </script>
 
 <svelte:head>
 	<title>Mina zkChess UI</title>
 </svelte:head>
-<main>
-	<div class="flex-container">
-		<div id="chess-container">
-			<Chess />
-		</div>
-		<div id="list">
-			<h1>zkChess</h1>
-			<p>
-				You play a move. Move validity proof is generated and a transaction is made. You will get
-				notified when the transaction is done.
-			</p>
-			<button>get onchain state</button>
-		</div>
+<main class="flex-container">
+	<div id="chess-container">
+		{#if disableMove}
+			<div class="overlay">
+				<div class="list">
+					<p class="msg">{msg}</p>
+				</div>
+			</div>
+		{/if}
+		<ChessBoard on:move={move} />
+	</div>
+	<div class="list">
+		<p>zkChess</p>
+		<hr />
+		<button on:click={init}>init</button>
+		<button on:click={start}>start</button>
+		<button on:click={draw}>draw</button>
+		<button on:click={resign}>resign</button>
+		<button on:click={getState}>get onchain state</button>
 	</div>
 </main>
 
 <style>
-	main {
-		display: grid;
-		place-content: center;
-		width: 100vw;
-		height: 100vh;
+	p {
+		font-size: 1.2rem;
+		padding: 0.2rem;
+	}
+	.msg {
+		background-color: #eee;
+		border-radius: 0.2rem;
+		width: 40ch;
 	}
 	.flex-container {
 		display: flex;
-		flex-direction: row;
-		gap: 1rem;
-	}
-	#chess-container {
-		width: 600px;
-		height: 600px;
-	}
-	#list {
-		width: 400px;
-		height: 300px;
-		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		background-color: #eee;
-		padding: 0.25rem 0.5rem;
-		border-radius: 0.5rem;
-	}
-	#list button {
-		cursor: pointer;
 		padding: 0.5rem;
-		border-radius: 0.5rem;
-		border: none;
-		background-color: #aca;
-		width: fit-content;
 	}
-	#list button:hover {
-		background-color: #bdb;
+	#chess-container {
+		position: relative;
+		max-width: 600px;
+		background: #eee;
+		aspect-ratio: 1;
 	}
-	#list button:active {
-		background-color: #9b9;
+	.overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: grid;
+		place-content: center;
+		align-items: center;
+		z-index: 5;
+		background-color: #222a;
+	}
+	.list {
+		max-width: 600px;
+		display: flex;
+		justify-content: start;
+		flex-direction: row;
+		gap: 0.5rem;
+		background-color: #eee;
+		padding: 0.5rem 0.5rem;
+		border-radius: 0.2rem;
 	}
 </style>
