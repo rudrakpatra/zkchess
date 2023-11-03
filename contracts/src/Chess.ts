@@ -288,6 +288,9 @@ class Chess extends SmartContract {
       );
     });
 
+    //update turn
+    gameState.turn = whiteToPlay.not();
+
     //update the state of zkapp
     let [a, b] = gameState.encode();
     this.gs0.set(a);
