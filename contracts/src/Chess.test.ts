@@ -1,16 +1,8 @@
-import {
-  AccountUpdate,
-  Bool,
-  Field,
-  Mina,
-  PrivateKey,
-  PublicKey,
-  UInt32,
-} from 'o1js';
+import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
 
-import { Chess, Path } from './Chess.js';
-import { Position } from './Board/Position/Position.js';
-import { RANKS } from './Board/Piece/Piece.js';
+import { Chess } from './Chess.js';
+import { ChessMove } from './ChessMove.js';
+import { RANK } from './Piece/Rank.js';
 
 const proofsEnabled = false;
 describe('Chess.ts', () => {
@@ -56,7 +48,6 @@ describe('Chess.ts', () => {
   //   await localDeploy();
   //   zkApp.startGame(whitePlayerAccount, blackPlayerAccount);
   // });
-
   it('starts and moves', async () => {
     await localDeploy();
 
@@ -65,38 +56,27 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getBoard().display());
+    console.log(zkApp.getGameState().toString());
+
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      const p0 = Position.from(7, 1);
-      const p1 = Position.from(6, 1);
-      const p2 = Position.from(5, 0);
-      const path = Path.from([p0, p0, p0, p0, p0, p0, p1, p2]);
-      zkApp.move(path, Field(RANKS.QUEEN)); // play the left knight out
+      zkApp.move(ChessMove.fromLAN('b1', 'a3'));
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();
-    console.log(zkApp.getBoard().display());
+    console.log(zkApp.getGameState().toString());
 
     const txn3 = await Mina.transaction(blackPlayerAccount, () => {
-      const p0 = Position.from(0, 6);
-      const p1 = Position.from(1, 6);
-      const p2 = Position.from(2, 5);
-      const path = Path.from([p0, p0, p0, p0, p0, p0, p1, p2]);
-      zkApp.move(path, Field(RANKS.QUEEN)); // play the right knight out
+      zkApp.move(ChessMove.fromLAN('d7', 'd6', 'b'));
     });
     await txn3.prove();
     await txn3.sign([blackPlayerKey]).send();
-    console.log(zkApp.getBoard().display());
+    console.log(zkApp.getGameState().toString());
 
     const txn4 = await Mina.transaction(whitePlayerAccount, () => {
-      const p0 = Position.from(6, 2);
-      const p1 = Position.from(5, 2);
-      const p2 = Position.from(4, 2);
-      const path = Path.from([p0, p0, p0, p0, p0, p0, p1, p2]);
-      zkApp.move(path, Field(RANKS.QUEEN)); //play the pawn
+      zkApp.move(ChessMove.fromLAN('c2', 'c4'));
     });
     await txn4.prove();
     await txn4.sign([whitePlayerKey]).send();
-    console.log(zkApp.getBoard().display());
+    console.log(zkApp.getGameState().toString());
   });
 });

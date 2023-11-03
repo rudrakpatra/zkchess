@@ -1,5 +1,19 @@
-import { Chess, Path } from './Chess.js';
-import { Board } from './Board/Board.js';
-import { Piece } from './Board/Piece/Piece.js';
-import { Position } from './Board/Position/Position.js';
-export { Chess, Board, Piece, Position, Path };
+import { Chess } from './Chess.js';
+import { GameState } from './GameState/GameState.js';
+import { PlayerState } from './GameState/PlayerState/PlayerState.js';
+import { ChessMove } from './ChessMove.js';
+import { RANK, RankAsChar, RankAsName } from './Piece/Rank.js';
+import { Position } from './Position/Position.js';
+import { Piece } from './Piece/Piece.js';
+
+export {
+  Chess,
+  ChessMove,
+  GameState,
+  PlayerState,
+  Position,
+  Piece,
+  RANK,
+  RankAsChar,
+  RankAsName,
+};

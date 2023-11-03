@@ -5,30 +5,21 @@ import {
   Bool,
   state,
   State,
-  Poseidon,
-  Struct,
   Provable,
   PublicKey,
 } from 'o1js';
 
-import { Position } from './Board/Position/Position';
-import { Board } from './Board/Board';
-import { Piece, RANKS } from './Board/Piece/Piece';
+import { Position } from './Position/Position';
+import { GameState } from './GameState/GameState';
+import { Piece } from './Piece/Piece';
+import { ChessMove } from './ChessMove';
+import { RANK } from './Piece/Rank';
 
-export { Chess,Path };
-
-class Path extends Struct({
-  positions: Provable.Array(Position, 8),
-}) {
-  static from(path: Position[]) {
-    return new Path({ positions: path });
-  }
-}
+export { Chess };
 
 class Chess extends SmartContract {
-  @state(Field) whitePieces = State<Field>();
-  @state(Field) blackPieces = State<Field>();
-  @state(Bool) whiteToPlay = State<Bool>();
+  @state(Field) gs0 = State<Field>();
+  @state(Field) gs1 = State<Field>();
   @state(PublicKey) whiteKey = State<PublicKey>();
   @state(PublicKey) blackKey = State<PublicKey>();
 
@@ -37,48 +28,45 @@ class Chess extends SmartContract {
   }
 
   @method start(whiteKey: PublicKey, blackKey: PublicKey) {
-    this.whiteToPlay.set(Bool(true));
     this.whiteKey.set(whiteKey);
     this.blackKey.set(blackKey);
-    const board = Board.startBoard();
-    let [a, b] = board.encode();
-    this.whitePieces.set(a);
-    this.blackPieces.set(b);
+    const gameState = GameState.fromFEN();
+    let [a, b] = gameState.encode();
+    this.gs0.set(a);
+    this.gs1.set(b);
   }
 
-  @method move(path: Path, promotion: Field) {
-    // this.sender.assertEquals(Provable.switch()
-    const whiteToPlay = this.whiteToPlay.getAndAssertEquals();
-    const whitePieces = this.whitePieces.getAndAssertEquals();
-    const blackPieces = this.blackPieces.getAndAssertEquals();
-    const piecesArray = [whitePieces, blackPieces];
-    const board = Board.fromEncoded(piecesArray);
+  @method move(move: ChessMove) {
+    const { path, promotion } = move;
+    // this.sender.assertEquals(Provable.switch())
+    this.gs0.getAndAssertEquals();
+    this.gs1.getAndAssertEquals();
+    const gameState = GameState.fromEncoded([this.gs0.get(), this.gs1.get()]);
+    //game state helpers
+    const { white, black } = gameState;
+
+    const whiteToPlay = gameState.turn;
+
+    //path helpers
     const startPos = path.positions[0];
     const finalPos = path.positions[7];
 
-    const myPieces = Provable.switch(
-      [whiteToPlay, whiteToPlay.not()],
-      Provable.Array(Piece, 16),
-      [board.whitePieces, board.blackPieces]
-    );
-    const oppPieces = Provable.switch(
-      [whiteToPlay.not(), whiteToPlay],
-      Provable.Array(Piece, 16),
-      [board.whitePieces, board.blackPieces]
-    );
+    const self = Provable.if(whiteToPlay, white, black);
+    const opponent = Provable.if(whiteToPlay, black, white);
+
     const fields_0to15 = [...Array(16).keys()].map((i) => Field(i));
     const ID = fields_0to15.reduce(
       (acc, u, i) =>
-        Provable.if(myPieces[i].position.equals(startPos), Field(i), acc),
+        Provable.if(self.pieces[i].position.equals(startPos), Field(i), acc),
       Field(-1)
     );
     ID.equals(Field(-1)).assertFalse('piece must exist at start position');
 
     //find my piece
-    // const myPiece = myPieces[ID];
+    // const myPiece = self.pieces[ID];
     const myPiece = fields_0to15.reduce(
-      (acc, u, i) => Provable.if(u.equals(ID), myPieces[i], acc),
-      myPieces[0]
+      (acc, u, i) => Provable.if(u.equals(ID), self.pieces[i], acc),
+      self.pieces[0]
     );
 
     //verify:
@@ -88,20 +76,27 @@ class Chess extends SmartContract {
     myPiece.position
       .equals(finalPos)
       .assertFalse('piece cannot move to its own position');
+
+    function contains(position: Position) {
+      return position.x
+        .greaterThanOrEqual(Field.from(0))
+        .and(position.x.lessThan(Field.from(8)))
+        .and(position.y.greaterThanOrEqual(Field.from(0)))
+        .and(position.y.lessThan(Field.from(8)));
+    }
     // no path positions move out of the board
     path.positions
-      .map((p) => board.contains(p))
+      .map((p) => contains(p))
       .reduce(Bool.and)
       .assertTrue('piece cannot move out of the board');
-
     // piece does not capture own piece
     function thereIsOneOfMyPiecesAt(pos: Position) {
       return [...Array(16).keys()]
         .map((k) => {
           //checking if any uncaptured my piece is at pos
-          const myPieceOnPath = myPieces[k].captured
+          const myPieceOnPath = self.pieces[k].captured
             .not()
-            .and(myPieces[k].position.equals(pos));
+            .and(self.pieces[k].position.equals(pos));
           return myPieceOnPath;
         })
         .reduce(Bool.or);
@@ -110,9 +105,9 @@ class Chess extends SmartContract {
       return [...Array(16).keys()]
         .map((k) => {
           //checking if any uncaptured opponent piece is at pos
-          const oppPieceOnPath = oppPieces[k].captured
+          const oppPieceOnPath = opponent.pieces[k].captured
             .not()
-            .and(oppPieces[k].position.equals(pos));
+            .and(opponent.pieces[k].position.equals(pos));
           return oppPieceOnPath;
         })
         .reduce(Bool.or);
@@ -148,7 +143,6 @@ class Chess extends SmartContract {
       .reduce(Bool.and);
 
     const pathIsValid = pathIsContinous.and(pathIsEmpty);
-
     // vertical path
     const sameX = path.positions
       .map((p) => myPiece.position.x.equals(p.x))
@@ -212,75 +206,94 @@ class Chess extends SmartContract {
 
     const knightPattern = distSquaredToFinalPosition.equals(Field(5));
 
-    Provable.switch(myPiece.rank.toBits(6), Bool, [
-      pawnPattern,
-      rookPattern,
-      knightPattern,
-      bishopPattern,
-      queenPattern,
-      kingPattern,
-    ]).assertTrue('piece must move according to its rank');
+    // piece moves according to its rank
+    [
+      myPiece.rank.equals(RANK.from.name.PAWN).and(pawnPattern),
+      myPiece.rank.equals(RANK.from.name.ROOK).and(rookPattern),
+      myPiece.rank.equals(RANK.from.name.KNIGHT).and(knightPattern),
+      myPiece.rank.equals(RANK.from.name.BISHOP).and(bishopPattern),
+      myPiece.rank.equals(RANK.from.name.QUEEN).and(queenPattern),
+      myPiece.rank.equals(RANK.from.name.KING).and(kingPattern),
+    ]
+      .reduce(Bool.or)
+      .assertTrue('piece must move according to its rank');
 
-    //NOT CHECKING if move puts own king in check
+    //CURRENTLY NOT CHECKING if move puts own king in check
     //KING can be captured which declares win or loss
 
     //PAWN PROMOTION
     //no need to check for black or white pawns.
     const newRankIsValid = promotion
-      .equals(RANKS.QUEEN)
-      .or(promotion.equals(RANKS.ROOK))
-      .or(promotion.equals(RANKS.KNIGHT))
-      .or(promotion.equals(RANKS.BISHOP));
+      .equals(RANK.from.name.QUEEN)
+      .or(promotion.equals(RANK.from.name.ROOK))
+      .or(promotion.equals(RANK.from.name.KNIGHT))
+      .or(promotion.equals(RANK.from.name.BISHOP));
 
     const updateRank = myPiece.rank
-      .equals(RANKS.PAWN)
+      .equals(RANK.from.name.PAWN)
       .and(finalPos.x.equals(Field(0)).or(finalPos.x.equals(Field(7))))
       .and(newRankIsValid);
 
-    //update board
+    //UPDATE GAME STATE
+
+    //update piece position
     fields_0to15.forEach((u, i) => {
-      board.whitePieces[i] = Provable.if(
+      white.pieces[i] = Provable.if(
         whiteToPlay,
         Piece.from(
-          Provable.if(u.equals(ID), finalPos, myPieces[i].position),
-          myPieces[i].captured,
-          Provable.if(u.equals(ID).and(updateRank), promotion, myPieces[i].rank)
+          Provable.if(u.equals(ID), finalPos, self.pieces[i].position),
+          self.pieces[i].captured,
+          Provable.if(
+            u.equals(ID).and(updateRank),
+            promotion,
+            self.pieces[i].rank
+          )
         ),
-        board.whitePieces[i]
+        white.pieces[i]
       );
-      board.blackPieces[i] = Provable.if(
+      black.pieces[i] = Provable.if(
         whiteToPlay.not(),
         Piece.from(
-          Provable.if(u.equals(ID), finalPos, myPieces[i].position),
-          myPieces[i].captured,
-          Provable.if(u.equals(ID).and(updateRank), promotion, myPieces[i].rank)
+          Provable.if(u.equals(ID), finalPos, self.pieces[i].position),
+          self.pieces[i].captured,
+          Provable.if(
+            u.equals(ID).and(updateRank),
+            promotion,
+            self.pieces[i].rank
+          )
         ),
-        board.blackPieces[i]
+        black.pieces[i]
       );
     });
     //capture opponent piece if any
     fields_0to15.forEach((u, i) => {
-      const captured = oppPieces[i].position.equals(finalPos);
-      board.whitePieces[i] = Provable.if(
+      const captured = opponent.pieces[i].position.equals(finalPos);
+      gameState.white.pieces[i] = Provable.if(
         whiteToPlay.not(),
-        Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
-        board.whitePieces[i]
+        Piece.from(
+          opponent.pieces[i].position,
+          captured,
+          opponent.pieces[i].rank
+        ),
+        white.pieces[i]
       );
-      board.blackPieces[i] = Provable.if(
+      gameState.black.pieces[i] = Provable.if(
         whiteToPlay,
-        Piece.from(oppPieces[i].position, captured, oppPieces[i].rank),
-        board.blackPieces[i]
+        Piece.from(
+          opponent.pieces[i].position,
+          captured,
+          opponent.pieces[i].rank
+        ),
+        black.pieces[i]
       );
     });
 
-    //update the state
-    let [a, b] = board.encode();
-    this.whitePieces.set(a);
-    this.blackPieces.set(b);
-    this.whiteToPlay.set(whiteToPlay.not());
+    //update the state of zkapp
+    let [a, b] = gameState.encode();
+    this.gs0.set(a);
+    this.gs1.set(b);
   }
-  getBoard(): Board {
-    const pieces = [this.whitePieces.get(), this.blackPieces.get()];
-    return Board.fromEncoded(pieces);
+  getGameState() {
+    return GameState.fromEncoded([this.gs0.get(), this.gs1.get()]);
   }
 }

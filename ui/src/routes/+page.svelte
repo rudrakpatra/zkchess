@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { AccountUpdate, Field, Mina, PrivateKey, PublicKey } from 'o1js';
-	import { Chess as ChessBoard } from 'svelte-chess';
-	import type { Move } from 'svelte-chess/dist/api';
-	import type { Chess } from '../../../contracts/build/src';
-	import { getMoveFromUIEvent } from './Move';
+	import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
+	import { Chess as ChessUI } from 'svelte-chess';
+	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
+	import { type Chess, ChessMove } from '../../../contracts/build/src';
 
 	let disableMove = true;
 
@@ -21,7 +20,7 @@
 		zkApp: Chess;
 
 	// _____________________________________
-	const switchPlayer = (e: CustomEvent<Move>) => {
+	const switchPlayer = (e: CustomEvent<ChessMoveUI>) => {
 		return e.detail.color === 'w'
 			? { playerAccount: whitePlayerAccount, playerKey: whitePlayerKey }
 			: { playerAccount: blackPlayerAccount, playerKey: blackPlayerKey };
@@ -71,17 +70,16 @@
 		msg = 'signing transaction...';
 		await startTxn.sign([whitePlayerKey]).send();
 		msg = 'game started!';
-		console.log('board:', zkApp.getBoard().display());
+		console.log('gamestate:', zkApp.getGameState().toString());
 		disableMove = false;
 	};
 
-	const move = async (e: CustomEvent<Move>) => {
+	const move = async (e: CustomEvent<ChessMoveUI>) => {
 		disableMove = true;
 		msg = 'moving...';
 		const { playerAccount, playerKey } = switchPlayer(e);
-		const { path, promotion } = getMoveFromUIEvent(e);
 		const txn = await Mina.transaction(playerAccount, () => {
-			zkApp.move(path, promotion);
+			zkApp.move(ChessMove.fromLAN(e.detail.from, e.detail.to));
 		});
 		msg = 'proving transaction...';
 		await txn.prove();
@@ -102,7 +100,7 @@
 	const getState = async () => {
 		disableMove = true;
 		msg = 'getting state...';
-		console.log(await zkApp.getBoard().display());
+		console.log('gamestate:', zkApp.getGameState().toString());
 		disableMove = false;
 	};
 </script>
@@ -119,7 +117,7 @@
 				</div>
 			</div>
 		{/if}
-		<ChessBoard on:move={move} />
+		<ChessUI on:move={move} />
 	</div>
 	<div class="list">
 		<p>zkChess</p>
