@@ -21,4 +21,8 @@ describe('Position', () => {
       ),
     ]);
   });
+
+  it('equals', () => {
+    expect(Position.from(1, 3).equals(Position.from(1, 3))).toEqual(Bool(true));
+  });
 });

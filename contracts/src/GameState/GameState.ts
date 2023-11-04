@@ -10,25 +10,25 @@ export const defaultFEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 /**
- * 162 + 162 + 1 + 1 + 3 + 6 + 1 = 336
+ * 162 + 162 + 1 + 1 + 3 + 7 + 1 = 336
  */
 export class GameState extends Struct({
   white: PlayerState,
   black: PlayerState,
   turn: Bool,
   enpassant: Bool,
-  column: UInt32,
-  halfmove: UInt32,
-  draw: Bool,
+  column: Field,
+  halfmove: Field,
+  canDraw: Bool,
 }) {
   static from(
     white: PlayerState,
     black: PlayerState,
     turn: Bool,
     enpassant: Bool,
-    column: UInt32,
-    halfmove: UInt32,
-    draw: Bool
+    column: Field,
+    halfmove: Field,
+    canDraw: Bool
   ): GameState {
     return new GameState({
       white,
@@ -37,12 +37,12 @@ export class GameState extends Struct({
       enpassant,
       column,
       halfmove,
-      draw,
+      canDraw,
     });
   }
   /**
    *
-   * @param state 162|162|1|1|3|6|1 = 336
+   * @param state 162|162|1|1|3|7|1 = 336
    * @returns
    */
   static fromEncoded(fields: Field[]): GameState {
@@ -53,16 +53,16 @@ export class GameState extends Struct({
       enpassantBits,
       columnBits,
       halfmoveBits,
-      drawBit,
-    ] = unpack(fields, [162, 162, 1, 1, 3, 6, 1]);
+      canDrawBit,
+    ] = unpack(fields, [162, 162, 1, 1, 3, 7, 1]);
 
     const white = PlayerState.fromEncoded([whiteBits]);
     const black = PlayerState.fromEncoded([blackBits]);
     const turn = Bool.fromFields([turnBit]);
     const enpassant = Bool.fromFields([enpassantBits]);
-    const column = UInt32.fromFields([columnBits]);
-    const halfmove = UInt32.fromFields([halfmoveBits]);
-    const draw = Bool.fromFields([drawBit]);
+    const column = Field.fromFields([columnBits]);
+    const halfmove = Field.fromFields([halfmoveBits]);
+    const canDraw = Bool.fromFields([canDrawBit]);
     return GameState.from(
       white,
       black,
@@ -70,7 +70,7 @@ export class GameState extends Struct({
       enpassant,
       column,
       halfmove,
-      draw
+      canDraw
     );
   }
   public encode(): Field[] {
@@ -82,9 +82,9 @@ export class GameState extends Struct({
         ...this.enpassant.toFields(),
         ...this.column.toFields(),
         ...this.halfmove.toFields(),
-        ...this.draw.toFields(),
+        ...this.canDraw.toFields(),
       ],
-      [162, 162, 1, 1, 3, 6, 1]
+      [162, 162, 1, 1, 3, 7, 1]
     );
   }
   static fromFEN(FEN: string = defaultFEN): GameState {
@@ -118,14 +118,14 @@ export class GameState extends Struct({
           : black.pieces.push(piece);
       });
     });
-    const column = UInt32.from(Math.max(0, enpassant.charCodeAt(0) - 97));
+    const column = Math.max(0, enpassant.charCodeAt(0) - 97);
     return GameState.from(
       PlayerState.from(white.pieces, white.castling),
       PlayerState.from(black.pieces, black.castling),
       Bool(turn.includes('w')),
       Bool(enpassant !== '-'),
-      UInt32.from(column),
-      UInt32.from(Number(half)),
+      Field(column),
+      Field(Number(half)),
       Bool(false)
     );
   }
@@ -158,14 +158,14 @@ export class GameState extends Struct({
     const turn = this.turn.toString() === 'true' ? 'w' : 'b';
     const castling =
       '' +
-      (this.white.castling.kingSide ? 'K' : '') +
-      (this.white.castling.queenSide ? 'Q' : '') +
-      (this.black.castling.kingSide ? 'k' : '') +
-      (this.black.castling.queenSide ? 'q' : '');
+      (this.white.castling.kingSide.toString() === 'true' ? 'K' : '') +
+      (this.white.castling.queenSide.toString() === 'true' ? 'Q' : '') +
+      (this.black.castling.kingSide.toString() === 'true' ? 'k' : '') +
+      (this.black.castling.queenSide.toString() === 'true' ? 'q' : '');
     //enpassant
     const enpassantVal =
-      (this.turn ? 3 : 6) +
-      String.fromCharCode(Number(this.column.toString()) + 97);
+      String.fromCharCode(Number(this.column.toString()) + 97) +
+      (turn === 'w' ? 6 : 3);
     const enpassant = this.enpassant.toString() === 'true' ? enpassantVal : '-';
 
     const halfmove = this.halfmove.toString();
