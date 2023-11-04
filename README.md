@@ -18,11 +18,10 @@ The smart contract has 4 methods.
 1. takes in the public keys of the white and black players.
 2. starts the game with the initial starting positions (configurable).
 
-### 🚚 `move(path: Position[], promotion:Field)`
+### 🚚 `move(move:ChessMove)`
 1. verifies whether the current move is valid or not.
-2. `path` is an ordered list of 8 positions. A piece must be present at the start which is moved along the path.
-4. `promotion` is used for promoting a pawn to knight/bishop/rook/queen.
-5. finally updates the piece's position to the end of the path.
+2. a `ChessMove` consists of a path of size 8 and promotion choice.
+3. finally updates the piece's position to the end of the path.
 
    ### A possible way of handling Draws and Stalemates
      If a player has no valid move to play and its king is not in check, then it's a stalemate and the game is a draw.
@@ -42,7 +41,7 @@ The smart contract has 4 methods.
   
 ### 🤝 `draw()`
 1. the player calls this to accept a draw request.
-2. this can only be called if other player has requested to draw (as mentioned in move).
+2. this can only be called if other player requested it / stalemate / 50 moves rule
 
 ### 😖 `resign()`
 1. the player calls this to resign.
