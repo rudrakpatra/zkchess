@@ -17,11 +17,12 @@ a {
 
 button{
   cursor: pointer;
-  padding: .5rem 1rem;
+  padding: .5rem .6rem;
   border: none;
   border-radius: .5rem;
   background-color: #8a8;
   color: #fff;
+  white-space: nowrap;
 }
 button:hover{
   background-color: #686;

@@ -1,40 +1,30 @@
-import WorkerURL from './zkappWorker.js?url';
+import ZkAppWorker from '$lib/ZkAppWorker?worker';
 
-export default class ZkappWorkerClient {
+export class ZkAppWorkerClient {
 	worker: Worker;
-
 	constructor() {
-		this.worker = new Worker(WorkerURL, { type: 'module' });
-		console.log('ZkappWorkerClient created worker:', this.worker);
-		this.worker.onmessage = (event: MessageEvent<string>) => {
-			console.log('ZkappWorkerClient received message:', event.data);
-		};
+		this.worker = new ZkAppWorker();
+		console.log('Web Worker Successfully Initialized.', this.worker);
 	}
 	init() {
-		console.log('ZkappWorkerClient sending message:', { fn: 'init' });
 		this.worker.postMessage({ fn: 'init' });
 	}
 	start() {
-		console.log('ZkappWorkerClient sending message:', { fn: 'start' });
 		this.worker.postMessage({ fn: 'start' });
 	}
-	move(posArray: number[][], promotion: number) {
-		console.log('ZkappWorkerClient sending message:', {
-			fn: 'move',
-			args: JSON.stringify({ posArray, promotion })
-		});
-		this.worker.postMessage({ fn: 'move', args: JSON.stringify({ posArray, promotion }) });
+	move(from: string, to: string, promotion: string) {
+		this.worker.postMessage({ fn: 'move', args: { from, to, promotion } });
 	}
 	draw() {
-		console.log('ZkappWorkerClient sending message:', { fn: 'draw' });
 		this.worker.postMessage({ fn: 'draw' });
 	}
 	resign() {
-		console.log('ZkappWorkerClient sending message:', { fn: 'resign' });
 		this.worker.postMessage({ fn: 'resign' });
 	}
-	getBoard() {
-		console.log('ZkappWorkerClient sending message:', { fn: 'getBoard' });
-		this.worker.postMessage({ fn: 'getBoard' });
+	getState() {
+		this.worker.postMessage({ fn: 'getState' });
+	}
+	onmessage(cb: (msg: string) => void) {
+		this.worker.onmessage = (e) => cb(e.data);
 	}
 }
