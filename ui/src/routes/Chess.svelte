@@ -17,6 +17,7 @@
 	let timerIsRunning = false;
 	let interval = 0;
 	const startTimer = (startTime = 0) => {
+		stopTimer();
 		timer = startTime;
 		timerIsRunning = true;
 		interval = setInterval(() => {
@@ -72,8 +73,10 @@
 		handleGetState = async () => {
 			startTimer();
 			msg = `Getting state...`;
+			disableMove = true;
 			const state = await client.getState();
-			msg = `Got state in ${timer}s. ${state}`;
+			console.log(`received state:${state}`);
+			disableMove = false;
 			stopTimer();
 		};
 	});

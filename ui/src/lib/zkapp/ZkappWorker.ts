@@ -11,16 +11,17 @@ let deployerAccount: PublicKey,
 	zkAppPrivateKey: PrivateKey,
 	zkApp: Chess;
 
+const decoratedLog = (...args: string[]) => console.log('%c' + args.join(' '), 'color: #00ffee');
 const proofsEnabled = true;
 
 const init = async () => {
-	console.log('importing contract...');
+	decoratedLog('importing contract...');
 	const { Chess } = await import('../../../../contracts/build/src');
 
-	console.log('compiling...');
+	decoratedLog('compiling...');
 	await Chess.compile();
 
-	console.log('setting up local blockchain...');
+	decoratedLog('setting up local blockchain...');
 	const Local = Mina.LocalBlockchain({ proofsEnabled });
 	Mina.setActiveInstance(Local);
 	({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
@@ -29,77 +30,77 @@ const init = async () => {
 
 	zkAppPrivateKey = PrivateKey.random();
 	zkAppAddress = zkAppPrivateKey.toPublicKey();
-	console.log('setting up zkApp...');
+	decoratedLog('setting up zkApp...');
 	zkApp = new Chess(zkAppAddress);
 
-	console.log('setting up zkApp deploy transaction...');
+	decoratedLog('setting up zkApp deploy transaction...');
 	const deployTxn = await Mina.transaction(deployerAccount, () => {
 		AccountUpdate.fundNewAccount(deployerAccount);
 		zkApp.deploy();
 	});
-	console.log('proving transaction...');
+	decoratedLog('proving transaction...');
 	await deployTxn.prove();
 
-	console.log('signing transaction...');
+	decoratedLog('signing transaction...');
 	await deployTxn.sign([deployerKey, zkAppPrivateKey]).send();
-	console.log('deployed! press start');
+	decoratedLog('deployed! press start');
 };
 
 const start = async () => {
-	console.log('starting the game');
+	decoratedLog('starting the game');
 	const startTxn = await Mina.transaction(whitePlayerAccount, () => {
 		zkApp.start(whitePlayerAccount, blackPlayerAccount);
 	});
-	console.log('proving transaction...');
+	decoratedLog('proving transaction...');
 	await startTxn.prove();
-	console.log('signing transaction...');
+	decoratedLog('signing transaction...');
 	await startTxn.sign([whitePlayerKey]).send();
-	console.log('game started!');
-	console.log('gamestate:', zkApp.getGameState().toString());
+	decoratedLog('game started!');
+	decoratedLog('gamestate:', zkApp.getGameState().toString());
 };
 
 const move = async (args: { from: string; to: string; promotion: PromotionRankAsChar }) => {
-	console.log('moving...');
+	decoratedLog('moving...');
 	const { playerAccount, playerKey } = await getPlayer();
 	const txn = await Mina.transaction(playerAccount, () => {
 		zkApp.move(ChessMove.fromLAN(args.from, args.to, args.promotion));
 	});
-	console.log('proving transaction...');
+	decoratedLog('proving transaction...');
 	await txn.prove();
-	console.log('signing transaction...');
+	decoratedLog('signing transaction...');
 	await txn.sign([playerKey]).send();
-	console.log('moved!');
+	decoratedLog('moved!');
 };
 
 const draw = async () => {
-	console.log('drawing...');
+	decoratedLog('drawing...');
 	const { playerAccount, playerKey } = await getPlayer();
 	const txn = await Mina.transaction(playerAccount, () => {
 		zkApp.draw();
 	});
-	console.log('proving transaction...');
+	decoratedLog('proving transaction...');
 	await txn.prove();
-	console.log('signing transaction...');
+	decoratedLog('signing transaction...');
 	await txn.sign([playerKey]).send();
-	console.log('drawn!');
+	decoratedLog('drawn!');
 };
 const resign = async () => {
-	console.log('resigning...');
+	decoratedLog('resigning...');
 	const { playerAccount, playerKey } = await getPlayer();
 	const txn = await Mina.transaction(playerAccount, () => {
 		zkApp.resign();
 	});
-	console.log('proving transaction...');
+	decoratedLog('proving transaction...');
 	await txn.prove();
-	console.log('signing transaction...');
+	decoratedLog('signing transaction...');
 	await txn.sign([playerKey]).send();
-	console.log('resigned!');
+	decoratedLog('resigned!');
 };
 
 const getState = async () => {
-	console.log('getting state...');
+	decoratedLog('getting state...');
 	const state = zkApp.getGameState().toString();
-	console.log(state);
+	decoratedLog(state);
 };
 
 //helpers
@@ -135,7 +136,6 @@ export type ZkappWorkerReponse = {
 onmessage = async (event: MessageEvent<ZkappWorkerRequest>) => {
 	const fn = functions[event.data.fn] as (args: unknown) => Promise<unknown>;
 	const returnData = await fn(event.data.args);
-
 	const response: ZkappWorkerReponse = {
 		id: event.data.id,
 		data: returnData

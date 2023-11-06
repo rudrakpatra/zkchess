@@ -26,7 +26,7 @@ export class ZkappWorkerClient {
 
 	async getState() {
 		const result = await this._call('getState', {});
-		return JSON.parse(result as string);
+		return result;
 	}
 
 	worker: Worker;
