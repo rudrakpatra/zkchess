@@ -6,7 +6,7 @@ I made this project primarily to understand how Mina works.
 1. Proves that every move is played correctly and the final result win,loose,draw.
 2. Players can also create chess puzzles using a custom inital state of the Board.
 ### A simple UI demo
-
+<img src="https://github.com/rudrakpatra/zkchess/assets/84844790/54bf5d8e-344f-4564-aa95-54098beab065" height="500"/>
 
 # Usage
 1. Chess matches are verified onchain and player ratings can be trusted.
@@ -45,3 +45,14 @@ The smart contract has 4 methods.
 
 ### 😖 `resign()`
 1. the player calls this to resign.
+
+# Getting Started
+clone this repository
+go to contracts folder and run 
+`npm install` and then `npm run test` to test the contract.
+run `npm run build` to build the contracts
+
+go to ui folder and run
+`npm install` and then `npm run dev` to run it on dev mode
+
+you can check out this [youtube video](https://youtu.be/4SH52WuMwkI) (last updated on Nov 1, 2023) 
