@@ -50,6 +50,7 @@ The smart contract has 4 methods.
 clone this repository
 go to contracts folder and run 
 `npm install` and then `npm run test` to test the contract.
+
 run `npm run build` to build the contracts
 
 go to ui folder and run
