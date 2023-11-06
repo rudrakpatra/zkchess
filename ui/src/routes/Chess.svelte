@@ -6,7 +6,6 @@
 
 	let disableMove = true;
 	let msg = 'Open the console for msgs. Press init';
-	$: console.log(`msg at %c${Math.round(performance.now() / 1000)}s\n%c${msg}`, 'color: #2f0;', '');
 	let handleInit = () => {},
 		handleStart = () => {},
 		handleMove = (e: CustomEvent<ChessMoveUI>) => {},
@@ -14,30 +13,68 @@
 		handleResign = () => {},
 		handleGetState = () => {};
 
+	let timer = 0;
+	let timerIsRunning = false;
+	let interval = 0;
+	const startTimer = (startTime = 0) => {
+		timer = startTime;
+		timerIsRunning = true;
+		interval = setInterval(() => {
+			timer++;
+		}, 1000);
+	};
+	const stopTimer = () => {
+		timerIsRunning = false;
+		clearInterval(interval);
+	};
+
 	onMount(async () => {
-		const { ZkAppClient } = await import('$lib/ZkAppClient');
-		const client = new ZkAppClient();
-		client.onmessage((e) => (msg = e));
+		const { ZkappWorkerClient } = await import('$lib/zkapp/ZkappWorkerClient');
+		const client = new ZkappWorkerClient();
 		handleInit = async () => {
+			startTimer();
+			msg = `Initializing...`;
 			await client.init();
+			msg = `Initialized in ${timer}s. Press start.`;
+			stopTimer();
 		};
 		handleStart = async () => {
+			startTimer();
+			msg = `Starting...`;
 			await client.start();
+			msg = `Started in ${timer}s. Move a piece, draw or resign.`;
 			disableMove = false;
+			stopTimer();
 		};
 		handleMove = async (e: CustomEvent<ChessMoveUI>) => {
+			startTimer();
+			msg = `Moving...`;
 			disableMove = true;
 			await client.move(e.detail.from, e.detail.to, e.detail.promotion as PromotionRankAsChar);
+			msg = `Moved in ${timer}s. Move a piece, draw or resign or start again.`;
 			disableMove = false;
+			stopTimer();
 		};
 		handleDraw = async () => {
+			startTimer();
+			msg = `Drawing...`;
 			await client.draw();
+			msg = `Drawn in ${timer}s. Press start again.`;
+			stopTimer();
 		};
 		handleResign = async () => {
+			startTimer();
+			msg = `Resign...`;
 			await client.resign();
+			msg = `Resigned in ${timer}s. Press start again.`;
+			stopTimer();
 		};
 		handleGetState = async () => {
-			await client.getState();
+			startTimer();
+			msg = `Getting state...`;
+			const state = await client.getState();
+			msg = `Got state in ${timer}s. ${state}`;
+			stopTimer();
 		};
 	});
 </script>
@@ -45,7 +82,7 @@
 <div id="chess-container">
 	{#if disableMove}
 		<div class="overlay">
-			<div class="msg">{msg}</div>
+			<div class="msg">{msg} {timerIsRunning ? timer + 's' : ''}</div>
 		</div>
 	{/if}
 	<ChessUI on:move={handleMove} />

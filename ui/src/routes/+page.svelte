@@ -5,11 +5,19 @@
 <svelte:head>
 	<title>Mina zkChess UI</title>
 </svelte:head>
-<main class="flex-container">
-	<Chess />
+<main>
+	<section class="flex-container">
+		<Chess />
+	</section>
 </main>
 
 <style>
+	main {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		height: 100vh;
+	}
 	.flex-container {
 		display: flex;
 		flex-wrap: wrap;
