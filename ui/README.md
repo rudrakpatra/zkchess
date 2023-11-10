@@ -17,6 +17,7 @@ npm create svelte@latest my-app
 ## Developing
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+
 Try `npm install --force` if installing svelte-chess gives you problem.
 
 ```bash
