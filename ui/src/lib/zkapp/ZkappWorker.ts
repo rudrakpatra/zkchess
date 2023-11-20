@@ -1,5 +1,5 @@
 import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, Move, type PromotionRankAsChar } from '../../../../contracts/build/src';
+import { type Chess, Move, type PromotionRankAsChar } from 'zkchess';
 
 let deployerAccount: PublicKey,
 	deployerKey: PrivateKey,
@@ -16,7 +16,7 @@ const proofsEnabled = true;
 
 const init = async () => {
 	decoratedLog('importing contract...');
-	const { Chess } = await import('../../../../contracts/build/src');
+	const { Chess } = await import('zkchess');
 
 	decoratedLog('compiling...');
 	await Chess.compile();

@@ -33,6 +33,7 @@
 	"type": "module",
 	"dependencies": {
 		"o1js": "0.*",
-		"svelte-chess": "^0.11.1"
+		"svelte-chess": "^0.11.1",
+		"zkchess": "^0.1.0"
 	}
 }
