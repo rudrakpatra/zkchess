@@ -8,7 +8,7 @@
 	let msg = 'Open the console for msgs. Press init';
 	let handleInit = () => {},
 		handleStart = () => {},
-		handleMove = (e: CustomEvent<ChessMoveUI>) => {},
+		handleMove = (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
 		handleDraw = () => {},
 		handleResign = () => {},
 		handleGetState = () => {};
