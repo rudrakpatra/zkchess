@@ -1,5 +1,5 @@
 import { Field } from 'o1js';
-import { Position } from './Position/Position';
+import { Position } from '../Position/Position';
 
 export class Board {
   static bounds(position: Position) {

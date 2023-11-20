@@ -12,13 +12,11 @@ import {
 import { Position } from './Position/Position';
 import { GameState } from './GameState/GameState';
 import { Piece } from './Piece/Piece';
-import { ChessMove } from './ChessMove';
+import { Move } from './Move/Move';
 import { RANK } from './Piece/Rank';
 import { PlayerState } from './GameState/PlayerState/PlayerState';
 
-export { Chess };
-
-class Chess extends SmartContract {
+export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();
   @state(Field) gs1 = State<Field>();
   @state(PublicKey) whiteKey = State<PublicKey>();
@@ -34,20 +32,20 @@ class Chess extends SmartContract {
     this.setGameState(GameState.fromFEN());
   }
 
-  getAndAssertEqualsState() {
+  private getAndAssertEqualsState() {
     this.gs0.getAndAssertEquals();
     this.gs1.getAndAssertEquals();
     this.whiteKey.getAndAssertEquals();
     this.blackKey.getAndAssertEquals();
   }
-  verifySender(gameState: GameState) {
+  private verifySender(gameState: GameState) {
     this.sender
       .equals(
         Provable.if(gameState.turn, this.whiteKey.get(), this.blackKey.get())
       )
       .assertTrue('sender must be the player whose turn it is');
   }
-  getGameState() {
+  public getGameState() {
     return GameState.fromEncoded([this.gs0.get(), this.gs1.get()]);
   }
   setGameState(gameState: GameState) {
@@ -56,7 +54,7 @@ class Chess extends SmartContract {
     this.gs1.set(b);
   }
 
-  @method move(move: ChessMove) {
+  @method move(move: Move) {
     this.getAndAssertEqualsState();
     const gameState = this.getGameState();
     this.verifySender(gameState);
@@ -323,7 +321,7 @@ class Chess extends SmartContract {
     );
     opponent.setPlayerState(
       PlayerState.from(
-        opponent.playerState.pieces.map((piece, i) => {
+        opponent.playerState.pieces.map((piece) => {
           const position = piece.position;
           const enpassantPawnCapture = SPECIAL_EVENTS.capturesEnpassantPawn;
           const captured = [

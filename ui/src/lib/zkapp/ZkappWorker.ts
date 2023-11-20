@@ -1,5 +1,5 @@
 import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, ChessMove, type PromotionRankAsChar } from '../../../../contracts/build/src';
+import { type Chess, Move, type PromotionRankAsChar } from '../../../../contracts/build/src';
 
 let deployerAccount: PublicKey,
 	deployerKey: PrivateKey,
@@ -63,7 +63,7 @@ const move = async (args: { from: string; to: string; promotion: PromotionRankAs
 	decoratedLog('moving...');
 	const { playerAccount, playerKey } = await getPlayer();
 	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.move(ChessMove.fromLAN(args.from, args.to, args.promotion));
+		zkApp.move(Move.fromLAN(args.from, args.to, args.promotion));
 	});
 	decoratedLog('proving transaction...');
 	await txn.prove();

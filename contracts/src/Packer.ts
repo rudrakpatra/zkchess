@@ -29,7 +29,7 @@ export function pack(fields: Field[], shape: number[]): Field[] {
  *
  * example:
  *
- * `unpack([F(a1,a2,a3,a4,a5...)], [b2,b3]) => [F(a1,a2,...)],F(b3,b4,b5...)]`
+ * `unpack([F(a1,a2,a3,a4,a5...)], [2,3]) => [F(a1,a2,...)],F(a3,a4,a5...)]`
  * @param fields
  * @param shape
  * @returns

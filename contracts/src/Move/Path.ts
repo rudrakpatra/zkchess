@@ -1,8 +1,8 @@
 import { Field, Struct, Provable, Bool } from 'o1js';
 
-import { Position } from './Position/Position';
-import { Board } from './Boards';
-import { GameState } from './GameState/GameState';
+import { Position } from '../Position/Position';
+import { Board } from '../Board/Boards';
+import { GameState } from '../GameState/GameState';
 
 export class Path extends Struct({
   positions: Provable.Array(Position, 8),

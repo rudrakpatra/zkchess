@@ -1,7 +1,7 @@
-import { Field, Struct, Provable } from 'o1js';
+import { Field, Struct } from 'o1js';
 
-import { Position } from './Position/Position';
-import { PromotionRankAsChar, RANK } from './Piece/Rank';
+import { Position } from '../Position/Position';
+import { PromotionRankAsChar, RANK } from '../Piece/Rank';
 import { Path } from './Path';
 
 //LAN = Long Algebraic Notation
@@ -17,12 +17,12 @@ function getYfromLAN(lan: string) {
  * @param path The path of the move.
  * @param promotion The piece to promote to, if any.
  */
-export class ChessMove extends Struct({
+export class Move extends Struct({
   path: Path,
   promotion: Field,
 }) {
   static from(path: Position[], promotion: Field) {
-    return new ChessMove({ path: Path.from(path), promotion });
+    return new Move({ path: Path.from(path), promotion });
   }
   static fromLAN(from: string, to: string, promotion?: PromotionRankAsChar) {
     const x1 = getXfromLAN(from);
@@ -50,7 +50,7 @@ export class ChessMove extends Struct({
       Position.from(Field(p[0]), Field(p[1]))
     );
 
-    return new ChessMove({
+    return new Move({
       path: Path.from(positions),
       promotion: Field(RANK.from.char[promotion || 'q']),
     });
