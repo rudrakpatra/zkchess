@@ -25,5 +25,9 @@ export default defineConfig({
 	build: {
 		target: 'esnext'
 	},
+	worker: {
+		format: 'es',
+		plugins: [viteServerConfig]
+	},
 	optimizeDeps: { esbuildOptions: { target: 'esnext' } }
 });

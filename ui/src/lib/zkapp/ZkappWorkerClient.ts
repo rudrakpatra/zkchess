@@ -1,6 +1,4 @@
-// import { fetchAccount, PublicKey, Field, UInt64 } from "o1js";
-
-import ZkappWorkerUrl from './ZkappWorker?url';
+import ZkappWorker from './ZkappWorker?worker';
 import type { ZkappWorkerRequest, ZkappWorkerReponse, WorkerFunctions } from './ZkappWorker';
 
 export class ZkappWorkerClient {
@@ -36,7 +34,7 @@ export class ZkappWorkerClient {
 	nextId: number;
 
 	constructor() {
-		this.worker = new Worker(ZkappWorkerUrl, { type: 'module' });
+		this.worker = new ZkappWorker();
 		this.promises = {};
 		this.nextId = 0;
 
