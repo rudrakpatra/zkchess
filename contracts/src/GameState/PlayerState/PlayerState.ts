@@ -1,6 +1,8 @@
 import { Field, Bool, Struct, Provable } from 'o1js';
 import { Piece } from '../../Piece/Piece';
 import { pack, unpack } from '../../Packer';
+import { Position } from '../../Position/Position';
+import { RANK } from '../../Piece/Rank';
 
 /**
  * 16*10 bits + 2 bits = 162 bits
@@ -18,6 +20,7 @@ export class PlayerState extends Struct({
   ): PlayerState {
     return new PlayerState({ pieces, castling });
   }
+  static ENCODING_SCHEME = [160, 1, 1];
   /**
    *
    * @param field 160|1|1 = 162
@@ -26,7 +29,7 @@ export class PlayerState extends Struct({
   static fromEncoded(fields: Field[]): PlayerState {
     const [piecesBits, kingSideCastlingBit, queenSideCastlingBit] = unpack(
       fields,
-      [160, 1, 1]
+      PlayerState.ENCODING_SCHEME
     );
     const pieces = unpack([piecesBits], Array(16).fill(10)).map((f) =>
       Piece.fromEncoded([f])
@@ -47,10 +50,29 @@ export class PlayerState extends Struct({
         this.castling.kingSide.toField(),
         this.castling.queenSide.toField(),
       ],
-      [160, 1, 1]
+      PlayerState.ENCODING_SCHEME
     );
   }
   public toFields(): Field[] {
     return this.encode();
+  }
+
+  public isUncapturedPieceAt(position: Position): Bool {
+    return this.pieces
+      .map((p) => p.captured.not().and(p.position.equals(position)))
+      .reduce(Bool.or);
+  }
+  public getKing(): Piece {
+    return this.pieces.reduce(
+      (p, n) => Provable.if(n.rank.equals(RANK.from.name.KING), n, p),
+      this.pieces[0]
+    );
+  }
+  public getUncapturedPieceAt(position: Position): Piece {
+    this.isUncapturedPieceAt(position).assertTrue('no piece at position');
+    return this.pieces.reduce(
+      (p, n) => Provable.if(n.position.equals(position), n, p),
+      this.pieces[0]
+    );
   }
 }

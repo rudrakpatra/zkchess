@@ -1,4 +1,4 @@
-import { Field, Bool, Struct, UInt32 } from 'o1js';
+import { Field, Bool, Struct, Provable } from 'o1js';
 
 import { Piece } from '../Piece/Piece';
 import { Position } from '../Position/Position';
@@ -9,9 +9,6 @@ import { PlayerState } from './PlayerState/PlayerState';
 export const defaultFEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-/**
- * 162 + 162 + 1 + 1 + 3 + 7 + 1 = 336
- */
 export class GameState extends Struct({
   white: PlayerState,
   black: PlayerState,
@@ -20,6 +17,7 @@ export class GameState extends Struct({
   column: Field,
   halfmove: Field,
   canDraw: Bool,
+  finalized: Field,
 }) {
   static from(
     white: PlayerState,
@@ -28,7 +26,8 @@ export class GameState extends Struct({
     enpassant: Bool,
     column: Field,
     halfmove: Field,
-    canDraw: Bool
+    canDraw: Bool,
+    finalized: Field
   ): GameState {
     return new GameState({
       white,
@@ -38,11 +37,19 @@ export class GameState extends Struct({
       column,
       halfmove,
       canDraw,
+      finalized,
     });
   }
+  static FINALSTATES = {
+    ONGOING: 0,
+    WHITE_WON: 1,
+    BLACK_WON: 2,
+    DRAW: 3,
+  };
+  static ENCODING_SCHEME = [162, 162, 1, 1, 3, 8, 1, 2];
   /**
    *
-   * @param state 162|162|1|1|3|7|1 = 336
+   * @param state 162|162|1|1|3|8|1|2 = 340 bits
    * @returns
    */
   static fromEncoded(fields: Field[]): GameState {
@@ -54,7 +61,8 @@ export class GameState extends Struct({
       columnBits,
       halfmoveBits,
       canDrawBit,
-    ] = unpack(fields, [162, 162, 1, 1, 3, 7, 1]);
+      finalizedBits,
+    ] = unpack(fields, GameState.ENCODING_SCHEME);
 
     const white = PlayerState.fromEncoded([whiteBits]);
     const black = PlayerState.fromEncoded([blackBits]);
@@ -63,6 +71,7 @@ export class GameState extends Struct({
     const column = Field.fromFields([columnBits]);
     const halfmove = Field.fromFields([halfmoveBits]);
     const canDraw = Bool.fromFields([canDrawBit]);
+    const finalized = Field.fromFields([finalizedBits]);
     return GameState.from(
       white,
       black,
@@ -70,9 +79,11 @@ export class GameState extends Struct({
       enpassant,
       column,
       halfmove,
-      canDraw
+      canDraw,
+      finalized
     );
   }
+
   public encode(): Field[] {
     return pack(
       [
@@ -84,7 +95,7 @@ export class GameState extends Struct({
         ...this.halfmove.toFields(),
         ...this.canDraw.toFields(),
       ],
-      [162, 162, 1, 1, 3, 7, 1]
+      GameState.ENCODING_SCHEME
     );
   }
   static fromFEN(FEN: string = defaultFEN): GameState {
@@ -126,7 +137,8 @@ export class GameState extends Struct({
       Bool(enpassant !== '-'),
       Field(column),
       Field(Number(half)),
-      Bool(false)
+      Bool(false),
+      Field(GameState.FINALSTATES.ONGOING)
     );
   }
   public toString() {
@@ -170,5 +182,28 @@ export class GameState extends Struct({
 
     const halfmove = this.halfmove.toString();
     return `${board} ${turn} ${castling} ${enpassant} ${halfmove} 1`;
+  }
+  public self() {
+    return {
+      playerState: Provable.if(this.turn, this.white, this.black),
+      setPlayerState: (state: PlayerState) => {
+        this.white = Provable.if(this.turn, state, this.white);
+        this.black = Provable.if(this.turn, this.black, state);
+      },
+    };
+  }
+  public opponent() {
+    return {
+      playerState: Provable.if(this.turn, this.black, this.white),
+      setPlayerState: (state: PlayerState) => {
+        this.white = Provable.if(this.turn, this.white, state);
+        this.black = Provable.if(this.turn, state, this.black);
+      },
+    };
+  }
+  public isUncapturedPieceAt(position: Position) {
+    return this.white
+      .isUncapturedPieceAt(position)
+      .or(this.black.isUncapturedPieceAt(position));
   }
 }

@@ -1,4 +1,4 @@
-import { Field, Bool, Struct } from 'o1js';
+import { Field, Bool, Struct, Provable } from 'o1js';
 
 import { Position } from '../Position/Position';
 import { RANK } from './Rank';
@@ -12,13 +12,17 @@ export class Piece extends Struct({
   static from(position: Position, captured: Bool, rank: Field) {
     return new Piece({ position, captured, rank });
   }
+  static ENCODING_SCHEME = [6, 1, 3];
   /**
    * 6 bit position + 1bit + 3 bits rank = 10 bits
    * @param bits
    * @returns
    */
   static fromEncoded(fields: Field[]): Piece {
-    const [positionBits, capturedBit, rankBits] = unpack(fields, [6, 1, 3]);
+    const [positionBits, capturedBit, rankBits] = unpack(
+      fields,
+      Piece.ENCODING_SCHEME
+    );
     return Piece.from(
       Position.fromEncoded([positionBits]),
       Bool.fromFields([capturedBit]),
@@ -29,7 +33,7 @@ export class Piece extends Struct({
   public encode(): Field[] {
     return pack(
       [...this.position.encode(), this.captured.toField(), this.rank],
-      [6, 1, 3]
+      Piece.ENCODING_SCHEME
     );
   }
 

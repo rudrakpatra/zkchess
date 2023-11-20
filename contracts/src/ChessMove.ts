@@ -2,14 +2,7 @@ import { Field, Struct, Provable } from 'o1js';
 
 import { Position } from './Position/Position';
 import { PromotionRankAsChar, RANK } from './Piece/Rank';
-
-class Path extends Struct({
-  positions: Provable.Array(Position, 8),
-}) {
-  static from(path: Position[]) {
-    return new Path({ positions: path });
-  }
-}
+import { Path } from './Path';
 
 //LAN = Long Algebraic Notation
 function getXfromLAN(lan: string) {
