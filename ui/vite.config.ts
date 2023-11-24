@@ -27,7 +27,7 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es',
-		plugins: [crossOriginIsolationPlugin()]
+		plugins: [sveltekit(), crossOriginIsolationPlugin()]
 	},
 	optimizeDeps: { esbuildOptions: { target: 'esnext' } }
 });
