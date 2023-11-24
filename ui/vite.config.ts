@@ -2,7 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type ViteDevServer, type PreviewServerForHook } from 'vite';
 
 /** @type {import('vite').Plugin} */
-const viteServerConfig = {
+const crossOriginIsolationPlugin = () => ({
 	name: 'cross-origin-isolation',
 	configureServer: (server: ViteDevServer) => {
 		server.middlewares.use((_, response, next) => {
@@ -18,16 +18,16 @@ const viteServerConfig = {
 			next();
 		});
 	}
-};
+});
 
 export default defineConfig({
-	plugins: [sveltekit(), viteServerConfig],
+	plugins: [sveltekit(), crossOriginIsolationPlugin()],
 	build: {
 		target: 'esnext'
 	},
 	worker: {
 		format: 'es',
-		plugins: [viteServerConfig]
+		plugins: [crossOriginIsolationPlugin()]
 	},
 	optimizeDeps: { esbuildOptions: { target: 'esnext' } }
 });
