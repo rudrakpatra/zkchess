@@ -1,5 +1,5 @@
 {
-	"name": "ui",
+	"name": "zkchess-ui",
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "vite dev",
@@ -31,9 +31,12 @@
 		"vite": "^4.4.2"
 	},
 	"type": "module",
+	"overrides": {
+		"svelte": "^4.0.5"
+	},
 	"dependencies": {
 		"o1js": "0.*",
 		"svelte-chess": "^0.11.1",
-		"zkchess": "^0.1.0"
+		"zkchess-contracts": "^0.1.0"
 	}
 }

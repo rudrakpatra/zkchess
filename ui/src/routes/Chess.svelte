@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
 	import { Chess as ChessUI } from 'svelte-chess';
-	import type { PromotionRankAsChar } from '../../../contracts/build/src';
+	import type { PromotionRankAsChar } from 'zkchess-contracts';
 	import { onMount } from 'svelte';
 
 	let disableMove = true;
