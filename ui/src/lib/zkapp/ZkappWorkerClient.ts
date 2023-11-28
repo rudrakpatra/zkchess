@@ -39,7 +39,6 @@ export class ZkappWorkerClient {
 		this.nextId = 0;
 
 		this.worker.onmessage = (event: MessageEvent<ZkappWorkerReponse>) => {
-			console.log('from worker', event.data);
 			this.promises[event.data.id].resolve(event.data.data);
 			delete this.promises[event.data.id];
 		};

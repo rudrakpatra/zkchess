@@ -72,9 +72,7 @@ export class Chess extends SmartContract {
     const endPos = path.end();
     const pathIsValid = path.isValid(gameState);
     //find my piece
-    // const myPiece = self.get.pieces[ID];
-    const myPiece = self.playerState.getUncapturedPieceAt(startPos);
-
+    const myPiece = self.playerState.checkAndGetUncapturedPieceAt(startPos);
     const ID = self.playerState.pieces.reduce(
       (acc, _, i) =>
         Provable.if(
@@ -265,8 +263,10 @@ export class Chess extends SmartContract {
       .reduce(Bool.or)
       .assertTrue('piece must move according to its rank');
 
-    //CURRENTLY NOT CHECKING if move puts own king in check
-    //KING can be captured which declares win or loss
+    // CURRENTLY NOT CHECKING if move puts own king in check
+    // takes a lot of memory!!!
+
+    // KING can be captured which declares win or loss
 
     //UPDATE GAME STATE
     self.setPlayerState(
@@ -370,10 +370,13 @@ export class Chess extends SmartContract {
     );
 
     // TODO: stalemate
+    // Normal stalemate check not possible
+    // takes a lot of memory!!!
+
     // there is a possibleMoveLeft for the next player
     // the current player must provide a valid possible move for the next player (witness)
     // the possible move should be private
-
+    // check the possible move is valid
     const possiblyNoValidMoveLeft = Bool(false);
 
     //update canDraw

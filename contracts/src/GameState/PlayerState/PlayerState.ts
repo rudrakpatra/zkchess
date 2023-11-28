@@ -68,7 +68,7 @@ export class PlayerState extends Struct({
       this.pieces[0]
     );
   }
-  public getUncapturedPieceAt(position: Position): Piece {
+  public checkAndGetUncapturedPieceAt(position: Position): Piece {
     this.isUncapturedPieceAt(position).assertTrue('no piece at position');
     return this.pieces.reduce(
       (p, n) => Provable.if(n.position.equals(position), n, p),
