@@ -1,112 +1,133 @@
 <script lang="ts">
+	import Player from './../lib/Player.svelte';
 	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
 	import { Chess as ChessUI } from 'svelte-chess';
 	import type { PromotionRankAsChar } from 'zkchess-contracts';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import { Stopwatch } from '$lib/Stopwatch';
+	import toast from 'svelte-french-toast';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut, elasticIn } from 'svelte/easing';
 
-	let disableMove = true;
-	let msg = 'Open the console for msgs. Press init';
-	let handleInit = () => {},
-		handleStart = () => {},
+	let stopwatch = new Stopwatch();
+	let clientIdle = true;
+	$: if (clientIdle) {
+		const time = stopwatch.reset();
+		toast.success(`took ${time}`, { icon: '⏱️' });
+	} else {
+		stopwatch.start();
+	}
+
+	let gameStarted = false;
+
+	let msg = 'click to compile and start the game';
+	let handleCompileAndStartGame = () => {},
 		handleMove = (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
 		handleDraw = () => {},
 		handleResign = () => {},
 		handleGetState = () => {};
 
-	let timer = 0;
-	let timerIsRunning = false;
-	let interval = 0;
-	const startTimer = (startTime = 0) => {
-		stopTimer();
-		timer = startTime;
-		timerIsRunning = true;
-		interval = setInterval(() => {
-			timer++;
-		}, 1000);
-	};
-	const stopTimer = () => {
-		timerIsRunning = false;
-		clearInterval(interval);
-	};
-
+	let loadFen: (fen: string) => void;
 	onMount(async () => {
 		const { ZkappWorkerClient } = await import('$lib/zkapp/ZkappWorkerClient');
 		const client = new ZkappWorkerClient();
-		handleInit = async () => {
-			startTimer();
-			msg = `Initializing...`;
-			await client.init();
-			msg = `Initialized in ${timer}s. Press start.`;
-			stopTimer();
-		};
-		handleStart = async () => {
-			startTimer();
-			msg = `Starting...`;
-			await client.start();
-			msg = `Started in ${timer}s. Move a piece, draw or resign.`;
-			disableMove = false;
-			stopTimer();
+		handleCompileAndStartGame = async () => {
+			clientIdle = false;
+			await toast.promise(client.init(), {
+				loading: 'Compiling...',
+				success: 'Compiled!',
+				error: 'Compilation failed.'
+			});
+			await toast.promise(client.start(), {
+				loading: 'Starting...',
+				success: 'Game Started!',
+				error: 'Could not start the game.'
+			});
+			gameStarted = true;
+			clientIdle = true;
 		};
 		handleMove = async (e: CustomEvent<ChessMoveUI>) => {
-			startTimer();
-			msg = `Moving...`;
-			disableMove = true;
-			await client.move(e.detail.from, e.detail.to, e.detail.promotion as PromotionRankAsChar);
-			msg = `Moved in ${timer}s. Move a piece, draw or resign or start again.`;
-			disableMove = false;
-			stopTimer();
+			clientIdle = false;
+			await toast.promise(
+				client.move(e.detail.from, e.detail.to, e.detail.promotion as PromotionRankAsChar),
+				{
+					loading: 'Moving...',
+					success: 'Moved!',
+					error: 'Failed to move.'
+				}
+			);
+			clientIdle = true;
 		};
 		handleDraw = async () => {
-			startTimer();
-			msg = `Drawing...`;
-			await client.draw();
-			msg = `Drawn in ${timer}s. Press start again.`;
-			stopTimer();
+			clientIdle = false;
+			await toast.promise(client.draw(), {
+				loading: 'Drawing...',
+				success: 'Drawn!',
+				error: 'Failed to draw.'
+			});
+			clientIdle = true;
 		};
 		handleResign = async () => {
-			startTimer();
-			msg = `Resign...`;
-			await client.resign();
-			msg = `Resigned in ${timer}s. Press start again.`;
-			stopTimer();
+			clientIdle = false;
+			await toast.promise(client.resign(), {
+				loading: 'Resigning...',
+				success: 'Resigned!',
+				error: 'Failed to resign.'
+			});
+			clientIdle = true;
 		};
 		handleGetState = async () => {
-			startTimer();
-			msg = `Getting state...`;
-			disableMove = true;
-			const state = await client.getState();
-			console.log(`received state:${state}`);
-			disableMove = false;
-			stopTimer();
+			clientIdle = false;
+			const state = await toast.promise(client.getState(), {
+				loading: 'Getting state...',
+				success: 'Got state!',
+				error: 'Failed to get state.'
+			});
+			loadFen(state as string);
+			clientIdle = true;
 		};
+	});
+	onDestroy(() => {
+		stopwatch.destroy();
 	});
 </script>
 
-<div id="chess-container">
-	{#if disableMove}
-		<div class="overlay">
-			<div class="msg">{msg} {timerIsRunning ? timer + 's' : ''}</div>
+<div class="flex-container">
+	<Player />
+</div>
+<div style="cursor:{!clientIdle ? 'wait' : ''};" class="fluid-container shadow">
+	<ChessUI on:move={handleMove} bind:load={loadFen} />
+	{#if !clientIdle || !gameStarted}
+		<div class="overlay" transition:fade>
+			{#if clientIdle}
+				<button
+					class="msg"
+					transition:fly={{ y: 20, easing: cubicOut }}
+					on:click={handleCompileAndStartGame}
+				>
+					{msg}
+				</button>
+			{/if}
 		</div>
 	{/if}
-	<ChessUI on:move={handleMove} />
 </div>
-<div class="list">
-	<p>zkChess 0.0.1</p>
-	<hr />
-	<button on:click={handleInit}>init</button>
-	<button on:click={handleStart}>start</button>
-	<button on:click={handleDraw}>draw</button>
-	<button on:click={handleResign}>resign</button>
-	<button on:click={handleGetState}>get gamestate</button>
+<div class="flex-container">
+	<Player />
+	<button disabled={!clientIdle || !gameStarted} on:click={handleDraw}>draw</button>
+	<button disabled={!clientIdle || !gameStarted} on:click={handleResign}>resign</button>
+	<button disabled={!clientIdle || !gameStarted} on:click={handleGetState}>get gamestate</button>
 </div>
 
 <style>
-	#chess-container {
+	.shadow {
+		background-color: #0006;
+		box-shadow: 0 0 0.5rem #0006;
+	}
+
+	.fluid-container {
 		position: relative;
 		width: 100vw;
 		max-width: min(600px, calc(100vh - 1rem));
-
-		background: #eee;
 		aspect-ratio: 1;
 	}
 	.overlay {
@@ -120,44 +141,15 @@
 		align-items: center;
 		z-index: 5;
 		background-color: #222a;
-	}
-
-	.list {
-		flex-grow: 1;
-		max-width: 200px;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: start;
-		flex-direction: column;
-		gap: 0.25rem;
-		background-color: #eee;
-		padding: 0.5rem 0.5rem;
-		border-radius: 0.2rem;
+		user-select: none;
 	}
 	.msg {
 		font-size: 1.2rem;
-		padding: 0.5rem;
-		margin: 0.5rem;
+		color: black;
 		background-color: #eee;
+		box-shadow: 0 0 0.5rem #0006;
+		margin: 0.5rem;
+		padding: 0.5rem;
 		border-radius: 0.2rem;
-	}
-
-	@media screen and (max-width: 800px) {
-		.list {
-			max-width: min(600px, calc(100vh - 1rem));
-			width: 100%;
-			flex-direction: row;
-		}
-		.msg {
-			font-size: 1.1rem;
-		}
-	}
-	@media screen and (max-width: 450px) {
-		.list {
-			flex-direction: column;
-		}
-		.msg {
-			font-size: 1rem;
-		}
 	}
 </style>
