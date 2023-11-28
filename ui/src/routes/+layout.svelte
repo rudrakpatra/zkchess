@@ -1,32 +1,17 @@
 <script>
+	import '../app.pcss';
 	import '../styles/globals.css';
 	import { Toaster } from 'svelte-french-toast';
-	import ConnectWalletButton from '$lib/ConnectWalletButton.svelte';
 </script>
 
-<Toaster containerStyle="top:50vh" />
-<header>
-	<nav>
-		<a href="/" style="font-size:1.5rem">zkchess 0.0.1</a>
-		<ConnectWalletButton />
-	</nav>
-</header>
+<Toaster />
 <slot />
+<footer class="absolute bottom-0 w-full">
+	<p class="mx-auto text-center text-lg md:text-xl max-w-md text-balance">
+		Check out the source code on
+		<a href="https://github.com/rudrakpatra/zkchess" class="font-medium text-[#6819fd]">Github</a>.
+	</p>
+</footer>
 
 <style>
-	header {
-		background-color: #000;
-		color: #fff;
-		padding: 0.5rem;
-		white-space: nowrap;
-	}
-	nav {
-		display: flex;
-		gap: 2rem;
-		align-items: center;
-	}
-	/* separatation */
-	nav > a:first-child {
-		margin-right: auto;
-	}
 </style>

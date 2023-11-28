@@ -1,13 +1,11 @@
 <script lang="ts">
-	import Player from './../lib/Player.svelte';
+	import Player from '../../lib/Player.svelte';
 	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
 	import { Chess as ChessUI } from 'svelte-chess';
 	import type { PromotionRankAsChar } from 'zkchess-contracts';
 	import { onDestroy, onMount } from 'svelte';
 	import { Stopwatch } from '$lib/Stopwatch';
 	import toast from 'svelte-french-toast';
-	import { fade, fly } from 'svelte/transition';
-	import { cubicOut, elasticIn } from 'svelte/easing';
 
 	let stopwatch = new Stopwatch();
 	let clientIdle = true;
@@ -20,7 +18,6 @@
 
 	let gameStarted = false;
 
-	let msg = 'click to compile and start the game';
 	let handleCompileAndStartGame = () => {},
 		handleMove = (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
 		handleDraw = () => {},
@@ -92,64 +89,9 @@
 	});
 </script>
 
-<div class="flex-container">
-	<Player />
-</div>
-<div style="cursor:{!clientIdle ? 'wait' : ''};" class="fluid-container shadow">
+<div class=" max-w-[600px]">
 	<ChessUI on:move={handleMove} bind:load={loadFen} />
-	{#if !clientIdle || !gameStarted}
-		<div class="overlay" transition:fade>
-			{#if clientIdle}
-				<button
-					class="msg"
-					transition:fly={{ y: 20, easing: cubicOut }}
-					on:click={handleCompileAndStartGame}
-				>
-					{msg}
-				</button>
-			{/if}
-		</div>
-	{/if}
-</div>
-<div class="flex-container">
-	<Player />
-	<button disabled={!clientIdle || !gameStarted} on:click={handleDraw}>draw</button>
-	<button disabled={!clientIdle || !gameStarted} on:click={handleResign}>resign</button>
-	<button disabled={!clientIdle || !gameStarted} on:click={handleGetState}>get gamestate</button>
 </div>
 
 <style>
-	.shadow {
-		background-color: #0006;
-		box-shadow: 0 0 0.5rem #0006;
-	}
-
-	.fluid-container {
-		position: relative;
-		width: 100vw;
-		max-width: min(600px, calc(100vh - 1rem));
-		aspect-ratio: 1;
-	}
-	.overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		display: grid;
-		place-content: center;
-		align-items: center;
-		z-index: 5;
-		background-color: #222a;
-		user-select: none;
-	}
-	.msg {
-		font-size: 1.2rem;
-		color: black;
-		background-color: #eee;
-		box-shadow: 0 0 0.5rem #0006;
-		margin: 0.5rem;
-		padding: 0.5rem;
-		border-radius: 0.2rem;
-	}
 </style>
