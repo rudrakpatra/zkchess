@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Player from '../../lib/Player.svelte';
 	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
 	import { Chess as ChessUI } from 'svelte-chess';
 	import type { PromotionRankAsChar } from 'zkchess-contracts';
@@ -89,9 +88,7 @@
 	});
 </script>
 
-<div class=" max-w-[600px]">
-	<ChessUI on:move={handleMove} bind:load={loadFen} />
-</div>
+<ChessUI on:move={handleMove} bind:load={loadFen} />
 
 <style>
 </style>
