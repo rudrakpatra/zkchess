@@ -1,4 +1,4 @@
-import { Field, Bool, Struct, Provable } from 'o1js';
+import { Field, Bool, Struct } from 'o1js';
 
 import { Position } from '../Position/Position';
 import { RANK } from './Rank';
@@ -41,10 +41,10 @@ export class Piece extends Struct({
     return this.encode();
   }
 
-  public toString() {
+  public toFEN() {
     return (
-      this.position.x.toString() +
-      this.position.y.toString() +
+      this.position.row.toString() +
+      this.position.col.toString() +
       (this.captured.toString() == 'true' ? '-' : '+') +
       RANK.to.name(this.rank.toBigInt())
     );

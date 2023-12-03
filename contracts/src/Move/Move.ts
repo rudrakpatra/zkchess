@@ -1,8 +1,5 @@
-import { Field, Struct } from 'o1js';
-
+import { Bool, Struct } from 'o1js';
 import { Position } from '../Position/Position';
-import { PromotionRankAsChar, RANK } from '../Piece/Rank';
-import { Path } from './Path';
 
 //LAN = Long Algebraic Notation
 function getXfromLAN(lan: string) {
@@ -12,56 +9,40 @@ function getYfromLAN(lan: string) {
   return lan.charCodeAt(0) - 97;
 }
 
-/**
- * A chess move represented as a path of 8 positions.
- * @param path The path of the move.
- * @param promotion The piece to promote to, if any.
- */
-export class Move extends Struct({
-  path: Path,
-  promotion: Field,
-}) {
-  static from(path: Position[], promotion: Field) {
-    return new Move({ path: Path.from(path), promotion });
-  }
-  static fromLAN(from: string, to: string, promotion?: PromotionRankAsChar) {
-    const x1 = getXfromLAN(from);
-    const y1 = getYfromLAN(from);
-    let x2 = getXfromLAN(to);
-    let y2 = getYfromLAN(to);
-    let count = 0;
-    const path = [];
-    while ((x2 != x1 && y2 != y1) || count < 8) {
-      count++;
-      path.push([x2, y2]);
-      if (x2 > x1) {
-        x2--;
-      } else if (x2 < x1) {
-        x2++;
-      }
-      if (y2 > y1) {
-        y2--;
-      } else if (y2 < y1) {
-        y2++;
-      }
-    }
-    const reversed = path.reverse();
-    const positions = reversed.map((p) =>
-      Position.from(Field(p[0]), Field(p[1]))
-    );
+function getLANfromX(x: bigint) {
+  return (8n - x).toString();
+}
+function getLANfromY(y: bigint) {
+  return String.fromCharCode(Number(97n + y));
+}
 
+export class Move extends Struct({
+  from: Position,
+  to: Position,
+  valid: Bool,
+}) {
+  static from(from: Position, to: Position, valid = Bool(true)) {
+    return new Move({ from, to, valid });
+  }
+  static fromLAN(from: string, to: string) {
     return new Move({
-      path: Path.from(positions),
-      promotion: Field(RANK.from.char[promotion || 'q']),
+      from: Position.from(getXfromLAN(from), getYfromLAN(from)),
+      to: Position.from(getXfromLAN(to), getYfromLAN(to)),
+      valid: Bool(true),
     });
   }
-  public toString() {
+  static addCondition(move: Move, condition: Bool) {
+    return Move.from(move.from, move.to, move.valid.and(condition));
+  }
+  public equals(move: Move) {
+    return this.from.equals(move.from) && this.to.equals(move.to);
+  }
+  public toLAN() {
     return (
-      this.path.positions[0].toString() +
-      this.path.positions[7].toString() +
-      (this.promotion.toString() == '5'
-        ? ''
-        : RANK.to.char(this.promotion.toBigInt()))
+      getLANfromY(this.from.col.toBigInt()) +
+      getLANfromX(this.from.row.toBigInt()) +
+      getLANfromY(this.to.col.toBigInt()) +
+      getLANfromX(this.to.row.toBigInt())
     );
   }
 }

@@ -1,7 +1,8 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
+import { AccountUpdate, Field, Mina, PrivateKey, PublicKey } from 'o1js';
 
 import { Chess } from './Chess.js';
 import { Move } from './Move/Move.js';
+import { RANK } from './Piece/Rank.js';
 
 const proofsEnabled = false;
 describe('Chess.ts', () => {
@@ -50,13 +51,13 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
       zkApp.resign();
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
   });
 
   it('start game twice', async () => {
@@ -66,21 +67,21 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.move(Move.fromLAN('b1', 'a3'));
+      zkApp.move(Move.fromLAN('b1', 'a3'), Field(RANK.from.name.ROOK));
     });
     await txn2.prove();
     await txn2.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const txn3 = await Mina.transaction(whitePlayerAccount, () => {
       zkApp.start(whitePlayerAccount, blackPlayerAccount);
     });
     await txn3.prove();
     await txn3.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
   });
 
   it('halfmove', async () => {
@@ -91,7 +92,7 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const moves = [
       ['b1', 'c3'],
@@ -101,13 +102,15 @@ describe('Chess.ts', () => {
     for (let i = 0; i < moves.length; i++) {
       const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
       const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-      console.log(moves[i][0], moves[i][1]);
+      const from = moves[i][0];
+      const to = moves[i][1];
+      console.log(from, to);
       const txn2 = await Mina.transaction(player, () => {
-        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+        zkApp.move(Move.fromLAN(from, to), Field(RANK.from.name.ROOK));
       });
       await txn2.prove();
       await txn2.sign([key]).send();
-      console.log(zkApp.getGameState().toString());
+      console.log(zkApp.getGameState().toFEN());
     }
   });
 
@@ -119,7 +122,7 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const moves = [
       ['e2', 'e4'],
@@ -131,13 +134,15 @@ describe('Chess.ts', () => {
     for (let i = 0; i < moves.length; i++) {
       const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
       const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-      console.log(moves[i][0], moves[i][1]);
+      const from = moves[i][0];
+      const to = moves[i][1];
+      console.log(from, to);
       const txn2 = await Mina.transaction(player, () => {
-        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+        zkApp.move(Move.fromLAN(from, to), Field(RANK.from.name.ROOK));
       });
       await txn2.prove();
       await txn2.sign([key]).send();
-      console.log(zkApp.getGameState().toString());
+      console.log(zkApp.getGameState().toFEN());
     }
   });
 
@@ -149,7 +154,7 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const moves = [
       ['e2', 'e4'],
@@ -163,13 +168,15 @@ describe('Chess.ts', () => {
     for (let i = 0; i < moves.length; i++) {
       const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
       const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-      console.log(moves[i][0], moves[i][1]);
+      const from = moves[i][0];
+      const to = moves[i][1];
+      console.log(from, to);
       const txn2 = await Mina.transaction(player, () => {
-        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+        zkApp.move(Move.fromLAN(from, to), Field(RANK.from.name.ROOK));
       });
       await txn2.prove();
       await txn2.sign([key]).send();
-      console.log(zkApp.getGameState().toString());
+      console.log(zkApp.getGameState().toFEN());
     }
   });
 
@@ -181,7 +188,7 @@ describe('Chess.ts', () => {
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toString());
+    console.log(zkApp.getGameState().toFEN());
 
     const moves = [
       ['b2', 'b4'],
@@ -197,13 +204,15 @@ describe('Chess.ts', () => {
     for (let i = 0; i < moves.length; i++) {
       const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
       const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-      console.log(moves[i][0], moves[i][1]);
+      const from = moves[i][0];
+      const to = moves[i][1];
+      console.log(from, to);
       const txn2 = await Mina.transaction(player, () => {
-        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+        zkApp.move(Move.fromLAN(from, to), Field(RANK.from.name.ROOK));
       });
       await txn2.prove();
       await txn2.sign([key]).send();
-      console.log(zkApp.getGameState().toString());
+      console.log(zkApp.getGameState().toFEN());
     }
   });
 });

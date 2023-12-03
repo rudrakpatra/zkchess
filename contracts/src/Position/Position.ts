@@ -2,11 +2,11 @@ import { Field, Bool, Struct } from 'o1js';
 import { pack, unpack } from '../Packer';
 
 export class Position extends Struct({
-  x: Field,
-  y: Field,
+  row: Field,
+  col: Field,
 }) {
-  static from(x: number | Field, y: number | Field) {
-    return new Position({ x: Field.from(x), y: Field.from(y) });
+  static from(row: number | Field, col: number | Field) {
+    return new Position({ row: Field.from(row), col: Field.from(col) });
   }
   static ENCODING_SCHEME = [3, 3];
   static fromEncoded(fields: Field[]): Position {
@@ -14,21 +14,17 @@ export class Position extends Struct({
     return Position.from(x, y);
   }
   public encode(): Field[] {
-    return pack([this.x, this.y], Position.ENCODING_SCHEME);
+    return pack([this.row, this.col], Position.ENCODING_SCHEME);
   }
   public toFields(): Field[] {
     return this.encode();
   }
-  public set(position: Position) {
-    this.x = position.x;
-    this.y = position.y;
-  }
   public equals(position: Position): Bool {
-    return this.x.equals(position.x).and(this.y.equals(position.y));
+    return this.row.equals(position.row).and(this.col.equals(position.col));
   }
   public distanceSquared(position: Position): Field {
-    const dx = this.x.sub(position.x);
-    const dy = this.y.sub(position.y);
-    return dx.mul(dx).add(dy.mul(dy));
+    const drow = this.row.sub(position.row);
+    const dcol = this.col.sub(position.col);
+    return drow.mul(drow).add(dcol.mul(dcol));
   }
 }

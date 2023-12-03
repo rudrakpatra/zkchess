@@ -46,7 +46,7 @@ describe('Piece', () => {
         Position.from(1, 6),
         Bool(false),
         Field(RANK.from.name.PAWN)
-      ).toString()
+      ).toFEN()
     ).toEqual('16+PAWN');
   });
   it('should be able to be displayed', () => {
@@ -55,7 +55,7 @@ describe('Piece', () => {
         Position.from(7, 7),
         Bool(false),
         Field(RANK.from.name.KING)
-      ).toString()
+      ).toFEN()
     ).toEqual('77+KING');
   });
 });

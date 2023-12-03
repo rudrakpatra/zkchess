@@ -6,7 +6,6 @@ export type RankAsName =
   | 'QUEEN'
   | 'KING';
 export type RankAsChar = 'p' | 'r' | 'n' | 'b' | 'q' | 'k';
-export type PromotionRankAsChar = 'r' | 'n' | 'b' | 'q';
 export const RANK = {
   from: {
     name: {
