@@ -1,4 +1,4 @@
-import { Field, Bool, Struct, Provable, Scalar } from 'o1js';
+import { Field, Bool, Struct, Provable, Scalar, provable } from 'o1js';
 
 import { Piece } from '../Piece/Piece';
 import { Position } from '../Position/Position';
@@ -205,11 +205,12 @@ export class GameState extends Struct({
    * @returns
    */
   private getMovesfromRay(origin: Position, delta: Position) {
-    const ray = Array(8).map((_, i) => {
-      const row = origin.row.add(delta.row.mul(i));
-      const col = origin.col.add(delta.col.mul(i));
-      return Position.from(row, col);
-    });
+    const ray = [0, 1, 2, 3, 4, 5, 6, 7].map((i) =>
+      Position.from(
+        origin.row.add(delta.row.mul(i)),
+        origin.col.add(delta.col.mul(i))
+      )
+    );
     const march1 = Bool(true);
     const march2 = this.isUncapturedPieceAt(ray[1]).not();
     const march3 = this.isUncapturedPieceAt(ray[2]).not().and(march2);

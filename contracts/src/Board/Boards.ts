@@ -1,13 +1,17 @@
-import { Field } from 'o1js';
+import { Bool, Field, Provable } from 'o1js';
 import { Position } from '../Position/Position';
 
 export class Board {
-  static size = 8;
   static bounds(position: Position) {
-    return position.row
-      .greaterThanOrEqual(Field.from(0))
-      .and(position.row.lessThan(Field.from(Board.size)))
-      .and(position.col.greaterThanOrEqual(Field.from(0)))
-      .and(position.col.lessThan(Field.from(Board.size)));
+    return [
+      // 0 <= row <= 7
+      [0, 1, 2, 3, 4, 5, 6, 7]
+        .map((i) => Field.from(i).equals(position.row))
+        .reduce(Bool.or),
+      // 0 <= col <= 7
+      [0, 1, 2, 3, 4, 5, 6, 7]
+        .map((i) => Field.from(i).equals(position.col))
+        .reduce(Bool.or),
+    ].reduce(Bool.and);
   }
 }
