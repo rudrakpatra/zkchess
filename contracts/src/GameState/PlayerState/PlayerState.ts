@@ -3,7 +3,6 @@ import { Piece } from '../../Piece/Piece';
 import { pack, unpack } from '../../Packer';
 import { Position } from '../../Position/Position';
 import { RANK } from '../../Piece/Rank';
-import { Move } from '../../Move/Move';
 
 /**
  * 16*10 bits + 2 bits = 162 bits

@@ -1,4 +1,4 @@
-import { Field, Bool, Struct, Provable, Scalar, provable } from 'o1js';
+import { Field, Bool, Struct, Provable } from 'o1js';
 
 import { Piece } from '../Piece/Piece';
 import { Position } from '../Position/Position';
@@ -204,7 +204,7 @@ export class GameState extends Struct({
    * @param delta the ray marching direction
    * @returns
    */
-  private getMovesfromRay(origin: Position, delta: Position) {
+  public getMovesfromRay(origin: Position, delta: Position) {
     const ray = [0, 1, 2, 3, 4, 5, 6, 7].map((i) =>
       Position.from(
         origin.row.add(delta.row.mul(i)),
@@ -255,7 +255,7 @@ export class GameState extends Struct({
    * **Warning**: This function does not check if the king is in check.
    *
    */
-  private generateValidMovesWithoutChecks(): Move[] {
+  public generateMovesWithoutChecks(): Move[] {
     const self = this.self();
     //for each piece
     return self.pieces.flatMap(({ rank, position, captured }) => {
@@ -270,19 +270,22 @@ export class GameState extends Struct({
           [this.KING(position), RANK.from.name.KING],
         ] as Array<[Move[], number]>
       )
-        .flatMap(([moves, rankToMatch]) =>
-          moves.map((m) => Move.addCondition(m, rank.equals(rankToMatch)))
-        )
-        .map((m) =>
-          [
+        .flatMap(([moves, rankToMatch]) => {
+          Provable.log(moves.length, 'moves for', rankToMatch);
+          return moves.map((m) => {
+            return Move.addCondition(m, rank.equals(rankToMatch));
+          });
+        })
+        .map((m) => {
+          return [
             //piece must not be captured
             captured.not(),
             //piece must not capture own piece
             self.isUncapturedPieceAt(m.to).not(),
             //piece does not move out of the board
             Board.bounds(m.to),
-          ].reduce(Move.addCondition, m)
-        );
+          ].reduce(Move.addCondition, m);
+        });
     });
   }
   /**
@@ -295,7 +298,8 @@ export class GameState extends Struct({
    * @param move the move after which we check these conditions
    * @returns whether the move obeys these conditions
    */
-  private isKingSafe(move: Move) {
+  public isKingSafe(move: Move) {
+    Provable.log('isKingSafe called on move', move);
     const self = this.self();
     const opponent = this.opponent();
 
@@ -327,7 +331,6 @@ export class GameState extends Struct({
 
     //the row where the pawn moved to by 2 squares
     const enpassantRow = Provable.if(this.turn, Field(2), Field(5));
-
     const newSelf = PlayerState.from(
       self.pieces.map(({ position, captured, rank }) => {
         //normal move
@@ -345,7 +348,7 @@ export class GameState extends Struct({
             position.equals(Position.from(castlingRow, 7))
           ),
           Position.from(castlingRow, 5),
-          position
+          newPosition
         );
 
         //queen side rook move when castling
@@ -355,12 +358,11 @@ export class GameState extends Struct({
             position.equals(Position.from(castlingRow, 0))
           ),
           Position.from(castlingRow, 3),
-          position
+          newPosition
         );
 
         let newCaptured = captured;
         let newRank = rank;
-
         return Piece.from(newPosition, newCaptured, newRank);
       }),
       {
@@ -419,18 +421,18 @@ export class GameState extends Struct({
     // note that on the next turn self becomes opponent
     const myKing = newOpponent.getKing();
     return nextState
-      .generateValidMovesWithoutChecks()
+      .generateMovesWithoutChecks()
       .map((m) =>
         [
           //can capture king
-          m.to.equals(myKing.position),
+          m.valid.and(m.to.equals(myKing.position)),
           //could capture king while king side castling
           castlingOccured.kingSide.and(
-            m.to.equals(Position.from(castlingRow, 6))
+            m.valid.and(m.to.equals(Position.from(castlingRow, 6)))
           ),
           //could capture king while queen side castling
           castlingOccured.queenSide.and(
-            m.to.equals(Position.from(castlingRow, 2))
+            m.valid.and(m.to.equals(Position.from(castlingRow, 2)))
           ),
         ].reduce(Bool.or)
       )
@@ -440,7 +442,7 @@ export class GameState extends Struct({
   /**
    * @returns whether the king is currently in check
    */
-  private isKingInCheck() {
+  public isKingInCheck() {
     //the player skips turn
     const nextState = GameState.from(
       this.white,
@@ -456,10 +458,11 @@ export class GameState extends Struct({
     //can the opponent now capture my king?
     //note that on the next turn self becomes opponent
     const myKing = nextState.opponent().getKing();
+    Provable.log(myKing.position);
     return nextState
-      .generateValidMovesWithoutChecks()
+      .generateMovesWithoutChecks()
       .map((m) => {
-        return m.to.equals(myKing.position);
+        return m.valid.and(m.to.equals(myKing.position));
       })
       .reduce(Bool.or);
   }
@@ -476,7 +479,7 @@ export class GameState extends Struct({
    * @param position
    * @returns
    */
-  private PAWN(position: Position) {
+  public PAWN(position: Position) {
     const enpassantRow = Provable.if(this.turn, Field(2), Field(5));
     const startingRow = Provable.if(this.turn, Field(6), Field(1));
     const forward = Provable.if(this.turn, Field(-1), Field(1));
@@ -554,7 +557,7 @@ export class GameState extends Struct({
    * @param position
    * @returns
    */
-  private KNIGHT(position: Position) {
+  public KNIGHT(position: Position) {
     //prettier-ignore
     const squares=[
               [-2, -1],        [-2,  1],
@@ -578,7 +581,7 @@ export class GameState extends Struct({
    * @param from
    * @returns
    */
-  private BISHOP(from: Position) {
+  public BISHOP(from: Position) {
     return this.diagonals(from).flat();
   }
   /**
@@ -588,7 +591,7 @@ export class GameState extends Struct({
    * @param from
    * @returns
    */
-  private ROOK(from: Position) {
+  public ROOK(from: Position) {
     return [
       ...this.right(from),
       ...this.left(from),
@@ -603,7 +606,7 @@ export class GameState extends Struct({
    * @param from
    * @returns
    */
-  private QUEEN(from: Position) {
+  public QUEEN(from: Position) {
     return [...this.BISHOP(from), ...this.ROOK(from)];
   }
   /**
@@ -615,7 +618,7 @@ export class GameState extends Struct({
    * @param from
    * @returns
    */
-  private KING(from: Position) {
+  public KING(from: Position) {
     //prettier-ignore
     const squares = [
       [-1, 1],[-1, 0],[-1, -1],
@@ -668,7 +671,7 @@ export class GameState extends Struct({
    */
   public assertMoveIsValid(move: Move) {
     //we assert a move is valid if
-    return this.generateValidMovesWithoutChecks()
+    return this.generateMovesWithoutChecks()
       .map((m) =>
         //that move is listed as
         m.equals(move).and(
@@ -765,7 +768,7 @@ export class GameState extends Struct({
             position.equals(Position.from(castlingRow, 7))
           ),
           Position.from(castlingRow, 5),
-          position
+          newPosition
         );
 
         //queen side rook move when castling
@@ -775,7 +778,7 @@ export class GameState extends Struct({
             position.equals(Position.from(castlingRow, 0))
           ),
           Position.from(castlingRow, 3),
-          position
+          newPosition
         );
 
         let newCaptured = captured;
@@ -833,6 +836,7 @@ export class GameState extends Struct({
     //create next game state
     const newWhite = Provable.if(this.turn, newSelf, newOpponent);
     const newBlack = Provable.if(this.turn, newOpponent, newSelf);
+    Provable.log(newWhite.pieces);
     const newTurn = this.turn.not();
     const newEnpassant = pawnMovedTwoSquares;
     const newEnpassantColumn = move.to.col;
@@ -861,35 +865,35 @@ export class GameState extends Struct({
     //NOT IN PLAN
 
     //override with stalemate
-    newFinalized = Provable.if(
-      //if we find any
-      this.generateValidMovesWithoutChecks()
-        .map((m) =>
-          //valid move
-          m.valid.and(
-            //that keeps the king safe
-            this.isKingSafe(m)
-          )
-        )
-        .reduce(Bool.or),
-      //then the game is ongoing
-      Field(GameState.FINALSTATES.ONGOING),
-      //no valid moves left
-      Provable.if(
-        //king is in check
-        this.isKingInCheck(),
-        //then the game is a checkmate
-        Provable.if(
-          this.turn,
-          //white lost
-          Field(GameState.FINALSTATES.BLACK_WON),
-          //black lost
-          Field(GameState.FINALSTATES.WHITE_WON)
-        ),
-        //otherwise the game is a stalemate
-        Field(GameState.FINALSTATES.DRAW)
-      )
-    );
+    // newFinalized = Provable.if(
+    //   //if we find any
+    //   this.generateMovesWithoutChecks()
+    //     .map((m) =>
+    //       //valid move
+    //       m.valid.and(
+    //         //that keeps the king safe
+    //         this.isKingSafe(m)
+    //       )
+    //     )
+    //     .reduce(Bool.or),
+    //   //then the game is ongoing
+    //   Field(GameState.FINALSTATES.ONGOING),
+    //   //no valid moves left
+    //   Provable.if(
+    //     //king is in check
+    //     this.isKingInCheck(),
+    //     //then the game is a checkmate
+    //     Provable.if(
+    //       this.turn,
+    //       //white lost
+    //       Field(GameState.FINALSTATES.BLACK_WON),
+    //       //black lost
+    //       Field(GameState.FINALSTATES.WHITE_WON)
+    //     ),
+    //     //otherwise the game is a stalemate
+    //     Field(GameState.FINALSTATES.DRAW)
+    //   )
+    // );
     return GameState.from(
       newWhite,
       newBlack,

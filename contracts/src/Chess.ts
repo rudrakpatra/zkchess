@@ -10,7 +10,6 @@ import {
 
 import { GameState } from './GameState/GameState';
 import { Move } from './Move/Move';
-import { RANK } from './Piece/Rank';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();

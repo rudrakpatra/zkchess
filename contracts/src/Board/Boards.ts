@@ -1,4 +1,4 @@
-import { Bool, Field, Provable } from 'o1js';
+import { Bool, Field } from 'o1js';
 import { Position } from '../Position/Position';
 
 export class Board {
