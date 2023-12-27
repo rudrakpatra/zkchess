@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let logs = ['Press compile to start'];
+	export let logs = ['Logs'];
 </script>
 
 <ul>

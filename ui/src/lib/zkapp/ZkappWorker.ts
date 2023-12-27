@@ -11,7 +11,8 @@ let deployerAccount: PublicKey,
 	zkAppPrivateKey: PrivateKey,
 	zkApp: Chess;
 
-const decoratedLog = (...args: string[]) => console.log('%c' + args.join(' '), 'color: #00ffee');
+const decoratedLog = (...args: string[]) =>
+	console.log('[worker] %c' + args.join(' '), 'color: #00ffee');
 const proofsEnabled = true;
 
 const init = async () => {

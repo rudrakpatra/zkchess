@@ -18,7 +18,9 @@ const config = {
 		}
 	},
 
-	plugins: []
+	plugins: [
+		require("tailwindcss-text-balance")
+	]
 };
 
 module.exports = config;

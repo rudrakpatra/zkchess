@@ -13,7 +13,7 @@ export class Stopwatch {
 		this.frame = requestAnimationFrame(this.update.bind(this));
 	}
 	public reset() {
-		const elapsedTimeInSecs = (this.elapsed / 1000).toFixed(1) + 's';
+		const elapsedTimeInSecs = (this.elapsed / 1000).toFixed(2) + 's';
 		this.elapsed = 0;
 		this.frame && cancelAnimationFrame(this.frame);
 		return elapsedTimeInSecs;
