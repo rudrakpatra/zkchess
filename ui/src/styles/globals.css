@@ -2,11 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+	/* style-scrollbars-css */
+	/* ::-webkit-scrollbar {
+		width: 0.5rem;
+		height: 0.5rem;
+	} */
+}
 @layer components {
 	.button {
 		@apply m-1 rounded-lg p-2 shadow-lg outline-none;
 		@apply text-lg font-semibold;
 		@apply ringed;
+		@apply scale-100;
+	}
+	.button:active {
+		@apply scale-[0.98];
 	}
 
 	.ringed {

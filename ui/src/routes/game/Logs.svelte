@@ -1,15 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
-	onMount(async () => {
-		const { Chess } = await import('zkchess-contracts');
-	});
-	let logs = ['contracts loaded', 'compiled', 'starting game', 'moving'];
+	export let logs = ['Press compile to start'];
 </script>
 
-<ul class="m-1 overflow-auto">
+<ul>
 	{#each logs as log}
-		<li class=" text-sm">
+		<li class=" text-sm bg-chess-200 p-1 rounded-md">
 			<pre>{log}</pre>
 		</li>
 	{/each}
