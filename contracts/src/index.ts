@@ -1,6 +1,6 @@
 import { Chess } from './Chess.js';
 import { GameState } from './GameState/GameState.js';
-import { PlayerState } from './GameState/PlayerState/PlayerState.js';
+import { PlayerState } from './PlayerState/PlayerState.js';
 import { Move } from './Move/Move.js';
 import { Position } from './Position/Position.js';
 import { Piece } from './Piece/Piece.js';

@@ -4,8 +4,8 @@ import { Chess } from './Chess.js';
 import { Move } from './Move/Move.js';
 import { RANK } from './Piece/Rank.js';
 
-const proofsEnabled = false;
-describe('Chess.ts', () => {
+const proofsEnabled = true;
+describe('Chess', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
     whitePlayerAccount: PublicKey,
@@ -17,10 +17,13 @@ describe('Chess.ts', () => {
     zkApp: Chess;
 
   beforeAll(async () => {
+    console.log(process.memoryUsage());
     if (proofsEnabled) await Chess.compile();
+    console.log(process.memoryUsage());
   });
 
   beforeEach(() => {
+    console.log(process.memoryUsage());
     const Local = Mina.LocalBlockchain({ proofsEnabled });
     Mina.setActiveInstance(Local);
     ({ privateKey: deployerKey, publicKey: deployerAccount } =
@@ -62,6 +65,7 @@ describe('Chess.ts', () => {
 
   it('start game twice', async () => {
     await localDeploy();
+    console.log(process.memoryUsage());
     const txn = await Mina.transaction(whitePlayerAccount, () => {
       zkApp.start(whitePlayerAccount, blackPlayerAccount);
     });
@@ -69,19 +73,19 @@ describe('Chess.ts', () => {
     await txn.sign([whitePlayerKey]).send();
     console.log(zkApp.getGameState().toFEN());
 
-    const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.move(Move.fromLAN('b1', 'a3'), Field(RANK.from.name.ROOK));
-    });
-    await txn2.prove();
-    await txn2.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toFEN());
+    // const txn2 = await Mina.transaction(whitePlayerAccount, () => {
+    //   zkApp.move(Move.fromLAN('b1', 'a3'), Field(RANK.from.name.ROOK));
+    // });
+    // await txn2.prove();
+    // await txn2.sign([whitePlayerKey]).send();
+    // console.log(zkApp.getGameState().toFEN());
 
-    const txn3 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
-    });
-    await txn3.prove();
-    await txn3.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toFEN());
+    // const txn3 = await Mina.transaction(whitePlayerAccount, () => {
+    //   zkApp.start(whitePlayerAccount, blackPlayerAccount);
+    // });
+    // await txn3.prove();
+    // await txn3.sign([whitePlayerKey]).send();
+    // console.log(zkApp.getGameState().toFEN());
   });
 
   // it('halfmove', async () => {

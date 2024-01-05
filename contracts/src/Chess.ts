@@ -53,8 +53,11 @@ export class Chess extends SmartContract {
     this.getAndAssertEqualsState();
     const gameState = this.getGameState();
     this.verifySender(gameState);
+    Provable.log('verifySender', process.memoryUsage());
     gameState.assertMoveIsValid(move);
+    Provable.log('assertMoveIsValid', process.memoryUsage());
     gameState.assertPromotionIsValid(promotion);
+    Provable.log('assertPromotionIsValid', process.memoryUsage());
     this.setGameState(gameState.toUpdated(move, promotion));
   }
   @method draw() {

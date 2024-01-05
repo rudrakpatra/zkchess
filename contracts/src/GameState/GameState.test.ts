@@ -26,20 +26,20 @@ describe('GameState', () => {
   //   Provable.log(process.memoryUsage());
   //   Provable.log(moves);
   // });
-  it('generateValidMovesWithoutChecks', () => {
-    const gameState = GameState.fromFEN();
-    const moves = gameState.generateMovesWithoutChecks();
-    const validMoves = moves.filter((m) => m.valid.toString() === 'true');
-    const namedValidMoves = validMoves.map((m) => m.toLAN());
-    Provable.log(
-      'valid moves',
-      validMoves.length,
-      '/',
-      moves.length,
-      '\n',
-      namedValidMoves
-    );
-  });
+  // it('generateValidMovesWithoutChecks', () => {
+  //   const gameState = GameState.fromFEN();
+  //   const moves = gameState.generateMovesWithoutChecks();
+  //   const validMoves = moves.filter((m) => m.valid.toString() === 'true');
+  //   const namedValidMoves = validMoves.map((m) => m.toLAN());
+  //   Provable.log(
+  //     'valid moves',
+  //     validMoves.length,
+  //     '/',
+  //     moves.length,
+  //     '\n',
+  //     namedValidMoves
+  //   );
+  // });
   // it('isKingInCheck', () => {
   //   const gameState = GameState.fromFEN();
   //   const bool = gameState.isKingInCheck();
@@ -64,17 +64,16 @@ describe('GameState', () => {
   //   const gameState = GameState.fromFEN();
   //   const kingPawntoE4 = Move.fromLAN('e2', 'e4');
   //   gameState.assertMoveIsValid(kingPawntoE4);
-  //   console.log('assertMoveIsValid done');
   // });
-  // it('move', () => {
-  //   const gameState = GameState.fromFEN();
-  //   const kingPawntoE4 = Move.fromLAN('e2', 'e4');
-  //   gameState.assertMoveIsValid(kingPawntoE4);
+  it('move', () => {
+    const gameState = GameState.fromFEN();
+    const kingPawntoE4 = Move.fromLAN('e2', 'e4');
+    gameState.assertMoveIsValid(kingPawntoE4);
 
-  //   const newGameState = gameState.toUpdated(
-  //     kingPawntoE4,
-  //     Field(RANK.from.name.ROOK)
-  //   );
-  //   Provable.log(newGameState.toFEN());
-  // });
+    const newGameState = gameState.toUpdated(
+      kingPawntoE4,
+      Field(RANK.from.name.ROOK)
+    );
+    Provable.log(newGameState.toFEN());
+  });
 });
