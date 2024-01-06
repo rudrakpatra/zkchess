@@ -36,7 +36,7 @@ export class Path extends Struct({
       .map((p) =>
         this.isIntermediatePosition(p).and(gameState.isUncapturedPieceAt(p))
       )
-      .concat(gameState.self().playerState.isUncapturedPieceAt(this.end()))
+      .concat(gameState.self().isUncapturedPieceAt(this.end()))
       .reduce(Bool.or)
       .not();
   }
@@ -44,5 +44,25 @@ export class Path extends Struct({
     return this.isBounded()
       .and(this.isContinous())
       .and(this.isEmpty(gameState));
+  }
+  public isSameX() {
+    return this.positions
+      .map((p) => this.start().x.equals(p.x))
+      .reduce(Bool.and);
+  }
+  public isSameY() {
+    return this.positions
+      .map((p) => this.start().y.equals(p.y))
+      .reduce(Bool.and);
+  }
+  public isSameXaddY() {
+    return this.positions
+      .map((p) => this.start().x.add(this.start().y).equals(p.x.add(p.y)))
+      .reduce(Bool.and);
+  }
+  public isSameXsubY() {
+    return this.positions
+      .map((p) => this.start().x.sub(this.start().y).equals(p.x.sub(p.y)))
+      .reduce(Bool.and);
   }
 }

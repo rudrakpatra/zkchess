@@ -1,8 +1,8 @@
 import { Field, Bool, Struct, Provable } from 'o1js';
-import { Piece } from '../../Piece/Piece';
-import { pack, unpack } from '../../Packer';
-import { Position } from '../../Position/Position';
-import { RANK } from '../../Piece/Rank';
+import { Piece } from '../Piece/Piece';
+import { pack, unpack } from '../Packer';
+import { Position } from '../Position/Position';
+import { RANKS } from '../Piece/Rank';
 
 /**
  * 16*10 bits + 2 bits = 162 bits
@@ -64,7 +64,7 @@ export class PlayerState extends Struct({
   }
   public getKing(): Piece {
     return this.pieces.reduce(
-      (p, n) => Provable.if(n.rank.equals(RANK.from.name.KING), n, p),
+      (p, n) => Provable.if(n.rank.equals(RANKS.KING), n, p),
       this.pieces[0]
     );
   }

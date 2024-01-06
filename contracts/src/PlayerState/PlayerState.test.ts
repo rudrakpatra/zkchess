@@ -1,9 +1,9 @@
 import { Bool, Field } from 'o1js';
-import { Piece } from '../../Piece/Piece';
+import { Piece } from '../Piece/Piece';
 import { PlayerState } from './PlayerState';
-import { Position } from '../../Position/Position';
+import { Position } from '../Position/Position';
 
-describe('GameState', () => {
+describe('PlayerState', () => {
   it('should be able to be created', () => {
     const pieces = Array(16).fill(
       Piece.from(Position.from(1, 2), Bool(false), Field.from(1))

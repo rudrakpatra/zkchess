@@ -1,7 +1,7 @@
 import { Field, Struct } from 'o1js';
 
 import { Position } from '../Position/Position';
-import { PromotionRankAsChar, RANK } from '../Piece/Rank';
+import { PromotionRankAsChar, charToRank, rankToChar } from '../Piece/Rank';
 import { Path } from './Path';
 
 //LAN = Long Algebraic Notation
@@ -52,7 +52,7 @@ export class Move extends Struct({
 
     return new Move({
       path: Path.from(positions),
-      promotion: Field(RANK.from.char[promotion || 'q']),
+      promotion: Field(charToRank(promotion || 'q')),
     });
   }
   public toString() {
@@ -61,7 +61,7 @@ export class Move extends Struct({
       this.path.positions[7].toString() +
       (this.promotion.toString() == '5'
         ? ''
-        : RANK.to.char(this.promotion.toBigInt()))
+        : rankToChar(this.promotion.toBigInt()))
     );
   }
 }

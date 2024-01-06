@@ -2,9 +2,9 @@ import { Field, Bool, Struct, Provable } from 'o1js';
 
 import { Piece } from '../Piece/Piece';
 import { Position } from '../Position/Position';
-import { RANK, RankAsChar } from '../Piece/Rank';
+import { RankAsChar, charToRank, rankToChar } from '../Piece/Rank';
 import { pack, unpack } from '../Packer';
-import { PlayerState } from './PlayerState/PlayerState';
+import { PlayerState } from '../PlayerState/PlayerState';
 
 export const defaultFEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -14,9 +14,11 @@ export class GameState extends Struct({
   black: PlayerState,
   turn: Bool,
   enpassant: Bool,
+  kingCastled: Bool,
   column: Field,
   halfmove: Field,
   canDraw: Bool,
+  stalemateClaimed: Bool,
   finalized: Field,
 }) {
   static from(
@@ -24,9 +26,11 @@ export class GameState extends Struct({
     black: PlayerState,
     turn: Bool,
     enpassant: Bool,
+    kingCastled: Bool,
     column: Field,
     halfmove: Field,
     canDraw: Bool,
+    stalemateClaimed: Bool,
     finalized: Field
   ): GameState {
     return new GameState({
@@ -34,9 +38,11 @@ export class GameState extends Struct({
       black,
       turn,
       enpassant,
+      kingCastled,
       column,
       halfmove,
       canDraw,
+      stalemateClaimed,
       finalized,
     });
   }
@@ -46,10 +52,10 @@ export class GameState extends Struct({
     BLACK_WON: 2,
     DRAW: 3,
   };
-  static ENCODING_SCHEME = [162, 162, 1, 1, 3, 8, 1, 2];
+  static ENCODING_SCHEME = [162, 162, 1, 1, 1, 3, 8, 1, 1, 2];
   /**
    *
-   * @param state 162|162|1|1|3|8|1|2 = 340 bits
+   * @param state 162|162|1|1|1|3|8|1|2 = 341 bits
    * @returns
    */
   static fromEncoded(fields: Field[]): GameState {
@@ -58,9 +64,11 @@ export class GameState extends Struct({
       blackBits,
       turnBit,
       enpassantBits,
+      kingCastledBits,
       columnBits,
       halfmoveBits,
       canDrawBit,
+      stalemateClaimedBits,
       finalizedBits,
     ] = unpack(fields, GameState.ENCODING_SCHEME);
 
@@ -68,18 +76,22 @@ export class GameState extends Struct({
     const black = PlayerState.fromEncoded([blackBits]);
     const turn = Bool.fromFields([turnBit]);
     const enpassant = Bool.fromFields([enpassantBits]);
+    const kingCastled = Bool.fromFields([kingCastledBits]);
     const column = Field.fromFields([columnBits]);
     const halfmove = Field.fromFields([halfmoveBits]);
     const canDraw = Bool.fromFields([canDrawBit]);
+    const stalemateClaimed = Bool.fromFields([stalemateClaimedBits]);
     const finalized = Field.fromFields([finalizedBits]);
     return GameState.from(
       white,
       black,
       turn,
       enpassant,
+      kingCastled,
       column,
       halfmove,
       canDraw,
+      stalemateClaimed,
       finalized
     );
   }
@@ -91,6 +103,7 @@ export class GameState extends Struct({
         ...this.black.encode(),
         ...this.turn.toFields(),
         ...this.enpassant.toFields(),
+        ...this.kingCastled.toFields(),
         ...this.column.toFields(),
         ...this.halfmove.toFields(),
         ...this.canDraw.toFields(),
@@ -122,7 +135,7 @@ export class GameState extends Struct({
         if (char == '.') return;
         const position = Position.from(Field.from(x), Field.from(y));
         const captured = Bool(false);
-        const rank = Field(RANK.from.char[char.toLowerCase() as RankAsChar]);
+        const rank = Field(charToRank(char.toLowerCase() as RankAsChar));
         const piece = Piece.from(position, captured, rank);
         char == char.toUpperCase()
           ? white.pieces.push(piece)
@@ -131,17 +144,19 @@ export class GameState extends Struct({
     });
     const column = Math.max(0, enpassant.charCodeAt(0) - 97);
     return GameState.from(
-      PlayerState.from(white.pieces, white.castling),
-      PlayerState.from(black.pieces, black.castling),
-      Bool(turn.includes('w')),
-      Bool(enpassant !== '-'),
-      Field(column),
-      Field(Number(half)),
-      Bool(false),
-      Field(GameState.FINALSTATES.ONGOING)
+      PlayerState.from(white.pieces, white.castling), //playerState - white
+      PlayerState.from(black.pieces, black.castling), //playerState - black
+      Bool(turn.includes('w')), //turn
+      Bool(enpassant !== '-'), //enpassant
+      Bool(false), //kingCastled
+      Field(column), //column
+      Field(Number(half)), //halfmove
+      Bool(false), //canDraw
+      Bool(false), //stalemateClaimed
+      Field(GameState.FINALSTATES.ONGOING) //finalized
     );
   }
-  public toString() {
+  public toFEN() {
     let pieces: string[][] = [];
     for (let i = 0; i < 8; i++) {
       pieces.push([]);
@@ -153,14 +168,14 @@ export class GameState extends Struct({
       if (p.captured.toString() === 'false') {
         const x = Number(p.position.x.toString());
         const y = Number(p.position.y.toString());
-        pieces[x][y] = RANK.to.char(p.rank.toBigInt()).toUpperCase();
+        pieces[x][y] = rankToChar(p.rank.toBigInt()).toUpperCase();
       }
     });
     this.black.pieces.forEach((p) => {
       if (p.captured.toString() === 'false') {
         const x = Number(p.position.x.toString());
         const y = Number(p.position.y.toString());
-        pieces[x][y] = RANK.to.char(p.rank.toBigInt()).toLowerCase();
+        pieces[x][y] = rankToChar(p.rank.toBigInt()).toLowerCase();
       }
     });
     const board = pieces
@@ -183,23 +198,37 @@ export class GameState extends Struct({
     const halfmove = this.halfmove.toString();
     return `${board} ${turn} ${castling} ${enpassant} ${halfmove} 1`;
   }
+  public toAscii() {
+    const grid: string[][] = [];
+    for (let i = 0; i < 8; i++) {
+      grid.push([]);
+      for (let j = 0; j < 8; j++) {
+        grid[i].push('.');
+      }
+    }
+    this.white.pieces.forEach((p) => {
+      if (p.captured.toString() === 'false') {
+        const x = Number(p.position.x.toString());
+        const y = Number(p.position.y.toString());
+        grid[x][y] = rankToChar(p.rank.toBigInt()).toUpperCase();
+      }
+    });
+    this.black.pieces.forEach((p) => {
+      if (p.captured.toString() === 'false') {
+        const x = Number(p.position.x.toString());
+        const y = Number(p.position.y.toString());
+        grid[x][y] = rankToChar(p.rank.toBigInt()).toLowerCase();
+      }
+    });
+    const board = grid.map((row) => row.join(' ')).join('\n');
+
+    return board;
+  }
   public self() {
-    return {
-      playerState: Provable.if(this.turn, this.white, this.black),
-      setPlayerState: (state: PlayerState) => {
-        this.white = Provable.if(this.turn, state, this.white);
-        this.black = Provable.if(this.turn, this.black, state);
-      },
-    };
+    return Provable.if(this.turn, this.white, this.black);
   }
   public opponent() {
-    return {
-      playerState: Provable.if(this.turn, this.black, this.white),
-      setPlayerState: (state: PlayerState) => {
-        this.white = Provable.if(this.turn, this.white, state);
-        this.black = Provable.if(this.turn, state, this.black);
-      },
-    };
+    return Provable.if(this.turn, this.black, this.white);
   }
   public isUncapturedPieceAt(position: Position) {
     return this.white

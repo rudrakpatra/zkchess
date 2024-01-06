@@ -1,7 +1,7 @@
 import { Piece } from './Piece';
 import { Position } from '../Position/Position';
 import { Bool, Field } from 'o1js';
-import { RANK } from './Rank';
+import { RANKS } from './Rank';
 
 describe('Piece', () => {
   it('should be able to be created', () => {
@@ -42,20 +42,12 @@ describe('Piece', () => {
   });
   it('should be able to be displayed', () => {
     expect(
-      Piece.from(
-        Position.from(1, 6),
-        Bool(false),
-        Field(RANK.from.name.PAWN)
-      ).toString()
+      Piece.from(Position.from(1, 6), Bool(false), Field(RANKS.PAWN)).toFEN()
     ).toEqual('16+PAWN');
   });
   it('should be able to be displayed', () => {
     expect(
-      Piece.from(
-        Position.from(7, 7),
-        Bool(false),
-        Field(RANK.from.name.KING)
-      ).toString()
+      Piece.from(Position.from(7, 7), Bool(false), Field(RANKS.KING)).toFEN()
     ).toEqual('77+KING');
   });
 });
