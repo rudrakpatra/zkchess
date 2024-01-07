@@ -199,9 +199,9 @@ export class GameObject {
   constructor(gameState: GameState) {
     this.state = gameState;
   }
-  public assertPreMoveValidations(move: Move) {
+  public preMoveValidations(move: Move) {
     const gameEvent = new GameEvent(this.state, move);
-    [
+    return [
       gameEvent.movesPawn(),
       gameEvent.movesKnight(),
       gameEvent.movesBishop(),
@@ -210,11 +210,59 @@ export class GameObject {
       gameEvent.movesKing(),
     ]
       .map((m) => Object.values(m).reduce(Bool.or))
-      .reduce(Bool.or)
-      .assertTrue('invalid move');
+      .reduce(Bool.or);
+  }
+  public illegalCastling(move: Move) {
+    //check if this move is valid
+    this.preMoveValidations(move);
+
+    const whiteToPlay = this.state.turn;
+    const opponentsCastlingRow = Provable.if(whiteToPlay, Field(0), Field(7));
+
+    this.state.kingCastled.assertTrue('the king did not castle last move');
+
+    // king side castling
+    // 0 1 2 3 4 5 6 7
+    // ? ? ? ? . K R .
+
+    const kingCastledSide = this.state
+      .opponent()
+      .getKing()
+      .position.x.equals(Field(5));
+
+    const kingSideWasVulnerable = [
+      Position.from(opponentsCastlingRow, 4),
+      Position.from(opponentsCastlingRow, 5),
+    ]
+      .map((p) => p.equals(move.path.end()))
+      .reduce(Bool.or);
+
+    // queen side castling
+    // 0 1 2 3 4 5 6 7
+    // . . K R . ? ? ?
+    const queenSideCastledSide = this.state
+      .opponent()
+      .getKing()
+      .position.x.equals(Field(2));
+
+    const queenSideWasVulnerable = [
+      Position.from(opponentsCastlingRow, 4),
+      Position.from(opponentsCastlingRow, 3),
+      Position.from(opponentsCastlingRow, 2),
+    ]
+      .map((p) => p.equals(move.path.end()))
+      .reduce(Bool.or);
+
+    //lastly we determine if this castling was illegal like this
+    return [
+      kingCastledSide.and(kingSideWasVulnerable),
+      queenSideCastledSide.and(queenSideWasVulnerable),
+    ].reduce(Bool.or);
   }
   /**
    * returns a updated game state
+   *
+   * **warning** does not update result
    * @param move
    */
   public toUpdated(move: Move) {
@@ -329,9 +377,7 @@ export class GameObject {
 
     const newCanDraw = Bool(false);
 
-    const newStalemateClaimed = Bool(false);
-
-    const newFinalized = this.state.finalized;
+    const newResult = this.state.result;
 
     return GameState.from(
       newWhite,
@@ -342,8 +388,7 @@ export class GameObject {
       newColumn,
       newHalfmove,
       newCanDraw,
-      newStalemateClaimed,
-      newFinalized
+      newResult
     );
   }
 }

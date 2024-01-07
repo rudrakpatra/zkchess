@@ -8,7 +8,16 @@ import { PlayerState } from '../PlayerState/PlayerState';
 
 export const defaultFEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-
+export enum GameResult {
+  ONGOING,
+  ONGOING_OFFERED_DRAW,
+  ONGOING_AND_STALEMATE_CLAIMED,
+  STALEMATE_CLAIM_REPORTED,
+  WHITE_WINS,
+  BLACK_WINS,
+  DRAW,
+  DRAW_BY_STALEMATE,
+}
 export class GameState extends Struct({
   white: PlayerState,
   black: PlayerState,
@@ -18,8 +27,7 @@ export class GameState extends Struct({
   column: Field,
   halfmove: Field,
   canDraw: Bool,
-  stalemateClaimed: Bool,
-  finalized: Field,
+  result: Field,
 }) {
   static from(
     white: PlayerState,
@@ -30,8 +38,7 @@ export class GameState extends Struct({
     column: Field,
     halfmove: Field,
     canDraw: Bool,
-    stalemateClaimed: Bool,
-    finalized: Field
+    result: Field
   ): GameState {
     return new GameState({
       white,
@@ -42,20 +49,13 @@ export class GameState extends Struct({
       column,
       halfmove,
       canDraw,
-      stalemateClaimed,
-      finalized,
+      result: result,
     });
   }
-  static FINALSTATES = {
-    ONGOING: 0,
-    WHITE_WON: 1,
-    BLACK_WON: 2,
-    DRAW: 3,
-  };
-  static ENCODING_SCHEME = [162, 162, 1, 1, 1, 3, 8, 1, 1, 2];
+  static ENCODING_SCHEME = [162, 162, 1, 1, 1, 3, 8, 1, 3];
   /**
    *
-   * @param state 162|162|1|1|1|3|8|1|2 = 341 bits
+   * @param state 162|162|1|1|1|3|8|3 = 341 bits
    * @returns
    */
   static fromEncoded(fields: Field[]): GameState {
@@ -69,7 +69,7 @@ export class GameState extends Struct({
       halfmoveBits,
       canDrawBit,
       stalemateClaimedBits,
-      finalizedBits,
+      resultBits,
     ] = unpack(fields, GameState.ENCODING_SCHEME);
 
     const white = PlayerState.fromEncoded([whiteBits]);
@@ -80,8 +80,7 @@ export class GameState extends Struct({
     const column = Field.fromFields([columnBits]);
     const halfmove = Field.fromFields([halfmoveBits]);
     const canDraw = Bool.fromFields([canDrawBit]);
-    const stalemateClaimed = Bool.fromFields([stalemateClaimedBits]);
-    const finalized = Field.fromFields([finalizedBits]);
+    const result = Field.fromFields([resultBits]);
     return GameState.from(
       white,
       black,
@@ -91,8 +90,7 @@ export class GameState extends Struct({
       column,
       halfmove,
       canDraw,
-      stalemateClaimed,
-      finalized
+      result
     );
   }
 
@@ -152,8 +150,7 @@ export class GameState extends Struct({
       Field(column), //column
       Field(Number(half)), //halfmove
       Bool(false), //canDraw
-      Bool(false), //stalemateClaimed
-      Field(GameState.FINALSTATES.ONGOING) //finalized
+      Field(GameResult.ONGOING) //result
     );
   }
   public toFEN() {
