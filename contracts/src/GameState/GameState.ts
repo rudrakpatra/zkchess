@@ -68,7 +68,6 @@ export class GameState extends Struct({
       columnBits,
       halfmoveBits,
       canDrawBit,
-      stalemateClaimedBits,
       resultBits,
     ] = unpack(fields, GameState.ENCODING_SCHEME);
 
@@ -105,6 +104,7 @@ export class GameState extends Struct({
         ...this.column.toFields(),
         ...this.halfmove.toFields(),
         ...this.canDraw.toFields(),
+        ...this.result.toFields(),
       ],
       GameState.ENCODING_SCHEME
     );
