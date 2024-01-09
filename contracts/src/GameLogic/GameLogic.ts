@@ -9,7 +9,7 @@ import { PlayerState } from '../PlayerState/PlayerState';
 /**
  *  logic to determine various events in the game
  */
-class GameEvent {
+export class GameEvent {
   gameState: GameState;
   move: Move;
   pathIsValid: Bool;
@@ -143,8 +143,10 @@ class GameEvent {
     return {
       alongRowOrColOrDiagonal: [
         this.piece.rank.equals(RANKS.QUEEN),
-        this.move.path.isSameX().or(this.move.path.isSameY()),
-        this.move.path.isSameXaddY().or(this.move.path.isSameXsubY()),
+        [
+          this.move.path.isSameX().or(this.move.path.isSameY()),
+          this.move.path.isSameXaddY().or(this.move.path.isSameXsubY()),
+        ].reduce(Bool.or),
         this.pathIsValid,
       ].reduce(Bool.and),
     };
