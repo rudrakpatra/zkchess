@@ -262,17 +262,18 @@ export class Chess extends SmartContract {
       .assertTrue('Stalemate must be claimed first');
     const gameObject = new GameObject(gameState);
     gameObject.preMoveValidations(move).assertTrue('invalid move');
-    gameObject.state.opponent().getKing().captured.assertTrue('invalid move');
+    let newGameState = gameObject.toUpdated(move);
+    newGameState.self().getKing().captured.assertTrue('invalid move');
     //UPDATE GAME STATE
     this.setGameState(
       GameState.from(
-        gameState.white,
-        gameState.black,
+        newGameState.white,
+        newGameState.black,
         gameState.turn.not(),
-        gameState.enpassant,
-        gameState.kingCastled,
-        gameState.column,
-        gameState.halfmove,
+        newGameState.enpassant,
+        newGameState.kingCastled,
+        newGameState.column,
+        newGameState.halfmove,
         //gameState.canDraw,
         Bool(false),
         // gameState.result
