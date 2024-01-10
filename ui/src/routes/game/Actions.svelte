@@ -1,12 +1,34 @@
 <script>
 	import ToastModal from '$lib/ToastModal.svelte';
-	import { click } from '$lib/actions/interaction';
+	import { animationOnFocus } from '$lib/actions/interaction';
 	import toast from 'svelte-french-toast';
+
+	export let handleDraw = async () => {
+		await toast.promise(new Promise((r) => setTimeout(r, 3000)), {
+			loading: '🤝 offering draw...',
+			success: 'draw offered!',
+			error: 'failed to offer draw'
+		});
+	};
+	export let handleResign = async () => {
+		await toast.promise(new Promise((r) => setTimeout(r, 3000)), {
+			loading: '🤝 resigning...',
+			success: 'resigned!',
+			error: 'failed to resign'
+		});
+	};
+	export let handleGetState = async () => {
+		await toast.promise(new Promise((r) => setTimeout(r, 3000)), {
+			loading: '🤝 getting state...',
+			success: 'state received!',
+			error: 'failed to get state'
+		});
+	};
 </script>
 
 <button
 	class="button"
-	use:click
+	use:animationOnFocus
 	on:click={() => {
 		toast(ToastModal, {
 			props: {
@@ -20,29 +42,8 @@
 		});
 	}}
 >
-	⭐test
+	⭐test draw
 </button>
-<button
-	class="button"
-	use:click
-	on:click={() =>
-		toast.promise(new Promise((r) => setTimeout(r, 3000)), {
-			loading: '🤝 offering draw...',
-			success: 'draw offered!',
-			error: 'failed to offer draw'
-		})}
->
-	🤝 offer draw
-</button>
-<button
-	class="button"
-	use:click
-	on:click={() =>
-		toast.promise(new Promise((r) => setTimeout(r, 3000)), {
-			loading: '🤝 resigning...',
-			success: 'resigned!',
-			error: 'failed to resign'
-		})}
->
-	😖 resign
-</button>
+<button class="button" use:animationOnFocus on:click={handleDraw}> 🤝 offer draw </button>
+<button class="button" use:animationOnFocus on:click={handleResign}> 😖 resign </button>
+<button class="button" use:animationOnFocus on:click={handleGetState}> 📜 get state </button>

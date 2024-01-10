@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { click } from '$lib/actions/interaction';
+	import { animationOnFocus } from '$lib/actions/interaction';
 	import toast_ from 'svelte-french-toast';
 	import type { Toast } from 'svelte-french-toast';
 
@@ -15,7 +15,7 @@
 		{#each options as option}
 			<button
 				class="button flex-1"
-				use:click
+				use:animationOnFocus
 				on:click={() => {
 					option.action();
 					toast_.dismiss(toast.id);
