@@ -6,8 +6,7 @@ import { RankAsChar, charToRank, rankToChar } from '../Piece/Rank';
 import { pack, unpack } from '../Packer';
 import { PlayerState } from '../PlayerState/PlayerState';
 
-export const defaultFEN =
-  'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+export const defaultFEN = `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`;
 export enum GameResult {
   ONGOING,
   ONGOING_OFFERED_DRAW,
@@ -49,7 +48,7 @@ export class GameState extends Struct({
       column,
       halfmove,
       canDraw,
-      result: result,
+      result,
     });
   }
   static ENCODING_SCHEME = [162, 162, 1, 1, 1, 3, 8, 1, 3];
@@ -109,22 +108,34 @@ export class GameState extends Struct({
       GameState.ENCODING_SCHEME
     );
   }
+  /**
+   * @param FEN
+   * @returns
+   */
   static fromFEN(FEN: string = defaultFEN): GameState {
     let [pieces, turn, castling, enpassant, half, full] = FEN.split(' ');
+    let piece0 = Piece.from(
+      Position.from(Field.from(0), Field.from(0)),
+      Bool(true), //captured
+      Field.from(0)
+    );
     let white = {
-      pieces: [] as Piece[],
+      pieces: Array.from({ length: 16 }, () => piece0),
       castling: {
         kingSide: Bool(castling.includes('K')),
         queenSide: Bool(castling.includes('Q')),
       },
     };
     let black = {
-      pieces: [] as Piece[],
+      pieces: Array.from({ length: 16 }, () => piece0),
       castling: {
         kingSide: Bool(castling.includes('k')),
         queenSide: Bool(castling.includes('q')),
       },
     };
+
+    let whitePieceNumber = 0;
+    let blackPieceNumber = 0;
     pieces.split('/').forEach((row, x) => {
       //expande number to dots
       const expanded = row.replace(/[1-8]/g, (m) => '.'.repeat(Number(m)));
@@ -136,8 +147,8 @@ export class GameState extends Struct({
         const rank = Field(charToRank(char.toLowerCase() as RankAsChar));
         const piece = Piece.from(position, captured, rank);
         char == char.toUpperCase()
-          ? white.pieces.push(piece)
-          : black.pieces.push(piece);
+          ? (white.pieces[whitePieceNumber++] = piece)
+          : (black.pieces[blackPieceNumber++] = piece);
       });
     });
     const column = Math.max(0, enpassant.charCodeAt(0) - 97);

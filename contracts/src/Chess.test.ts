@@ -2,7 +2,7 @@ import { AccountUpdate, Mina, PrivateKey, Provable, PublicKey } from 'o1js';
 
 import { Chess } from './Chess.js';
 import { Move } from './Move/Move.js';
-import { GameResult } from './GameState/GameState.js';
+import { GameResult, GameState } from './GameState/GameState.js';
 
 const proofsEnabled = false;
 describe('Chess', () => {
@@ -239,23 +239,130 @@ describe('Chess', () => {
   //   //check if black wins
   //   Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
   // });
-  it('checkmate but stalemate-pretend', async () => {
-    await localDeploy();
+  // it('checkmate but stalemate-pretend', async () => {
+  //   await localDeploy();
 
+  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //   });
+  //   await txn.prove();
+  //   await txn.sign([whitePlayerKey]).send();
+  //   console.log(zkApp.getGameState().toAscii());
+
+  //   const moves = [
+  //     ['f2', 'f3'],
+  //     ['e7', 'e6'],
+  //     ['g2', 'g4'],
+  //     ['d8', 'h4'], //check mate by queen
+  //     //white claims a stalemate
+  //     //black responds by checkmate
+  //   ];
+  //   for (let i = 0; i < moves.length; i++) {
+  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+  //     console.log(moves[i][0], moves[i][1]);
+  //     const txn2 = await Mina.transaction(player, () => {
+  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+  //     });
+  //     await txn2.prove();
+  //     await txn2.sign([key]).send();
+  //     console.log(zkApp.getGameState().toAscii());
+  //   }
+  //   const whiteClaimsStalemate = await Mina.transaction(
+  //     whitePlayerAccount,
+  //     () => {
+  //       zkApp.claimStalemate();
+  //     }
+  //   );
+  //   await whiteClaimsStalemate.prove();
+  //   await whiteClaimsStalemate.sign([whitePlayerKey]).send();
+
+  //   const blackPlayerCheckmates = await Mina.transaction(
+  //     blackPlayerAccount,
+  //     () => {
+  //       zkApp.overrideStalemateClaimByCapturingKing(Move.fromLAN('h4', 'e1'));
+  //     }
+  //   );
+  //   await blackPlayerCheckmates.prove();
+  //   await blackPlayerCheckmates.sign([blackPlayerKey]).send();
+
+  //   //check if black wins
+  //   Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
+  // });
+  // it('real stalemate', async () => {
+  //   const fen = '4k3/4p1K1/4N3/6R1/8/8/8/8 w - - 0 1';
+  //   const intialGameState = GameState.fromFEN(fen);
+  //   await localDeploy();
+  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
+  //     //this function is likely to be removed and used for testing only
+  //     zkApp.startFromGameState(
+  //       whitePlayerAccount,
+  //       blackPlayerAccount,
+  //       intialGameState
+  //     );
+  //   });
+  //   await txn.prove();
+  //   await txn.sign([whitePlayerKey]).send();
+  //   console.log(zkApp.getGameState().toAscii());
+
+  //   const moves = [
+  //     ['g5', 'd5'], //white player rook from g5 to d5 leading stalemate
+  //     //black claims stalemate
+  //     //white accepts stalemate like a good sport
+  //   ];
+  //   for (let i = 0; i < moves.length; i++) {
+  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+  //     console.log(moves[i][0], moves[i][1]);
+  //     const txn2 = await Mina.transaction(player, () => {
+  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+  //     });
+  //     await txn2.prove();
+  //     await txn2.sign([key]).send();
+  //     console.log(zkApp.getGameState().toAscii());
+  //   }
+  //   const blackClaimsStalemate = await Mina.transaction(
+  //     blackPlayerAccount,
+  //     () => {
+  //       zkApp.claimStalemate();
+  //     }
+  //   );
+  //   await blackClaimsStalemate.prove();
+  //   await blackClaimsStalemate.sign([blackPlayerKey]).send();
+
+  //   const whitePlayerAck = await Mina.transaction(whitePlayerAccount, () => {
+  //     zkApp.acknowledgeStalemateClaim();
+  //   });
+  //   await whitePlayerAck.prove();
+  //   await whitePlayerAck.sign([whitePlayerKey]).send();
+
+  //   //check if draw by stalemate
+  //   Provable.log(
+  //     zkApp.getGameState().result.equals(GameResult.DRAW_BY_STALEMATE)
+  //   );
+  // });
+
+  it('real stalemate with defence', async () => {
+    const fen = '4k3/4p1K1/4N3/6R1/8/8/8/8 w - - 0 1';
+    const intialGameState = GameState.fromFEN(fen);
+    await localDeploy();
     const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
+      //this function is likely to be removed and used for testing only
+      zkApp.startFromGameState(
+        whitePlayerAccount,
+        blackPlayerAccount,
+        intialGameState
+      );
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
     console.log(zkApp.getGameState().toAscii());
 
     const moves = [
-      ['f2', 'f3'],
-      ['e7', 'e6'],
-      ['g2', 'g4'],
-      ['d8', 'h4'], //check mate by queen
-      //white claims a stalemate
-      //black responds by checkmate
+      ['g5', 'd5'], //white player rook from g5 to d5 leading stalemate
+      //black claims stalemate
+      //white denies stalemate with a black's move that looks valid
+      //black shows that the move is invalid as white can now capture the king
     ];
     for (let i = 0; i < moves.length; i++) {
       const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
@@ -268,74 +375,46 @@ describe('Chess', () => {
       await txn2.sign([key]).send();
       console.log(zkApp.getGameState().toAscii());
     }
-    const whiteClaimsStalemate = await Mina.transaction(
-      whitePlayerAccount,
+    const blackClaimsStalemate = await Mina.transaction(
+      blackPlayerAccount,
       () => {
         zkApp.claimStalemate();
       }
     );
-    await whiteClaimsStalemate.prove();
-    await whiteClaimsStalemate.sign([whitePlayerKey]).send();
-
-    const blackPlayerCheckmates = await Mina.transaction(
-      blackPlayerAccount,
-      () => {
-        zkApp.overrideStalemateClaimByCapturingKing(Move.fromLAN('h4', 'e1'));
-      }
+    await blackClaimsStalemate.prove();
+    await blackClaimsStalemate.sign([blackPlayerKey]).send();
+    Provable.log(
+      'black claimed stalemate',
+      zkApp
+        .getGameState()
+        .result.equals(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
     );
-    await blackPlayerCheckmates.prove();
-    await blackPlayerCheckmates.sign([blackPlayerKey]).send();
-
-    //check if black wins
-    Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
-  });
-  it('real stalemate', async () => {
-    await localDeploy();
-    const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
-    });
-    await txn.prove();
-    await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toAscii());
-
-    const moves = [
-      ['f2', 'f3'],
-      ['e7', 'e6'],
-      ['g2', 'g4'],
-      ['d8', 'h4'], //check mate by queen
-      //white claims a stalemate
-      //black responds by checkmate
-    ];
-    for (let i = 0; i < moves.length; i++) {
-      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-      console.log(moves[i][0], moves[i][1]);
-      const txn2 = await Mina.transaction(player, () => {
-        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-      });
-      await txn2.prove();
-      await txn2.sign([key]).send();
-      console.log(zkApp.getGameState().toAscii());
-    }
-    const whiteClaimsStalemate = await Mina.transaction(
+    const whitePlayerFalseReport = await Mina.transaction(
       whitePlayerAccount,
       () => {
-        zkApp.claimStalemate();
+        zkApp.reportStalemateClaimByValidOpponentMove(Move.fromLAN('e8', 'd8'));
       }
     );
-    await whiteClaimsStalemate.prove();
-    await whiteClaimsStalemate.sign([whitePlayerKey]).send();
+    await whitePlayerFalseReport.prove();
+    await whitePlayerFalseReport.sign([whitePlayerKey]).send();
 
-    const blackPlayerCheckmates = await Mina.transaction(
+    Provable.log(
+      'white false report',
+      zkApp.getGameState().result.equals(GameResult.STALEMATE_CLAIM_REPORTED)
+    );
+
+    const blackPlayerDefendStalemate = await Mina.transaction(
       blackPlayerAccount,
       () => {
-        zkApp.overrideStalemateClaimByCapturingKing(Move.fromLAN('h4', 'e1'));
+        zkApp.defendStalemateClaim(Move.fromLAN('d5', 'd8'));
       }
     );
-    await blackPlayerCheckmates.prove();
-    await blackPlayerCheckmates.sign([blackPlayerKey]).send();
 
-    //check if black wins
-    Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
+    await blackPlayerDefendStalemate.prove();
+    await blackPlayerDefendStalemate.sign([blackPlayerKey]).send();
+    //check if draw by stalemate
+    Provable.log(
+      zkApp.getGameState().result.equals(GameResult.DRAW_BY_STALEMATE)
+    );
   });
 });

@@ -56,6 +56,22 @@ export class Chess extends SmartContract {
     this.blackKey.set(blackKey);
     this.setGameState(GameState.fromFEN());
   }
+
+  /**
+   * starts a new game
+   * @param whiteKey the public key of the player who plays white
+   * @param blackKey the public key of the player who plays black
+   * @param gameState the game state to start from
+   */
+  @method startFromGameState(
+    whiteKey: PublicKey,
+    blackKey: PublicKey,
+    gameState: GameState
+  ) {
+    this.whiteKey.set(whiteKey);
+    this.blackKey.set(blackKey);
+    this.setGameState(gameState);
+  }
   @method move(move: Move) {
     const gameState = this.getGameState();
     this.assertSenderIsPlayer(gameState);
@@ -322,7 +338,7 @@ export class Chess extends SmartContract {
       GameState.from(
         newGameState.white,
         newGameState.black,
-        newGameState.turn,
+        gameState.turn.not(),
         newGameState.enpassant,
         newGameState.kingCastled,
         newGameState.column,
