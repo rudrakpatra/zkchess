@@ -120,13 +120,13 @@
 			<Logs {logs} />
 		</div>
 		<div slot="board">
-			<Board {handleMove} {loadFen} />
+			<Board bind:handleMove bind:loadFen />
 		</div>
 		<div slot="playerB">
 			<Player />
 		</div>
 		<div slot="actions">
-			<Actions {handleDraw} {handleResign} {handleGetState} />
+			<Actions bind:handleDraw bind:handleResign bind:handleGetState />
 		</div>
 		<div slot="playerA">
 			<Player />
