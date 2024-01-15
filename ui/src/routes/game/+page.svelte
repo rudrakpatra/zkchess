@@ -23,7 +23,7 @@
 		if (browser) stopwatch.start();
 	}
 
-	let gameStarted = false;
+	let gameStarted = true;
 
 	let handleCompileAndStartGame = async () => {},
 		handleMove = async (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
@@ -116,19 +116,19 @@
 
 {#if gameStarted}
 	<DashboardLayout>
-		<div slot="logs">
+		<div class="slot" slot="logs">
 			<Logs {logs} />
 		</div>
-		<div slot="board">
+		<div class="slot" slot="board">
 			<Board bind:handleMove bind:loadFen />
 		</div>
-		<div slot="playerB">
+		<div class="slot" slot="playerB">
 			<Player />
 		</div>
-		<div slot="actions">
+		<div class="slot" slot="actions">
 			<Actions bind:handleDraw bind:handleResign bind:handleGetState />
 		</div>
-		<div slot="playerA">
+		<div class="slot" slot="playerA">
 			<Player />
 		</div>
 	</DashboardLayout>
@@ -143,3 +143,9 @@
 		</button>
 	</div>
 {/if}
+
+<style>
+	.slot {
+		@apply relative h-full w-full p-1;
+	}
+</style>

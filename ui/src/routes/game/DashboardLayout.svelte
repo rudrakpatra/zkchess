@@ -26,52 +26,22 @@
 	}
 	.layout {
 		@apply grid place-content-center gap-2;
-		grid-template: 3rem 30rem 10rem 3rem/ 20rem 40rem;
+		grid-template: 3rem 23rem 6.5rem 3rem / 12rem 30rem;
 		grid-template-areas:
 			'logs playerB '
 			'logs board '
 			'actions board'
 			'actions playerA ';
 		div {
-			// @apply grid place-items-center;
-			@apply h-full w-full rounded-md p-1 shadow-lg;
+			@apply shadow-chess-600/20 shadow-lg;
+			@apply h-full w-full rounded-md;
 			@apply bg-chess-400;
-		}
-		#actions,
-		#logs {
-			@apply overflow-auto;
-		}
-	}
-	@media (max-width: 85rem) or (max-height: 50rem) {
-		.layout {
-			grid-template: 3rem 30rem 5rem 3rem / 20rem 35rem;
-			grid-template-areas:
-				'logs playerB'
-				'logs board'
-				'actions board'
-				'actions playerA';
-			div {
-				// @apply bg-blue-500;
-			}
-		}
-	}
-	@media (max-width: 60rem) or (max-height: 45rem) {
-		.layout {
-			grid-template: 3rem 20rem 7rem 3rem / 12rem 27rem;
-			grid-template-areas:
-				'logs playerB'
-				'logs board'
-				'actions board'
-				'actions playerA';
-			div {
-				// @apply bg-gray-500;
-			}
 		}
 	}
 
-	@media (max-height: 35rem) {
+	@media (max-height: 38rem) {
 		.layout {
-			grid-template: 3rem 15rem 7rem 3rem / 12rem 22rem;
+			grid-template: 3rem 8rem 9.5rem 3rem / 12rem 25rem;
 			grid-template-areas:
 				'playerB board'
 				'logs board'
@@ -82,10 +52,10 @@
 			}
 		}
 	}
-	@media (max-width: 40rem) {
+	@media (max-width: 44rem) {
 		.layout {
 			--container-width: 100cqw;
-			grid-template: 3rem var(--container-width) 3rem 5rem 10rem / var(--container-width);
+			grid-template: 3rem var(--container-width) 3rem 9.5rem 10rem / var(--container-width);
 			grid-template-areas:
 				'playerB'
 				'board'

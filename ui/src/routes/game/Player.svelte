@@ -4,10 +4,16 @@
 	export let rating = '500';
 </script>
 
-<div class="m-1">
-	<span class="text-lg">{ellipsis(username, 14)}</span>
-	<span class="text-xl font-medium">({rating})</span>
+<div class="absolute inset-1 layout">
+	<img class="rounded-sm" src="./king.jpeg" />
+	<span class="text-lg flex-1 min-w-0 overflow-hidden self-center" title={username}
+		>{ellipsis(username, 10)}</span
+	>
+	<span class="text-xl font-medium self-center">({rating})</span>
 </div>
 
 <style>
+	.layout {
+		@apply flex gap-2;
+	}
 </style>

@@ -8,9 +8,9 @@ export function animationOnFocus(
 		el.dataset.originalTextColor =
 			el.dataset.originalTextColor || window.getComputedStyle(el).color;
 		const backgroundColor = window.getComputedStyle(el).backgroundColor;
-		el.style.backgroundImage = `linear-gradient(30deg, #ffff ${x1}%, #0000 ${x2}%, #0000)`;
+		// el.style.backgroundImage = `linear-gradient(30deg, #ffff ${x1}%, #0000 ${x2}%, #0000)`;
 		// el.style.backgroundImage = `conic-gradient(from 0deg, #ffff ${x1}%, #0000 ${x2}%, #0000)`;
-		// el.style.backgroundImage = `radial-gradient(circle at 50% 50%, ${el.dataset.originalTextColor} ${x1}%, ${backgroundColor} ${x2}%, ${backgroundColor})`;
+		el.style.backgroundImage = `radial-gradient(circle at 50% 50%, ${el.dataset.originalTextColor} ${x1}%, ${backgroundColor} ${x2}%, ${backgroundColor})`;
 		el.style.color = x1 < 50 ? el.dataset.originalTextColor : backgroundColor;
 	}
 ) {

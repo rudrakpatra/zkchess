@@ -2,7 +2,7 @@
 	export let logs = ['Logs'];
 </script>
 
-<ul>
+<ul class="flex flex-col gap-1 overflow-y-scroll">
 	{#each logs as log}
 		<li class=" text-sm bg-chess-200 p-1 rounded-md">
 			<pre>{log}</pre>

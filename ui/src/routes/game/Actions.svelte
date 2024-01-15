@@ -26,24 +26,32 @@
 	};
 </script>
 
-<button
-	class="button"
-	use:animationOnFocus
-	on:click={() => {
-		toast(ToastModal, {
-			props: {
-				prompt: 'opponent has offered a draw',
-				options: [
-					{ label: '👍 accept', action: () => toast.success('accepted draw') },
-					{ label: '👎 decline', action: () => toast.error('declined draw') }
-				]
-			},
-			duration: Infinity
-		});
-	}}
->
-	⭐test draw
-</button>
-<button class="button" use:animationOnFocus on:click={handleDraw}> 🤝 offer draw </button>
-<button class="button" use:animationOnFocus on:click={handleResign}> 😖 resign </button>
-<button class="button" use:animationOnFocus on:click={handleGetState}> 📜 get state </button>
+<div class="absolute inset-1 overflow-y-scroll flex flex-col justify-start gap-1">
+	<button
+		class="button flex-1 whitespace-nowrap"
+		use:animationOnFocus
+		on:click={() => {
+			toast(ToastModal, {
+				props: {
+					prompt: 'opponent has offered a draw',
+					options: [
+						{ label: '👍 accept', action: () => toast.success('accepted draw') },
+						{ label: '👎 decline', action: () => toast.error('declined draw') }
+					]
+				},
+				duration: Infinity
+			});
+		}}
+	>
+		⭐test draw
+	</button>
+	<button class="button flex-1 whitespace-nowrap" use:animationOnFocus on:click={handleDraw}>
+		🤝 offer draw
+	</button>
+	<button class="button flex-1 whitespace-nowrap" use:animationOnFocus on:click={handleResign}>
+		😖 resign
+	</button>
+	<button class="button flex-1 whitespace-nowrap" use:animationOnFocus on:click={handleGetState}>
+		📜 get state
+	</button>
+</div>
