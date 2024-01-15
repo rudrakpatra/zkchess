@@ -23,7 +23,7 @@
 		if (browser) stopwatch.start();
 	}
 
-	let gameStarted = true;
+	let gameStarted = false;
 
 	let handleCompileAndStartGame = async () => {},
 		handleMove = async (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
