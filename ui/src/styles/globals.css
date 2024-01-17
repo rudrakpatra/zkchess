@@ -11,6 +11,7 @@
 }
 @layer components {
 	.button {
+		@apply select-none;
 		@apply rounded-lg p-2 shadow-lg outline-none;
 		@apply text-lg font-semibold;
 		@apply ringed;
@@ -18,6 +19,10 @@
 	}
 	.button:active {
 		@apply scale-[0.98];
+	}
+	.button:disabled {
+		pointer-events: none;
+		@apply opacity-50;
 	}
 
 	.ringed {

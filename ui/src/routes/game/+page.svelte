@@ -13,6 +13,7 @@
 	import { animationOnFocus } from '$lib/actions/interaction';
 	import { browser, dev, building, version } from '$app/environment';
 
+	let disableCompileButton = false;
 	let stopwatch = new Stopwatch();
 	let clientIdle = false;
 	$: if (clientIdle) {
@@ -37,6 +38,7 @@
 		const { ZkappWorkerClient } = await import('$lib/zkapp/ZkappWorkerClient');
 		const client = new ZkappWorkerClient();
 		handleCompileAndStartGame = async () => {
+			disableCompileButton = true;
 			clientIdle = false;
 			await toast.promise(client.init(), {
 				loading: 'Compiling...',
@@ -135,11 +137,20 @@
 {:else}
 	<div class="fixed inset-0 grid place-content-center">
 		<p class="text-balance max-w-[16rem] text-center text-lg mb-4">
-			Welcome to zk chess example. <br />
-			This example first compiles the contract and then starts a game on a local test chain.<br />
+			Welcome to zk chess example! <br />
+			This example currently runs on a <b> local test chain</b>.<br />
 		</p>
-		<button class="button" use:animationOnFocus on:click|once={handleCompileAndStartGame}>
-			🚀 compile & start game
+		<button
+			class="button"
+			use:animationOnFocus
+			on:click|once={handleCompileAndStartGame}
+			disabled={disableCompileButton}
+		>
+			{#if disableCompileButton}
+				⏳ compiling and starting...
+			{:else}
+				🚀 compile & start game
+			{/if}
 		</button>
 	</div>
 {/if}

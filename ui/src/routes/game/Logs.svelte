@@ -2,15 +2,21 @@
 	export let logs = ['Logs'];
 </script>
 
-<ul class="flex flex-col gap-1 overflow-y-scroll">
+<ul class="absolute inset-1 flex flex-col gap-1 overflow-y-scroll">
 	{#each logs as log}
-		<li class=" text-sm bg-chess-200 p-1 rounded-md">
+		<li>
 			<pre>{log}</pre>
 		</li>
 	{/each}
 </ul>
 
 <style>
+	pre {
+		font-family: monospace;
+	}
+	li {
+		@apply bg-chess-200 rounded-md p-1 text-sm;
+	}
 	li::before {
 		content: '✦';
 		opacity: 0.2;

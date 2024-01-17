@@ -41,7 +41,7 @@
 
 	@media (max-height: 38rem) {
 		.layout {
-			grid-template: 3rem 8rem 9.5rem 3rem / 12rem 25rem;
+			grid-template: 3rem 10rem 7.5rem 3rem / 12rem 25rem;
 			grid-template-areas:
 				'playerB board'
 				'logs board'
