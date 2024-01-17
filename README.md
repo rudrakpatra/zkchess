@@ -6,7 +6,7 @@ I made this project primarily to understand how Mina works.
 1. Proves that every move is played correctly and the final result win,loose,draw.
 2. Players can also create chess puzzles using a custom inital state of the Board.
 ### A simple UI demo
-<img src="https://github.com/rudrakpatra/zkchess/assets/84844790/54bf5d8e-344f-4564-aa95-54098beab065" height="500"/>
+<img src="https://github.com/rudrakpatra/zkchess/assets/84844790/8f50b938-ce12-4d50-bccd-5742b22f0736" height="500"/>
 
 # Usage
 1. Chess matches are verified onchain and player ratings can be trusted.
