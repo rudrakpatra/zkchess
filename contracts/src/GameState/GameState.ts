@@ -91,7 +91,9 @@ export class GameState extends Struct({
       result
     );
   }
-
+  public toFields(): Field[] {
+    return this.encode();
+  }
   public encode(): Field[] {
     return pack(
       [

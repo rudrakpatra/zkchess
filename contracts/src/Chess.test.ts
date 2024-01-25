@@ -47,7 +47,7 @@ describe('Chess', () => {
   it('starts the game and resigns', async () => {
     await localDeploy();
     const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
@@ -63,7 +63,7 @@ describe('Chess', () => {
   it('start game twice', async () => {
     await localDeploy();
     const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
     });
     await txn.prove();
     await txn.sign([whitePlayerKey]).send();
@@ -77,7 +77,7 @@ describe('Chess', () => {
     console.log(zkApp.getGameState().toAscii());
 
     const txn3 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount);
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
     });
     await txn3.prove();
     await txn3.sign([whitePlayerKey]).send();
@@ -88,7 +88,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -116,7 +116,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -146,7 +146,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -178,7 +178,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -211,7 +211,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -243,7 +243,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount);
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
