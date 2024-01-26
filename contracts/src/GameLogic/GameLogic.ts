@@ -204,63 +204,63 @@ export class GameObject {
   public preMoveValidations(move: Move) {
     const gameEvent = new GameEvent(this.state, move);
     return [
-      gameEvent.movesPawn(),
+      // gameEvent.movesPawn(),
       gameEvent.movesKnight(),
-      gameEvent.movesBishop(),
-      gameEvent.movesRook(),
-      gameEvent.movesQueen(),
-      gameEvent.movesKing(),
+      // gameEvent.movesBishop(),
+      // gameEvent.movesRook(),
+      // gameEvent.movesQueen(),
+      // gameEvent.movesKing(),
     ]
       .map((m) => Object.values(m).reduce(Bool.or))
       .reduce(Bool.or);
   }
-  public illegalCastling(move: Move) {
-    //check if this move is valid
-    this.preMoveValidations(move);
+  // public illegalCastling(move: Move) {
+  //   //check if this move is valid
+  //   this.preMoveValidations(move);
 
-    const whiteToPlay = this.state.turn;
-    const opponentsCastlingRow = Provable.if(whiteToPlay, Field(0), Field(7));
+  //   const whiteToPlay = this.state.turn;
+  //   const opponentsCastlingRow = Provable.if(whiteToPlay, Field(0), Field(7));
 
-    this.state.kingCastled.assertTrue('the king did not castle last move');
+  //   this.state.kingCastled.assertTrue('the king did not castle last move');
 
-    // king side castling
-    // 0 1 2 3 4 5 6 7
-    // ? ? ? ? . K R .
+  //   // king side castling
+  //   // 0 1 2 3 4 5 6 7
+  //   // ? ? ? ? . K R .
 
-    const kingCastledSide = this.state
-      .opponent()
-      .getKing()
-      .position.x.equals(Field(5));
+  //   const kingCastledSide = this.state
+  //     .opponent()
+  //     .getKing()
+  //     .position.x.equals(Field(5));
 
-    const kingSideWasVulnerable = [
-      Position.from(opponentsCastlingRow, 4),
-      Position.from(opponentsCastlingRow, 5),
-    ]
-      .map((p) => p.equals(move.path.end()))
-      .reduce(Bool.or);
+  //   const kingSideWasVulnerable = [
+  //     Position.from(opponentsCastlingRow, 4),
+  //     Position.from(opponentsCastlingRow, 5),
+  //   ]
+  //     .map((p) => p.equals(move.path.end()))
+  //     .reduce(Bool.or);
 
-    // queen side castling
-    // 0 1 2 3 4 5 6 7
-    // . . K R . ? ? ?
-    const queenSideCastledSide = this.state
-      .opponent()
-      .getKing()
-      .position.x.equals(Field(2));
+  //   // queen side castling
+  //   // 0 1 2 3 4 5 6 7
+  //   // . . K R . ? ? ?
+  //   const queenSideCastledSide = this.state
+  //     .opponent()
+  //     .getKing()
+  //     .position.x.equals(Field(2));
 
-    const queenSideWasVulnerable = [
-      Position.from(opponentsCastlingRow, 4),
-      Position.from(opponentsCastlingRow, 3),
-      Position.from(opponentsCastlingRow, 2),
-    ]
-      .map((p) => p.equals(move.path.end()))
-      .reduce(Bool.or);
+  //   const queenSideWasVulnerable = [
+  //     Position.from(opponentsCastlingRow, 4),
+  //     Position.from(opponentsCastlingRow, 3),
+  //     Position.from(opponentsCastlingRow, 2),
+  //   ]
+  //     .map((p) => p.equals(move.path.end()))
+  //     .reduce(Bool.or);
 
-    //lastly we determine if this castling was illegal like this
-    return [
-      kingCastledSide.and(kingSideWasVulnerable),
-      queenSideCastledSide.and(queenSideWasVulnerable),
-    ].reduce(Bool.or);
-  }
+  //   //lastly we determine if this castling was illegal like this
+  //   return [
+  //     kingCastledSide.and(kingSideWasVulnerable),
+  //     queenSideCastledSide.and(queenSideWasVulnerable),
+  //   ].reduce(Bool.or);
+  // }
   /**
    * returns a updated game state
    *

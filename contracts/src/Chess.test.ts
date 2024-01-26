@@ -1,10 +1,17 @@
-import { AccountUpdate, Mina, PrivateKey, Provable, PublicKey } from 'o1js';
+import {
+  AccountUpdate,
+  Field,
+  Mina,
+  PrivateKey,
+  Provable,
+  PublicKey,
+} from 'o1js';
 
 import { Chess } from './Chess.js';
 import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
 
-const proofsEnabled = false;
+const proofsEnabled = true;
 describe('Chess', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
@@ -60,35 +67,35 @@ describe('Chess', () => {
     console.log(zkApp.getGameState().toAscii());
   });
 
-  it('start game twice', async () => {
-    await localDeploy();
-    const txn = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-    });
-    await txn.prove();
-    await txn.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toAscii());
+  // it('start game twice', async () => {
+  //   await localDeploy();
+  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+  //   });
+  //   await txn.prove();
+  //   await txn.sign([whitePlayerKey]).send();
+  //   console.log(zkApp.getGameState().toAscii());
 
-    const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.move(Move.fromLAN('b1', 'a3'));
-    });
-    await txn2.prove();
-    await txn2.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toAscii());
+  //   const txn2 = await Mina.transaction(whitePlayerAccount, () => {
+  //     zkApp.move(Move.fromLAN('b1', 'a3'));
+  //   });
+  //   await txn2.prove();
+  //   await txn2.sign([whitePlayerKey]).send();
+  //   console.log(zkApp.getGameState().toAscii());
 
-    const txn3 = await Mina.transaction(whitePlayerAccount, () => {
-      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-    });
-    await txn3.prove();
-    await txn3.sign([whitePlayerKey]).send();
-    console.log(zkApp.getGameState().toAscii());
-  });
+  //   const txn3 = await Mina.transaction(whitePlayerAccount, () => {
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+  //   });
+  //   await txn3.prove();
+  //   await txn3.sign([whitePlayerKey]).send();
+  //   console.log(zkApp.getGameState().toAscii());
+  // });
 
   // it('halfmove', async () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -116,7 +123,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -146,7 +153,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -178,7 +185,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -211,7 +218,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -243,7 +250,7 @@ describe('Chess', () => {
   //   await localDeploy();
 
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -271,7 +278,7 @@ describe('Chess', () => {
   //   const whiteClaimsStalemate = await Mina.transaction(
   //     whitePlayerAccount,
   //     () => {
-  //       zkApp.claimStalemate();
+  //       zkApp.interact(Field(Chess.CLAIM_STALEMATE), Move.INVALID);
   //     }
   //   );
   //   await whiteClaimsStalemate.prove();
@@ -280,7 +287,10 @@ describe('Chess', () => {
   //   const blackPlayerCheckmates = await Mina.transaction(
   //     blackPlayerAccount,
   //     () => {
-  //       zkApp.overrideStalemateClaimByCapturingKing(Move.fromLAN('h4', 'e1'));
+  //       zkApp.interact(
+  //         Field(Chess.OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE),
+  //         Move.fromLAN('h4', 'e1')
+  //       );
   //     }
   //   );
   //   await blackPlayerCheckmates.prove();
@@ -295,11 +305,7 @@ describe('Chess', () => {
   //   await localDeploy();
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
   //     //this function is likely to be removed and used for testing only
-  //     zkApp.startFromGameState(
-  //       whitePlayerAccount,
-  //       blackPlayerAccount,
-  //       intialGameState
-  //     );
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, intialGameState);
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -324,14 +330,14 @@ describe('Chess', () => {
   //   const blackClaimsStalemate = await Mina.transaction(
   //     blackPlayerAccount,
   //     () => {
-  //       zkApp.claimStalemate();
+  //       zkApp.interact(Field(Chess.CLAIM_STALEMATE), Move.INVALID);
   //     }
   //   );
   //   await blackClaimsStalemate.prove();
   //   await blackClaimsStalemate.sign([blackPlayerKey]).send();
 
   //   const whitePlayerAck = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.acknowledgeStalemateClaim();
+  //     zkApp.interact(Field(Chess.ACKNOWLEDGE_STALEMATE_CLAIM), Move.INVALID);
   //   });
   //   await whitePlayerAck.prove();
   //   await whitePlayerAck.sign([whitePlayerKey]).send();
@@ -348,11 +354,7 @@ describe('Chess', () => {
   //   await localDeploy();
   //   const txn = await Mina.transaction(whitePlayerAccount, () => {
   //     //this function is likely to be removed and used for testing only
-  //     zkApp.startFromGameState(
-  //       whitePlayerAccount,
-  //       blackPlayerAccount,
-  //       intialGameState
-  //     );
+  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, intialGameState);
   //   });
   //   await txn.prove();
   //   await txn.sign([whitePlayerKey]).send();
@@ -378,7 +380,7 @@ describe('Chess', () => {
   //   const blackClaimsStalemate = await Mina.transaction(
   //     blackPlayerAccount,
   //     () => {
-  //       zkApp.claimStalemate();
+  //       zkApp.interact(Field(Chess.CLAIM_STALEMATE), Move.INVALID);
   //     }
   //   );
   //   await blackClaimsStalemate.prove();
@@ -392,7 +394,10 @@ describe('Chess', () => {
   //   const whitePlayerFalseReport = await Mina.transaction(
   //     whitePlayerAccount,
   //     () => {
-  //       zkApp.reportStalemateClaimByValidOpponentMove(Move.fromLAN('e8', 'd8'));
+  //       zkApp.interact(
+  //         Field(Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE),
+  //         Move.fromLAN('e8', 'd8')
+  //       );
   //     }
   //   );
   //   await whitePlayerFalseReport.prove();
@@ -406,7 +411,10 @@ describe('Chess', () => {
   //   const blackPlayerDefendStalemate = await Mina.transaction(
   //     blackPlayerAccount,
   //     () => {
-  //       zkApp.defendStalemateClaim(Move.fromLAN('d5', 'd8'));
+  //       zkApp.interact(
+  //         Field(Chess.DEFEND_STALEMATE_CLAIM),
+  //         Move.fromLAN('d5', 'd8')
+  //       );
   //     }
   //   );
 

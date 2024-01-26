@@ -101,187 +101,255 @@ export class Chess extends SmartContract {
     );
   }
 
-  /**
-   * offers a draw to the opponent
-   */
-  @method offerDraw() {
-    const gameState = this.getGameState();
-    this.assertSenderIsPlayer(gameState);
-    gameState.result
-      .equals(Field(GameResult.ONGOING))
-      .assertTrue('game already over');
-    //UPDATE GAME STATE
-    this.setGameState(
-      GameState.from(
-        gameState.white,
-        gameState.black,
-        // gameState.turn,
-        gameState.turn.not(),
-        gameState.enpassant,
-        gameState.kingCastled,
-        gameState.column,
-        gameState.halfmove,
-        //gameState.canDraw,
-        Bool(true),
-        // gameState.result
-        Field(GameResult.ONGOING_OFFERED_DRAW)
-      )
-    );
-  }
-  /**
-   * resolve a draw offered by the opponent
-   */
-  @method resolveDraw(accept: Bool) {
-    const gameState = this.getGameState();
-    this.assertSenderIsPlayer(gameState);
-    gameState.result
-      .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
-      .assertTrue('no draw over');
+  // /**
+  //  * offers a draw to the opponent
+  //  */
+  // @method offerDraw() {
+  //   const gameState = this.getGameState();
+  //   this.assertSenderIsPlayer(gameState);
+  //   gameState.result
+  //     .equals(Field(GameResult.ONGOING))
+  //     .assertTrue('game already over');
+  //   //UPDATE GAME STATE
+  //   this.setGameState(
+  //     GameState.from(
+  //       gameState.white,
+  //       gameState.black,
+  //       // gameState.turn,
+  //       gameState.turn.not(),
+  //       gameState.enpassant,
+  //       gameState.kingCastled,
+  //       gameState.column,
+  //       gameState.halfmove,
+  //       //gameState.canDraw,
+  //       Bool(true),
+  //       // gameState.result
+  //       Field(GameResult.ONGOING_OFFERED_DRAW)
+  //     )
+  //   );
+  // }
+  // /**
+  //  * resolve a draw offered by the opponent
+  //  */
+  // @method resolveDraw(accept: Bool) {
+  //   const gameState = this.getGameState();
+  //   this.assertSenderIsPlayer(gameState);
+  //   gameState.result
+  //     .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
+  //     .assertTrue('no draw over');
 
-    gameState.canDraw.assertTrue('resolving draw not allowed');
-    //UPDATE GAME STATE
-    this.setGameState(
-      GameState.from(
-        gameState.white,
-        gameState.black,
-        // gameState.turn,
-        gameState.turn.not(),
-        gameState.enpassant,
-        gameState.kingCastled,
-        gameState.column,
-        gameState.halfmove,
-        //gameState.canDraw,
-        Bool(false),
-        // gameState.result
-        Provable.if(accept, Field(GameResult.DRAW), Field(GameResult.ONGOING))
-      )
-    );
-  }
+  //   gameState.canDraw.assertTrue('resolving draw not allowed');
+  //   //UPDATE GAME STATE
+  //   this.setGameState(
+  //     GameState.from(
+  //       gameState.white,
+  //       gameState.black,
+  //       // gameState.turn,
+  //       gameState.turn.not(),
+  //       gameState.enpassant,
+  //       gameState.kingCastled,
+  //       gameState.column,
+  //       gameState.halfmove,
+  //       //gameState.canDraw,
+  //       Bool(false),
+  //       // gameState.result
+  //       Provable.if(accept, Field(GameResult.DRAW), Field(GameResult.ONGOING))
+  //     )
+  //   );
+  // }
 
-  static readonly CLAIM_STALEMATE = 0;
-  static readonly ACKNOWLEDGE_STALEMATE_CLAIM = 1;
-  static readonly OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE = 2;
-  static readonly REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE = 3;
-  static readonly DEFEND_STALEMATE_CLAIM = 4;
-  static readonly REPORT_ILLEGAL_CASTLING = 5;
+  // static readonly CLAIM_STALEMATE = 0;
+  // static readonly ACKNOWLEDGE_STALEMATE_CLAIM = 1;
+  // static readonly OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE = 2;
+  // static readonly REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE = 3;
+  // static readonly DEFEND_STALEMATE_CLAIM = 4;
+  // static readonly REPORT_ILLEGAL_CASTLING = 5;
 
-  @method interact(mode: Field, move: Move) {
-    const gameState = this.getGameState();
-    const gameObject = new GameObject(gameState);
+  // @method interact(mode: Field, move: Move) {
+  //   const gameState = this.getGameState();
+  //   const gameObject = new GameObject(gameState);
 
-    const updateGameState = gameObject.toUpdated(move);
+  //   const updatedGameState = gameObject.toUpdated(move);
 
-    const oneTurnSkipped = GameState.from(
-      gameState.white,
-      gameState.black,
-      // gameState.turn,
-      gameState.turn.not(),
-      gameState.enpassant,
-      gameState.kingCastled,
-      gameState.column,
-      gameState.halfmove,
-      gameState.canDraw,
-      gameState.result
-    );
-    const gameObjectOneTurnSkipped = new GameObject(oneTurnSkipped);
+  //   const oneTurnSkipped = GameState.from(
+  //     gameState.white,
+  //     gameState.black,
+  //     // gameState.turn,
+  //     gameState.turn.not(),
+  //     gameState.enpassant,
+  //     gameState.kingCastled,
+  //     gameState.column,
+  //     gameState.halfmove,
+  //     gameState.canDraw,
+  //     gameState.result
+  //   );
+  //   const gameObjectOneTurnSkipped = new GameObject(oneTurnSkipped);
 
-    this.assertSenderIsPlayer(gameState);
+  //   const newGameStates = [
+  //     {
+  //       mode: Chess.CLAIM_STALEMATE,
+  //       cond: [gameState.result.equals(Field(GameResult.ONGOING))],
+  //       error: 'cannot claim if game is not ongoing',
+  //       state: GameState.from(
+  //         gameState.white,
+  //         gameState.black,
+  //         //turn,
+  //         gameState.turn.not(),
+  //         gameState.enpassant,
+  //         gameState.kingCastled,
+  //         gameState.column,
+  //         gameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+  //       ),
+  //     },
+  //     {
+  //       mode: Chess.ACKNOWLEDGE_STALEMATE_CLAIM,
+  //       cond: [
+  //         gameState.result.equals(
+  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+  //         ),
+  //       ],
+  //       error: 'cannot acknowledge, no stalemate is claimed',
+  //       state: GameState.from(
+  //         gameState.white,
+  //         gameState.black,
+  //         //turn,
+  //         gameState.turn.not(),
+  //         gameState.enpassant,
+  //         gameState.kingCastled,
+  //         gameState.column,
+  //         gameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Field(GameResult.DRAW_BY_STALEMATE)
+  //       ),
+  //     },
+  //     {
+  //       mode: Chess.OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE,
+  //       cond: [
+  //         gameState.result.equals(
+  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+  //         ),
+  //         gameObject.preMoveValidations(move),
+  //         updatedGameState.self().getKing().captured,
+  //       ],
+  //       error: 'cannot override stalemate claim by king capture',
+  //       state: GameState.from(
+  //         updatedGameState.white,
+  //         updatedGameState.black,
+  //         //turn,
+  //         updatedGameState.turn.not(),
+  //         updatedGameState.enpassant,
+  //         updatedGameState.kingCastled,
+  //         updatedGameState.column,
+  //         updatedGameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Provable.if(
+  //           gameState.turn,
+  //           Field(GameResult.WHITE_WINS),
+  //           Field(GameResult.BLACK_WINS)
+  //         )
+  //       ),
+  //     },
+  //     {
+  //       mode: Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE,
+  //       cond: [
+  //         gameState.result.equals(
+  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+  //         ),
+  //         gameObjectOneTurnSkipped.preMoveValidations(move),
+  //       ],
+  //       error: 'cannot report stalemate claim by valid opponent move',
+  //       state: GameState.from(
+  //         updatedGameState.white,
+  //         updatedGameState.black,
+  //         //turn
+  //         updatedGameState.turn.not(),
+  //         updatedGameState.enpassant,
+  //         updatedGameState.kingCastled,
+  //         updatedGameState.column,
+  //         updatedGameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Field(GameResult.STALEMATE_CLAIM_REPORTED)
+  //       ),
+  //     },
+  //     {
+  //       mode: Chess.DEFEND_STALEMATE_CLAIM,
+  //       cond: [
+  //         gameState.result.equals(Field(GameResult.STALEMATE_CLAIM_REPORTED)),
+  //         gameObjectOneTurnSkipped.preMoveValidations(move),
+  //         //show that your king can be captured now
+  //         updatedGameState.self().getKing().captured,
+  //       ],
+  //       error: 'incorrect defence of stalemate claim',
+  //       state: GameState.from(
+  //         updatedGameState.white,
+  //         updatedGameState.black,
+  //         //turn
+  //         updatedGameState.turn.not(),
+  //         updatedGameState.enpassant,
+  //         updatedGameState.kingCastled,
+  //         updatedGameState.column,
+  //         updatedGameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Field(GameResult.DRAW_BY_STALEMATE)
+  //       ),
+  //     },
+  //     {
+  //       mode: Chess.REPORT_ILLEGAL_CASTLING,
+  //       cond: [
+  //         gameState.result.equals(Field(GameResult.ONGOING)),
+  //         gameObject.illegalCastling(move),
+  //       ],
+  //       error: 'false report of illegal castling',
+  //       state: GameState.from(
+  //         gameState.white,
+  //         gameState.black,
+  //         //turn,
+  //         gameState.turn.not(),
+  //         gameState.enpassant,
+  //         gameState.kingCastled,
+  //         gameState.column,
+  //         gameState.halfmove,
+  //         //canDraw,
+  //         Bool(false),
+  //         //result
+  //         Provable.if(
+  //           gameState.turn,
+  //           //the reporting player simply wins the game
+  //           Field(GameResult.WHITE_WINS),
+  //           Field(GameResult.BLACK_WINS)
+  //         )
+  //       ),
+  //     },
+  //   ];
+  //   //satisfy one of these conditions
+  //   newGameStates.forEach((s) => {
+  //     Provable.if(
+  //       mode.equals(s.mode),
+  //       s.cond.reduce(Bool.or),
+  //       Bool(true)
+  //     ).assertTrue(s.error);
+  //   });
 
-    [
-      mode.equals(Field(Chess.CLAIM_STALEMATE)),
-      gameState.result.equals(Field(GameResult.ONGOING)),
-    ]
-      .reduce(Bool.and)
-      .assertTrue('cannot claim if game is not ongoing');
-
-    [
-      mode.equals(Field(Chess.ACKNOWLEDGE_STALEMATE_CLAIM)),
-      gameState.result.equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)),
-    ]
-      .reduce(Bool.and)
-      .assertTrue('cannot acknowledge, no stalemate is claimed');
-
-    [
-      mode.equals(Field(Chess.OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE)),
-      gameState.result.equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)),
-      gameObject.preMoveValidations(move),
-      updateGameState.self().getKing().captured,
-    ]
-      .reduce(Bool.and)
-      .assertTrue('cannot override stalemate claim by king capture');
-
-    [
-      mode.equals(Field(Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE)),
-      gameState.result.equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)),
-      gameObjectOneTurnSkipped.preMoveValidations(move),
-    ]
-      .reduce(Bool.and)
-      .assertTrue('cannot report stalemate claim by valid opponent move');
-
-    [
-      mode.equals(Field(Chess.DEFEND_STALEMATE_CLAIM)),
-      gameState.result.equals(Field(GameResult.STALEMATE_CLAIM_REPORTED)),
-      gameObjectOneTurnSkipped.preMoveValidations(move),
-      //show that your king can be captured now
-      updateGameState.self().getKing().captured,
-    ]
-      .reduce(Bool.and)
-      .assertTrue('incorrect defence of stalemate claim');
-
-    [
-      mode.equals(Field(Chess.REPORT_ILLEGAL_CASTLING)),
-      gameState.result.equals(Field(GameResult.ONGOING)),
-      gameObject.illegalCastling(move),
-    ]
-      .reduce(Bool.and)
-      .assertTrue('incorrect report of illegal castling');
-
-    const newGameResult = Provable.switch(
-      [
-        mode.equals(Field(Chess.CLAIM_STALEMATE)),
-        mode.equals(Field(Chess.ACKNOWLEDGE_STALEMATE_CLAIM)),
-        mode.equals(Field(Chess.OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE)),
-        mode.equals(Field(Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE)),
-        mode.equals(Field(Chess.DEFEND_STALEMATE_CLAIM)),
-        mode.equals(Field(Chess.REPORT_ILLEGAL_CASTLING)),
-      ],
-      Field,
-      [
-        Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED),
-        Field(GameResult.DRAW_BY_STALEMATE),
-        Provable.if(
-          gameState.turn,
-          Field(GameResult.WHITE_WINS),
-          Field(GameResult.BLACK_WINS)
-        ),
-        Field(GameResult.STALEMATE_CLAIM_REPORTED),
-        Field(GameResult.DRAW_BY_STALEMATE),
-        Provable.if(
-          gameState.turn,
-          //the reporting player simply wins the game
-          Field(GameResult.WHITE_WINS),
-          Field(GameResult.BLACK_WINS)
-        ),
-      ]
-    );
-
-    this.setGameState(
-      GameState.from(
-        updateGameState.white,
-        updateGameState.black,
-        // newGameState.turn,
-        gameState.turn.not(),
-        updateGameState.enpassant,
-        updateGameState.kingCastled,
-        updateGameState.column,
-        updateGameState.halfmove,
-        //newGameState.canDraw,
-        Bool(false),
-        // newGameState.result
-        newGameResult
-      )
-    );
-  }
+  //   this.setGameState(
+  //     Provable.switch(
+  //       newGameStates.map((s) => mode.equals(s.mode)),
+  //       GameState,
+  //       newGameStates.map((s) => s.state)
+  //     )
+  //   );
+  // }
 
   // //CURRENTLY A PLAYER CAN CASTLE THROUGH A VULNERABLE POSITION
   // /**

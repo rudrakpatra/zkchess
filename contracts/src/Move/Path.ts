@@ -7,6 +7,9 @@ import { GameState } from '../GameState/GameState';
 export class Path extends Struct({
   positions: Provable.Array(Position, 8),
 }) {
+  static INVALID = new Path({
+    positions: Array(8).fill(Board.INVALID_POSITION),
+  });
   static from(path: Position[]) {
     return new Path({ positions: path });
   }
