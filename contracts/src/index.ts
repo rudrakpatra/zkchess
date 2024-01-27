@@ -5,6 +5,11 @@ import { Move } from './Move/Move.js';
 import { Position } from './Position/Position.js';
 import { Piece } from './Piece/Piece.js';
 import { RANKS, RankAsChar, PromotionRankAsChar } from './Piece/Rank.js';
+import {
+  PvPChessProgramProof,
+  PvPChessProgram,
+  RollupState,
+} from './PvPChessProgram.js';
 
 export {
   Chess,
@@ -17,4 +22,7 @@ export {
   RANKS,
   RankAsChar,
   PromotionRankAsChar,
+  RollupState,
+  PvPChessProgram,
+  PvPChessProgramProof,
 };

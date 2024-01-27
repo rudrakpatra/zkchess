@@ -101,9 +101,9 @@ export class Chess extends SmartContract {
     );
   }
 
-  // /**
-  //  * offers a draw to the opponent
-  //  */
+  /**
+   * offers a draw to the opponent
+   */
   @method offerDraw() {
     const gameState = this.getGameState();
     this.assertSenderIsPlayer(gameState);
