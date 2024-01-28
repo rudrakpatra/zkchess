@@ -1,4 +1,4 @@
-import { Bool, Field, Provable } from 'o1js';
+import { Bool, Field, Provable, provable } from 'o1js';
 import { GameState } from '../GameState/GameState';
 import { Move } from '../Move/Move';
 import { Piece } from '../Piece/Piece';
@@ -61,7 +61,7 @@ export class GameEvent {
   movePromotesPawn() {
     return [
       this.piece.rank.equals(RANKS.PAWN),
-      this.move.path.end().y.equals(this.pawnPromotionRow),
+      this.move.path.end().x.equals(this.pawnPromotionRow),
       isRankSuitableForPromotion(this.move.promotion),
     ].reduce(Bool.and);
   }
@@ -203,13 +203,20 @@ export class GameObject {
   }
   public preMoveValidations(move: Move) {
     const gameEvent = new GameEvent(this.state, move);
+    const movesPawn = gameEvent.movesPawn();
+    const movesKnight = gameEvent.movesKnight();
+    const movesBishop = gameEvent.movesBishop();
+    const movesRook = gameEvent.movesRook();
+    const movesQueen = gameEvent.movesQueen();
+    const movesKing = gameEvent.movesKing();
+
     return [
-      gameEvent.movesPawn(),
-      gameEvent.movesKnight(),
-      gameEvent.movesBishop(),
-      gameEvent.movesRook(),
-      gameEvent.movesQueen(),
-      gameEvent.movesKing(),
+      movesPawn,
+      movesKnight,
+      movesBishop,
+      movesRook,
+      movesQueen,
+      movesKing,
     ]
       .map((m) => Object.values(m).reduce(Bool.or))
       .reduce(Bool.or);
@@ -269,6 +276,10 @@ export class GameObject {
    */
   public toUpdated(move: Move) {
     const gameEvent = new GameEvent(this.state, move);
+    const movePromotesPawn = gameEvent.movePromotesPawn();
+    const movesPawn = gameEvent.movesPawn();
+    const movesKing = gameEvent.movesKing();
+    const gameAdvances = gameEvent.gameAdvances();
     const newSelfPieces = this.state.self().pieces.map((p) => {
       const isSelectedPiece = p.position.equals(move.path.start());
       //king side rook move when castling
@@ -287,21 +298,17 @@ export class GameObject {
         //else if
         Provable.if(
           //the piece is the king side rook during castling
-          gameEvent
-            .movesKing()
-            .byCastlingKingSide.and(
-              p.position.equals(kingSideRookPositionFrom)
-            ),
+          movesKing.byCastlingKingSide.and(
+            p.position.equals(kingSideRookPositionFrom)
+          ),
           //move the rook to the king side rook position
           kingSideRookPositionTo,
           //else if
           Provable.if(
             //the piece is the queen side rook during castling
-            gameEvent
-              .movesKing()
-              .byCastlingQueenSide.and(
-                p.position.equals(queenSideRookPositionFrom)
-              ),
+            movesKing.byCastlingQueenSide.and(
+              p.position.equals(queenSideRookPositionFrom)
+            ),
             //move the rook to the queen side rook position
             queenSideRookPositionTo,
             //else
@@ -312,7 +319,7 @@ export class GameObject {
       );
       const newCaptured = p.captured;
       const newRank = Provable.if(
-        isSelectedPiece.and(gameEvent.movePromotesPawn()),
+        isSelectedPiece.and(movePromotesPawn),
         move.promotion,
         p.rank
       );
@@ -320,23 +327,21 @@ export class GameObject {
     });
     const newSelfCastling = {
       kingSide: Provable.if(
-        gameEvent.movesKing().byCastlingKingSide,
+        movesKing.byCastlingKingSide,
         Bool(false),
         this.state.self().castling.kingSide
       ),
       queenSide: Provable.if(
-        gameEvent.movesKing().byCastlingQueenSide,
+        movesKing.byCastlingQueenSide,
         Bool(false),
         this.state.self().castling.queenSide
       ),
     };
 
     const newSelf = PlayerState.from(newSelfPieces, newSelfCastling);
-
+    const enpassantPawnCapture = movesPawn.capturingEnpassantPawn;
     const newOpponentPieces = this.state.opponent().pieces.map((p) => {
       const newPosition = p.position;
-      const enpassantPawnCapture = gameEvent.movesPawn().capturingEnpassantPawn;
-
       const newCaptured = [
         //already captured
         p.captured,
@@ -362,17 +367,17 @@ export class GameObject {
 
     const newTurn = this.state.turn.not();
 
-    const newEnpassant = gameEvent.movesPawn().twoSquaresForwardFromStart;
+    const newEnpassant = movesPawn.twoSquaresForwardFromStart;
 
     const newKingCastled = [
-      gameEvent.movesKing().byCastlingKingSide,
-      gameEvent.movesKing().byCastlingQueenSide,
+      movesKing.byCastlingKingSide,
+      movesKing.byCastlingQueenSide,
     ].reduce(Bool.or);
 
     const newColumn = move.path.end().y;
 
     const newHalfmove = Provable.if(
-      gameEvent.gameAdvances(),
+      gameAdvances,
       Field(0),
       this.state.halfmove.add(Field(1))
     );
@@ -383,14 +388,23 @@ export class GameObject {
 
     return GameState.from(
       newWhite,
+      // this.state.white,
       newBlack,
+      // this.state.black,
       newTurn,
+      // this.state.turn,
       newEnpassant,
+      // this.state.enpassant,
       newKingCastled,
+      // this.state.kingCastled,
       newColumn,
+      // this.state.column,
       newHalfmove,
+      // this.state.halfmove,
       newCanDraw,
+      // this.state.canDraw,
       newResult
+      // this.state.result
     );
   }
 }

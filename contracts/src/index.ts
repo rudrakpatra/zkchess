@@ -4,12 +4,7 @@ import { PlayerState } from './PlayerState/PlayerState.js';
 import { Move } from './Move/Move.js';
 import { Position } from './Position/Position.js';
 import { Piece } from './Piece/Piece.js';
-import {
-  RANK,
-  RankAsChar,
-  RankAsName,
-  PromotionRankAsChar,
-} from './Piece/Rank.js';
+import { RANKS, RankAsChar, PromotionRankAsChar } from './Piece/Rank.js';
 
 export {
   Chess,
@@ -18,8 +13,7 @@ export {
   PlayerState,
   Position,
   Piece,
-  RANK,
+  RANKS,
   RankAsChar,
-  RankAsName,
   PromotionRankAsChar,
 };

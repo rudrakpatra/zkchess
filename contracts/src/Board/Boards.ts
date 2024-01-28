@@ -2,6 +2,7 @@ import { Field } from 'o1js';
 import { Position } from '../Position/Position';
 
 export class Board {
+  static INVALID_POSITION = Position.from(Field(-1), Field(-1));
   static bounds(position: Position) {
     return position.x
       .greaterThanOrEqual(Field.from(0))

@@ -21,6 +21,7 @@ export class Move extends Struct({
   path: Path,
   promotion: Field,
 }) {
+  static INVALID = new Move({ path: Path.INVALID, promotion: Field(-1) });
   static from(path: Position[], promotion: Field) {
     return new Move({ path: Path.from(path), promotion });
   }
