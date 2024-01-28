@@ -12,6 +12,7 @@ import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
 
 const proofsEnabled = true;
+
 describe('Chess', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
@@ -67,185 +68,185 @@ describe('Chess', () => {
     console.log(zkApp.getGameState().toAscii());
   });
 
-  // it('start game twice', async () => {
-  //   await localDeploy();
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+  it('start game twice', async () => {
+    await localDeploy();
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.move(Move.fromLAN('b1', 'a3'));
-  //   });
-  //   await txn2.prove();
-  //   await txn2.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn2 = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.move(Move.fromLAN('b1', 'a3'));
+    });
+    await txn2.prove();
+    await txn2.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const txn3 = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn3.prove();
-  //   await txn3.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
-  // });
+    const txn3 = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn3.prove();
+    await txn3.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
+  });
 
-  // it('halfmove', async () => {
-  //   await localDeploy();
+  it('halfmove', async () => {
+    await localDeploy();
 
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const moves = [
-  //     ['b1', 'c3'],
-  //     ['b8', 'c6'],
-  //     ['e2', 'e3'],
-  //   ];
-  //   for (let i = 0; i < moves.length; i++) {
-  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  //     console.log(moves[i][0], moves[i][1]);
-  //     const txn2 = await Mina.transaction(player, () => {
-  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-  //     });
-  //     await txn2.prove();
-  //     await txn2.sign([key]).send();
-  //     console.log(zkApp.getGameState().toAscii());
-  //   }
-  // });
+    const moves = [
+      ['b1', 'c3'],
+      ['b8', 'c6'],
+      ['e2', 'e3'],
+    ];
+    for (let i = 0; i < moves.length; i++) {
+      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+      console.log(moves[i][0], moves[i][1]);
+      const txn2 = await Mina.transaction(player, () => {
+        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+      });
+      await txn2.prove();
+      await txn2.sign([key]).send();
+      console.log(zkApp.getGameState().toAscii());
+    }
+  });
 
-  // it('enpassant', async () => {
-  //   await localDeploy();
+  it('enpassant', async () => {
+    await localDeploy();
 
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const moves = [
-  //     ['e2', 'e4'],
-  //     ['d7', 'd5'],
-  //     ['e4', 'd5'],
-  //     ['e7', 'e5'],
-  //     ['d5', 'e6'],
-  //   ];
-  //   for (let i = 0; i < moves.length; i++) {
-  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  //     console.log(moves[i][0], moves[i][1]);
-  //     const txn2 = await Mina.transaction(player, () => {
-  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-  //     });
-  //     await txn2.prove();
-  //     await txn2.sign([key]).send();
-  //     console.log(zkApp.getGameState().toAscii());
-  //   }
-  // });
+    const moves = [
+      ['e2', 'e4'],
+      ['d7', 'd5'],
+      ['e4', 'd5'],
+      ['e7', 'e5'],
+      ['d5', 'e6'],
+    ];
+    for (let i = 0; i < moves.length; i++) {
+      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+      console.log(moves[i][0], moves[i][1]);
+      const txn2 = await Mina.transaction(player, () => {
+        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+      });
+      await txn2.prove();
+      await txn2.sign([key]).send();
+      console.log(zkApp.getGameState().toAscii());
+    }
+  });
 
-  // it('castling', async () => {
-  //   await localDeploy();
+  it('castling', async () => {
+    await localDeploy();
 
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const moves = [
-  //     ['e2', 'e4'],
-  //     ['c7', 'c6'],
-  //     ['f1', 'b5'],
-  //     ['c6', 'b5'],
-  //     ['g1', 'e2'],
-  //     ['b5', 'b4'],
-  //     ['e1', 'g1'],
-  //   ];
-  //   for (let i = 0; i < moves.length; i++) {
-  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  //     console.log(moves[i][0], moves[i][1]);
-  //     const txn2 = await Mina.transaction(player, () => {
-  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-  //     });
-  //     await txn2.prove();
-  //     await txn2.sign([key]).send();
-  //     console.log(zkApp.getGameState().toAscii());
-  //   }
-  // });
+    const moves = [
+      ['e2', 'e4'],
+      ['c7', 'c6'],
+      ['f1', 'b5'],
+      ['c6', 'b5'],
+      ['g1', 'e2'],
+      ['b5', 'b4'],
+      ['e1', 'g1'],
+    ];
+    for (let i = 0; i < moves.length; i++) {
+      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+      console.log(moves[i][0], moves[i][1]);
+      const txn2 = await Mina.transaction(player, () => {
+        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+      });
+      await txn2.prove();
+      await txn2.sign([key]).send();
+      console.log(zkApp.getGameState().toAscii());
+    }
+  });
 
-  // it('promotion', async () => {
-  //   await localDeploy();
+  it('promotion', async () => {
+    await localDeploy();
 
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const moves = [
-  //     ['b2', 'b4'],
-  //     ['c7', 'c6'],
-  //     ['b4', 'b5'],
-  //     ['c6', 'c5'],
-  //     ['b5', 'b6'],
-  //     ['c5', 'c4'],
-  //     ['b6', 'a7'],
-  //     ['c4', 'c3'],
-  //     ['a7', 'b8'],
-  //   ];
-  //   for (let i = 0; i < moves.length; i++) {
-  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  //     console.log(moves[i][0], moves[i][1]);
-  //     const txn2 = await Mina.transaction(player, () => {
-  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-  //     });
-  //     await txn2.prove();
-  //     await txn2.sign([key]).send();
-  //     console.log(zkApp.getGameState().toAscii());
-  //   }
-  // });
-  // it('checkmate', async () => {
-  //   await localDeploy();
+    const moves = [
+      ['b2', 'b4'],
+      ['c7', 'c6'],
+      ['b4', 'b5'],
+      ['c6', 'c5'],
+      ['b5', 'b6'],
+      ['c5', 'c4'],
+      ['b6', 'a7'],
+      ['c4', 'c3'],
+      ['a7', 'b8'],
+    ];
+    for (let i = 0; i < moves.length; i++) {
+      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+      console.log(moves[i][0], moves[i][1]);
+      const txn2 = await Mina.transaction(player, () => {
+        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+      });
+      await txn2.prove();
+      await txn2.sign([key]).send();
+      console.log(zkApp.getGameState().toAscii());
+    }
+  });
+  it('checkmate', async () => {
+    await localDeploy();
 
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
 
-  //   const moves = [
-  //     ['f2', 'f3'],
-  //     ['e7', 'e6'],
-  //     ['g2', 'g4'],
-  //     ['d8', 'h4'], //check mate by queen
-  //     ['e1', 'f2'], //white is unable to deflect check
-  //     ['h4', 'f2'], //queen captures king
-  //   ];
-  //   for (let i = 0; i < moves.length; i++) {
-  //     const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
-  //     const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  //     console.log(moves[i][0], moves[i][1]);
-  //     const txn2 = await Mina.transaction(player, () => {
-  //       zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
-  //     });
-  //     await txn2.prove();
-  //     await txn2.sign([key]).send();
-  //     console.log(zkApp.getGameState().toAscii());
-  //   }
-  //   //check if black wins
-  //   Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
-  // });
+    const moves = [
+      ['f2', 'f3'],
+      ['e7', 'e6'],
+      ['g2', 'g4'],
+      ['d8', 'h4'], //check mate by queen
+      ['e1', 'f2'], //white is unable to deflect check
+      ['h4', 'f2'], //queen captures king
+    ];
+    for (let i = 0; i < moves.length; i++) {
+      const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
+      const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
+      console.log(moves[i][0], moves[i][1]);
+      const txn2 = await Mina.transaction(player, () => {
+        zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
+      });
+      await txn2.prove();
+      await txn2.sign([key]).send();
+      console.log(zkApp.getGameState().toAscii());
+    }
+    //check if black wins
+    Provable.log(zkApp.getGameState().result.equals(GameResult.BLACK_WINS));
+  });
   // it('checkmate but stalemate-pretend', async () => {
   //   await localDeploy();
 
