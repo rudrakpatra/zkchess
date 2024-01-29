@@ -1,4 +1,4 @@
-import { GameState, defaultFEN } from './GameState';
+import { GameState, defaultFEN } from './GameState.js';
 
 describe('GameState', () => {
   it('should be able to be created', () => {

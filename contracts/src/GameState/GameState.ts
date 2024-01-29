@@ -1,10 +1,10 @@
 import { Field, Bool, Struct, Provable } from 'o1js';
 
-import { Piece } from '../Piece/Piece';
-import { Position } from '../Position/Position';
-import { RankAsChar, charToRank, rankToChar } from '../Piece/Rank';
-import { pack, unpack } from '../Packer';
-import { PlayerState } from '../PlayerState/PlayerState';
+import { Piece } from '../Piece/Piece.js';
+import { Position } from '../Position/Position.js';
+import { RankAsChar, charToRank, rankToChar } from '../Piece/Rank.js';
+import { pack, unpack } from '../Packer.js';
+import { PlayerState } from '../PlayerState/PlayerState.js';
 
 export const defaultFEN = `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`;
 export enum GameResult {
@@ -176,15 +176,15 @@ export class GameState extends Struct({
     }
     this.white.pieces.forEach((p) => {
       if (p.captured.toString() === 'false') {
-        const x = Number(p.position.x.toString());
-        const y = Number(p.position.y.toString());
+        const x = Number(p.position.row.toString());
+        const y = Number(p.position.column.toString());
         pieces[x][y] = rankToChar(p.rank.toBigInt()).toUpperCase();
       }
     });
     this.black.pieces.forEach((p) => {
       if (p.captured.toString() === 'false') {
-        const x = Number(p.position.x.toString());
-        const y = Number(p.position.y.toString());
+        const x = Number(p.position.row.toString());
+        const y = Number(p.position.column.toString());
         pieces[x][y] = rankToChar(p.rank.toBigInt()).toLowerCase();
       }
     });
@@ -218,15 +218,15 @@ export class GameState extends Struct({
     }
     this.white.pieces.forEach((p) => {
       if (p.captured.toString() === 'false') {
-        const x = Number(p.position.x.toString());
-        const y = Number(p.position.y.toString());
+        const x = Number(p.position.row.toString());
+        const y = Number(p.position.column.toString());
         grid[x][y] = rankToChar(p.rank.toBigInt()).toUpperCase();
       }
     });
     this.black.pieces.forEach((p) => {
       if (p.captured.toString() === 'false') {
-        const x = Number(p.position.x.toString());
-        const y = Number(p.position.y.toString());
+        const x = Number(p.position.row.toString());
+        const y = Number(p.position.column.toString());
         grid[x][y] = rankToChar(p.rank.toBigInt()).toLowerCase();
       }
     });

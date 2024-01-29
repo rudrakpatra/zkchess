@@ -8,9 +8,9 @@ import {
   Provable,
   PublicKey,
 } from 'o1js';
-import { GameObject } from './GameLogic/GameLogic';
-import { Move } from './Move/Move';
-import { GameResult, GameState } from './GameState/GameState';
+import { GameObject } from './GameLogic/GameLogic.js';
+import { Move } from './Move/Move.js';
+import { GameResult, GameState } from './GameState/GameState.js';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();

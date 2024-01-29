@@ -1,8 +1,8 @@
 import { Field, Struct, Provable, Bool } from 'o1js';
 
-import { Position } from '../Position/Position';
-import { Board } from '../Board/Boards';
-import { GameState } from '../GameState/GameState';
+import { Position } from '../Position/Position.js';
+import { Board } from '../Board/Board.js';
+import { GameState } from '../GameState/GameState.js';
 
 export class Path extends Struct({
   positions: Provable.Array(Position, 8),
@@ -50,22 +50,26 @@ export class Path extends Struct({
   }
   public isSameX() {
     return this.positions
-      .map((p) => this.start().x.equals(p.x))
+      .map((p) => this.start().row.equals(p.row))
       .reduce(Bool.and);
   }
   public isSameY() {
     return this.positions
-      .map((p) => this.start().y.equals(p.y))
+      .map((p) => this.start().column.equals(p.column))
       .reduce(Bool.and);
   }
   public isSameXaddY() {
     return this.positions
-      .map((p) => this.start().x.add(this.start().y).equals(p.x.add(p.y)))
+      .map((p) =>
+        this.start().row.add(this.start().column).equals(p.row.add(p.column))
+      )
       .reduce(Bool.and);
   }
   public isSameXsubY() {
     return this.positions
-      .map((p) => this.start().x.sub(this.start().y).equals(p.x.sub(p.y)))
+      .map((p) =>
+        this.start().row.sub(this.start().column).equals(p.row.sub(p.column))
+      )
       .reduce(Bool.and);
   }
 }

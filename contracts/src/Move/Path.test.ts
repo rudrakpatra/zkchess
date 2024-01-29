@@ -1,5 +1,5 @@
 import { Provable } from 'o1js';
-import { Move } from './Move';
+import { Move } from './Move.js';
 
 describe('Path', () => {
   it('creates', () => {

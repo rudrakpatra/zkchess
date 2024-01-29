@@ -1,7 +1,7 @@
 import { Provable } from 'o1js';
-import { GameState } from '../GameState/GameState';
-import { Move } from '../Move/Move';
-import { GameEvent } from './GameLogic';
+import { GameState } from '../GameState/GameState.js';
+import { Move } from '../Move/Move.js';
+import { GameEvent } from './GameLogic.js';
 
 describe('GameLogic', () => {
   it('creates', () => {

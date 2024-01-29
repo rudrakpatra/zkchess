@@ -1,5 +1,5 @@
 import { Bool, Field } from 'o1js';
-import { Position } from './Position';
+import { Position } from './Position.js';
 
 describe('Position', () => {
   it('should be able to be created', () => {

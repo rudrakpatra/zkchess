@@ -1,12 +1,12 @@
 import { Field, Bool, Struct } from 'o1js';
-import { pack, unpack } from '../Packer';
+import { pack, unpack } from '../Packer.js';
 
 export class Position extends Struct({
-  x: Field,
-  y: Field,
+  row: Field,
+  column: Field,
 }) {
-  static from(x: number | Field, y: number | Field) {
-    return new Position({ x: Field.from(x), y: Field.from(y) });
+  static from(row: number | Field, column: number | Field) {
+    return new Position({ row: Field.from(row), column: Field.from(column) });
   }
   static ENCODING_SCHEME = [3, 3];
   static fromEncoded(fields: Field[]): Position {
@@ -14,21 +14,23 @@ export class Position extends Struct({
     return Position.from(x, y);
   }
   public encode(): Field[] {
-    return pack([this.x, this.y], Position.ENCODING_SCHEME);
+    return pack([this.row, this.column], Position.ENCODING_SCHEME);
   }
   public toFields(): Field[] {
     return this.encode();
   }
   public set(position: Position) {
-    this.x = position.x;
-    this.y = position.y;
+    this.row = position.row;
+    this.column = position.column;
   }
   public equals(position: Position): Bool {
-    return this.x.equals(position.x).and(this.y.equals(position.y));
+    return this.row
+      .equals(position.row)
+      .and(this.column.equals(position.column));
   }
   public distanceSquared(position: Position): Field {
-    const dx = this.x.sub(position.x);
-    const dy = this.y.sub(position.y);
+    const dx = this.row.sub(position.row);
+    const dy = this.column.sub(position.column);
     return dx.mul(dx).add(dy.mul(dy));
   }
 }

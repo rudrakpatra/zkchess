@@ -1,14 +1,14 @@
 import { Field, Struct } from 'o1js';
 
-import { Position } from '../Position/Position';
-import { PromotionRankAsChar, charToRank, rankToChar } from '../Piece/Rank';
-import { Path } from './Path';
+import { Position } from '../Position/Position.js';
+import { PromotionRankAsChar, charToRank, rankToChar } from '../Piece/Rank.js';
+import { Path } from './Path.js';
 
 //LAN = Long Algebraic Notation
-function getXfromLAN(lan: string) {
+function getRowfromLAN(lan: string) {
   return 8 - parseInt(lan[1]);
 }
-function getYfromLAN(lan: string) {
+function getColumnfromLAN(lan: string) {
   return lan.charCodeAt(0) - 97;
 }
 
@@ -26,10 +26,10 @@ export class Move extends Struct({
     return new Move({ path: Path.from(path), promotion });
   }
   static fromLAN(from: string, to: string, promotion?: PromotionRankAsChar) {
-    const x1 = getXfromLAN(from);
-    const y1 = getYfromLAN(from);
-    let x2 = getXfromLAN(to);
-    let y2 = getYfromLAN(to);
+    const x1 = getRowfromLAN(from);
+    const y1 = getColumnfromLAN(from);
+    let x2 = getRowfromLAN(to);
+    let y2 = getColumnfromLAN(to);
     let count = 0;
     const path = [];
     while ((x2 != x1 && y2 != y1) || count < 8) {

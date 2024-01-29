@@ -1,7 +1,7 @@
-import { Piece } from './Piece';
-import { Position } from '../Position/Position';
+import { Piece } from './Piece.js';
+import { Position } from '../Position/Position.js';
 import { Bool, Field } from 'o1js';
-import { RANKS } from './Rank';
+import { RANKS } from './Rank.js';
 
 describe('Piece', () => {
   it('should be able to be created', () => {

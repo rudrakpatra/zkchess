@@ -1,8 +1,8 @@
 import { Field, Bool, Struct } from 'o1js';
 
-import { Position } from '../Position/Position';
-import { rankToName } from './Rank';
-import { pack, unpack } from '../Packer';
+import { Position } from '../Position/Position.js';
+import { rankToName } from './Rank.js';
+import { pack, unpack } from '../Packer.js';
 
 export class Piece extends Struct({
   position: Position,
@@ -43,8 +43,8 @@ export class Piece extends Struct({
 
   public toFEN() {
     return (
-      this.position.x.toString() +
-      this.position.y.toString() +
+      this.position.row.toString() +
+      this.position.column.toString() +
       (this.captured.toString() == 'true' ? '-' : '+') +
       rankToName(this.rank.toBigInt())
     );

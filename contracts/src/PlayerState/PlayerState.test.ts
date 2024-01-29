@@ -1,7 +1,7 @@
 import { Bool, Field } from 'o1js';
-import { Piece } from '../Piece/Piece';
-import { PlayerState } from './PlayerState';
-import { Position } from '../Position/Position';
+import { Piece } from '../Piece/Piece.js';
+import { PlayerState } from './PlayerState.js';
+import { Position } from '../Position/Position.js';
 
 describe('PlayerState', () => {
   it('should be able to be created', () => {
