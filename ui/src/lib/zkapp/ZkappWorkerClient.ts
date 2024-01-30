@@ -1,56 +1,34 @@
-import ZkappWorker from './ZkappWorker?worker';
-import type { ZkappWorkerRequest, ZkappWorkerReponse, WorkerFunctions } from './ZkappWorker';
+import * as Comlink from 'comlink';
+import zkAppWorker from './zkAppWorker?worker';
+import { GameState, type Chess, Move, type PromotionRankAsChar } from 'zkchess-interactive';
+import { Bool, PublicKey } from 'o1js';
 
-export class ZkappWorkerClient {
-	async init() {
-		await this._call('init', {});
+const ChessLink: Comlink.Remote<Chess> = Comlink.wrap(new zkAppWorker());
+console.log('ChessLink', ChessLink);
+export const client = {
+	start: async (whiteKey: string, blackKey: string, fen: string) => {
+		return await ChessLink.start(
+			PublicKey.fromBase58(whiteKey),
+			PublicKey.fromBase58(blackKey),
+			GameState.fromFEN(fen)
+		);
+	},
+	move: async (from: string, to: string, promotion: PromotionRankAsChar) => {
+		return await ChessLink.move(Move.fromLAN(from, to, promotion || 'q'));
+	},
+	offerDraw: async () => {
+		return await ChessLink.offerDraw();
+	},
+	acceptDraw: async () => {
+		return await ChessLink.resolveDraw(Bool(true));
+	},
+	rejectDraw: async () => {
+		return await ChessLink.resolveDraw(Bool(false));
+	},
+	resign: async () => {
+		return await ChessLink.resign();
+	},
+	getGameState: async () => {
+		return await ChessLink.getGameState();
 	}
-
-	async start() {
-		await this._call('start', {});
-	}
-
-	async move(from: string, to: string, promotion: string) {
-		await this._call('move', { from, to, promotion });
-	}
-
-	async draw() {
-		await this._call('draw', {});
-	}
-
-	async resign() {
-		await this._call('resign', {});
-	}
-
-	async getState() {
-		const result = await this._call('getState', {});
-		return result;
-	}
-
-	worker: Worker;
-
-	promises: { [id: number]: { resolve: (res: unknown) => void; reject: (err: unknown) => void } };
-
-	nextId: number;
-
-	constructor() {
-		this.worker = new ZkappWorker();
-		this.promises = {};
-		this.nextId = 0;
-
-		this.worker.onmessage = (event: MessageEvent<ZkappWorkerReponse>) => {
-			this.promises[event.data.id].resolve(event.data.data);
-			delete this.promises[event.data.id];
-		};
-	}
-
-	_call(fn: WorkerFunctions, args: unknown) {
-		return new Promise((resolve, reject) => {
-			const message: ZkappWorkerRequest = { id: this.nextId, fn, args };
-
-			this.promises[this.nextId] = { resolve, reject };
-			this.worker.postMessage(message);
-			this.nextId++;
-		});
-	}
-}
+};

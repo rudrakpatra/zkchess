@@ -39,13 +39,14 @@
 		"svelte": "^4.0.5"
 	},
 	"dependencies": {
+		"comlink": "^4.4.1",
 		"o1js": "0.*",
-		"sass": "^1.69.5",
+		"sass": "^1.70.0",
 		"scss": "^0.2.4",
 		"svelte-chess": "^0.11.1",
 		"svelte-french-toast": "^1.2.0",
 		"svelte-icons-pack": "^2.1.0",
 		"tailwindcss-text-balance": "^0.0.7",
-		"zkchess-contracts": "^0.1.0"
+		"zkchess-interactive": "^0.1.0"
 	}
 }

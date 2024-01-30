@@ -1,62 +1,50 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
+	import ellipsis from '$lib/ellipsis';
 	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
-	import type { PromotionRankAsChar } from 'zkchess-contracts';
+	import type { Chess, PromotionRankAsChar } from 'zkchess-interactive';
 	import { onDestroy, onMount } from 'svelte';
-	import { Stopwatch } from '$lib/Stopwatch';
 	import toast from 'svelte-french-toast';
 
 	import DashboardLayout from './DashboardLayout.svelte';
-	import Logs from './Logs.svelte';
+	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Actions from './Actions.svelte';
 	import Player from './Player.svelte';
-	import { animationOnFocus } from '$lib/actions/interaction';
-	import { browser, dev, building, version } from '$app/environment';
+	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
 
-	let disableCompileButton = false;
-	let stopwatch = new Stopwatch();
-	let clientIdle = false;
-	$: if (clientIdle) {
-		const time = stopwatch.reset();
-		logs.push(`zkapp took ${time}`);
-		toast.success(`zkapp took ${time}`, { icon: '⏱️' });
-	} else {
-		if (browser) stopwatch.start();
-	}
+	import { browser, dev, version } from '$app/environment';
+	import type { PageData } from './$types';
 
+	export let data: PageData;
+
+	let compiled = false;
 	let gameStarted = false;
-
-	let handleCompileAndStartGame = async () => {},
-		handleMove = async (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
-		handleDraw = async () => {},
-		handleResign = async () => {},
-		handleGetState = async () => {};
-
-	let loadFen: (fen: string) => void;
+	let timeLog: TimeLog;
+	let fen: string;
+	let loadFen: (fen: string) => void | undefined;
+	let handleCompile: () => Promise<void> | undefined;
+	let handleStartGame: () => Promise<void> | undefined;
+	let handleMove: (e: CustomEvent<ChessMoveUI>) => Promise<void> | undefined;
+	let handleDraw: () => Promise<void> | undefined;
+	let handleResign: () => Promise<void> | undefined;
+	let handleGetState: () => Promise<void> | undefined;
 	onMount(async () => {
-		stopwatch.start();
-		const { ZkappWorkerClient } = await import('$lib/zkapp/ZkappWorkerClient');
-		const client = new ZkappWorkerClient();
-		handleCompileAndStartGame = async () => {
-			disableCompileButton = true;
-			clientIdle = false;
-			await toast.promise(client.init(), {
-				loading: 'Compiling...',
-				success: 'Compiled!',
-				error: 'Compilation failed.'
-			});
-			await toast.promise(client.start(), {
+		const { client } = await import('$lib/zkapp/zkAppWorkerClient');
+		handleStartGame = async () => {
+			if (!data.challenger) return;
+			timeLog.start('start');
+			await toast.promise(client.start(get(publicKey), data.challenger, fen), {
 				loading: 'Starting...',
 				success: 'Game Started!',
 				error: 'Could not start the game.'
 			});
-			logs.push('Game Started!');
-			logs = logs;
+			timeLog.stop('start');
 			gameStarted = true;
-			clientIdle = true;
 		};
 		handleMove = async (e: CustomEvent<ChessMoveUI>) => {
-			clientIdle = false;
+			const move = `Move ${e.detail.from} -> ${e.detail.to}`;
+			timeLog.start(move);
 			await toast.promise(
 				client.move(e.detail.from, e.detail.to, e.detail.promotion as PromotionRankAsChar),
 				{
@@ -65,95 +53,99 @@
 					error: 'Failed to move.'
 				}
 			);
-			logs.push(`Moved ${e.detail.from} -> ${e.detail.to}`);
-			logs = logs;
-			clientIdle = true;
+			timeLog.stop(move);
 		};
-		handleDraw = async () => {
-			clientIdle = false;
-			await toast.promise(client.draw(), {
-				loading: 'Drawing...',
-				success: 'Drawn!',
-				error: 'Failed to draw.'
-			});
-			logs.push('Drawn!');
-			logs = logs;
-			clientIdle = true;
-		};
-		handleResign = async () => {
-			clientIdle = false;
-			await toast.promise(client.resign(), {
-				loading: 'Resigning...',
-				success: 'Resigned!',
-				error: 'Failed to resign.'
-			});
-			logs.push('Resigned!');
-			logs = logs;
-			clientIdle = true;
-		};
-		handleGetState = async () => {
-			clientIdle = false;
-			const state = await toast.promise(client.getState(), {
-				loading: 'Getting state...',
-				success: 'Got state!',
-				error: 'Failed to get state.'
-			});
-			loadFen(state as string);
-			logs.push('Received state!');
-			logs = logs;
-			clientIdle = true;
-		};
-		clientIdle = true;
-	});
-	onDestroy(() => {
-		stopwatch.destroy();
+		// handleDraw = async () => {
+		// 	timeLog.start('draw');
+		// 	await toast.promise(client.draw(), {
+		// 		loading: 'Drawing...',
+		// 		success: 'Drawn!',
+		// 		error: 'Failed to draw.'
+		// 	});
+		// 	timeLog.stop('draw');
+		// };
+		// handleResign = async () => {
+		// 	timeLog.start('resign');
+		// 	await toast.promise(client.resign(), {
+		// 		loading: 'Resigning...',
+		// 		success: 'Resigned!',
+		// 		error: 'Failed to resign.'
+		// 	});
+		// 	timeLog.stop('resign');
+		// };
+		// handleGetState = async () => {
+		// 	timeLog.start('getState');
+		// 	const state = await toast.promise(client.getState(), {
+		// 		loading: 'Getting state...',
+		// 		success: 'Got state!',
+		// 		error: 'Failed to get state.'
+		// 	});
+		// 	loadFen(state as string);
+		// 	timeLog.stop('getState');
+		// };
 	});
 
-	let logs = ['Importing zkChess...'];
+	let copyInviteLink = () => {
+		let link = window.location.href;
+		//add params to link
+		link += '?challenger=' + $publicKey;
+		//copy link to clipboard
+		navigator.clipboard.writeText(link);
+		toast.success('Copied invite link to clipboard!');
+	};
 </script>
 
 <svelte:head>
 	<title>Mina zkChess game</title>
 </svelte:head>
 
-{#if gameStarted}
-	<DashboardLayout>
-		<div class="slot" slot="logs">
-			<Logs {logs} />
-		</div>
-		<div class="slot" slot="board">
-			<Board bind:handleMove bind:loadFen />
-		</div>
-		<div class="slot" slot="playerB">
-			<Player />
-		</div>
-		<div class="slot" slot="actions">
-			<Actions bind:handleDraw bind:handleResign bind:handleGetState />
-		</div>
-		<div class="slot" slot="playerA">
-			<Player />
-		</div>
-	</DashboardLayout>
-{:else}
-	<div class="fixed inset-0 grid place-content-center">
-		<p class="text-balance max-w-[16rem] text-center text-lg mb-4">
-			Welcome to zk chess example! <br />
-			This example currently runs on a <b> local test chain</b>.<br />
-		</p>
-		<button
-			class="button"
-			use:animationOnFocus
-			on:click|once={handleCompileAndStartGame}
-			disabled={disableCompileButton}
-		>
-			{#if disableCompileButton}
-				⏳ compiling and starting...
-			{:else}
-				🚀 compile & start game
-			{/if}
-		</button>
+<DashboardLayout>
+	<div class="slot" slot="logs">
+		<Logs bind:timeLog />
 	</div>
-{/if}
+	<div class="slot" slot="board">
+		{#if gameStarted}
+			<Board bind:loadFen />
+		{:else}
+			<div class="absolute inset-0 grid place-content-center">
+				{#if data.challenger}
+					<p class="max-w-[16rem] text-center text-lg mb-4">
+						Player
+						<b title={data.challenger}>
+							{ellipsis(data.challenger, 20)}
+						</b>
+						is willing to play a game.
+					</p>
+					<button class="button" on:click={handleStartGame}> 🚀Start </button>
+				{:else}
+					<p class="text-balance max-w-[16rem] text-center text-lg mb-4">
+						Welcome to zkchess!<br />
+						Copy this link to invite someone to play with you
+						<br />
+						<button class="button mt-3" on:click={copyInviteLink}> Invite Link</button>
+					</p>
+				{/if}
+			</div>
+		{/if}
+	</div>
+	<div class="slot" slot="playerB">
+		<!-- TODO use custom tokens for rating -->
+		<Player username={data.challenger} rating={'100'} />
+	</div>
+	<div class="slot" slot="actions">
+		{#if gameStarted}
+			<Actions />
+		{:else}
+			<div class="absolute inset-0 grid place-content-center text-center text-balance">
+				Actions will appear here once the game starts.
+			</div>
+		{/if}
+	</div>
+	<div class="slot" slot="playerA">
+		<!-- TODO use custom tokens for rating -->
+		<Player username={$publicKey} rating={'100'} />
+	</div>
+</DashboardLayout>
 
 <style>
 	.slot {

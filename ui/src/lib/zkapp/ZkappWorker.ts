@@ -1,146 +1,42 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, Move, type PromotionRankAsChar } from 'zkchess-contracts';
+import * as Comlink from 'comlink';
+import { AccountUpdate, Mina, PrivateKey } from 'o1js';
+import { GameState } from 'zkchess-interactive';
 
-let deployerAccount: PublicKey,
-	deployerKey: PrivateKey,
-	whitePlayerAccount: PublicKey,
-	whitePlayerKey: PrivateKey,
-	blackPlayerAccount: PublicKey,
-	blackPlayerKey: PrivateKey,
-	zkAppAddress: PublicKey,
-	zkAppPrivateKey: PrivateKey,
-	zkApp: Chess;
+const { Chess } = await import('zkchess-interactive');
+console.log('compiling');
+const before = Date.now();
+// await Chess.compile();
+const after = Date.now();
+console.log('compiled in', (after - before) / 1000);
 
-const decoratedLog = (...args: string[]) =>
-	console.log('[worker] %c' + args.join(' '), 'color: #00ffee');
-const proofsEnabled = true;
+const proofsEnabled = false;
 
-const init = async () => {
-	decoratedLog('importing contract...');
-	const { Chess } = await import('zkchess-contracts');
+const Local = Mina.LocalBlockchain({ proofsEnabled });
+Mina.setActiveInstance(Local);
+const deployer = Local.testAccounts[0];
 
-	decoratedLog('compiling...');
-	await Chess.compile();
+const zkAppPrivateKey = PrivateKey.random();
+const zkAppAddress = zkAppPrivateKey.toPublicKey();
+const zkApp = new Chess(zkAppAddress);
 
-	decoratedLog('setting up local blockchain...');
-	const Local = Mina.LocalBlockchain({ proofsEnabled });
-	Mina.setActiveInstance(Local);
-	({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
-	({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
-	({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
-
-	zkAppPrivateKey = PrivateKey.random();
-	zkAppAddress = zkAppPrivateKey.toPublicKey();
-	decoratedLog('setting up zkApp...');
-	zkApp = new Chess(zkAppAddress);
-
-	decoratedLog('setting up zkApp deploy transaction...');
-	const deployTxn = await Mina.transaction(deployerAccount, () => {
-		AccountUpdate.fundNewAccount(deployerAccount);
+async function localDeploy() {
+	const txn = await Mina.transaction(deployer.publicKey, () => {
+		AccountUpdate.fundNewAccount(deployer.publicKey);
 		zkApp.deploy();
 	});
-	decoratedLog('proving transaction...');
-	await deployTxn.prove();
-
-	decoratedLog('signing transaction...');
-	await deployTxn.sign([deployerKey, zkAppPrivateKey]).send();
-	decoratedLog('deployed! press start');
-};
-
-const start = async () => {
-	decoratedLog('starting the game');
-	const startTxn = await Mina.transaction(whitePlayerAccount, () => {
-		zkApp.start(whitePlayerAccount, blackPlayerAccount);
-	});
-	decoratedLog('proving transaction...');
-	await startTxn.prove();
-	decoratedLog('signing transaction...');
-	await startTxn.sign([whitePlayerKey]).send();
-	decoratedLog('game started!');
-	decoratedLog('gamestate:', zkApp.getGameState().toString());
-};
-
-const move = async (args: { from: string; to: string; promotion: PromotionRankAsChar }) => {
-	decoratedLog('moving...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.move(Move.fromLAN(args.from, args.to, args.promotion));
-	});
-	decoratedLog('proving transaction...');
 	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('moved!');
-};
+	// this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
+	await txn.sign([deployer.privateKey, zkAppPrivateKey]).send();
+}
 
-const draw = async () => {
-	decoratedLog('drawing...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.draw();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('drawn!');
-};
-const resign = async () => {
-	decoratedLog('resigning...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.resign();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('resigned!');
-};
+const whitePlayer = Local.testAccounts[1];
+const blackPlayer = Local.testAccounts[2];
 
-const getState = async () => {
-	decoratedLog('getting state...');
-	const state = zkApp.getGameState().toString();
-	decoratedLog(state);
-	return state;
-};
-
-//helpers
-
-const getPlayer = async () => {
-	return zkApp.getGameState().turn.toString() === 'true'
-		? { playerAccount: whitePlayerAccount, playerKey: whitePlayerKey }
-		: { playerAccount: blackPlayerAccount, playerKey: blackPlayerKey };
-};
-
-const functions = {
-	init,
-	start,
-	move,
-	draw,
-	resign,
-	getState
-};
-
-export type WorkerFunctions = keyof typeof functions;
-
-export type ZkappWorkerRequest = {
-	id: number;
-	fn: WorkerFunctions;
-	args: unknown;
-};
-
-export type ZkappWorkerReponse = {
-	id: number;
-	data: unknown;
-};
-
-onmessage = async (event: MessageEvent<ZkappWorkerRequest>) => {
-	const fn = functions[event.data.fn] as (args: unknown) => Promise<unknown>;
-	const returnData = await fn(event.data.args);
-	const response: ZkappWorkerReponse = {
-		id: event.data.id,
-		data: returnData
-	};
-	postMessage(response);
-};
+await localDeploy();
+const txn2 = await Mina.transaction(whitePlayer.publicKey, () => {
+	zkApp.start(whitePlayer.publicKey, blackPlayer.publicKey, GameState.fromFEN());
+});
+await txn2.prove();
+await txn2.sign([whitePlayer.privateKey]).send();
+console.log(zkApp.getGameState().toAscii());
+Comlink.expose(zkApp);

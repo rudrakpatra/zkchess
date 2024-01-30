@@ -27,9 +27,8 @@
 </script>
 
 <div class="absolute inset-1 overflow-y-scroll flex flex-col justify-start gap-1">
-	<!-- <button
+	<button
 		class="button flex-1 whitespace-nowrap"
-		
 		on:click={() => {
 			toast(ToastModal, {
 				props: {
@@ -44,7 +43,7 @@
 		}}
 	>
 		⭐test draw
-	</button> -->
+	</button>
 	<button class="button flex-1 whitespace-nowrap" on:click={handleDraw}> 🤝 offer draw </button>
 	<button class="button flex-1 whitespace-nowrap" on:click={handleResign}> 😖 resign </button>
 	<button class="button flex-1 whitespace-nowrap" on:click={handleGetState}> 📜 get state </button>

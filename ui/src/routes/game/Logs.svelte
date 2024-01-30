@@ -1,25 +1,50 @@
+<script context="module" lang="ts">
+	export type TimeLog = {
+		start: (label: string) => void;
+		stop: (label: string) => void;
+	};
+</script>
+
 <script lang="ts">
-	export let logs = ['Logs'];
+	let logs = [
+		{
+			name: 'Logs',
+			time: 0
+		}
+	];
+	let timers: Record<string, number> = {};
+	export const timeLog = {
+		start: (label: string) => {
+			timers[label] = performance.now();
+		},
+		stop: (label: string) => {
+			const took = (performance.now() - timers[label]) / 1000;
+			logs = [...logs,{name: label, time: took || 0}];
+		}
+	};
 </script>
 
 <ul class="absolute inset-1 flex flex-col gap-1 overflow-y-scroll">
 	{#each logs as log}
 		<li>
-			<pre>{log}</pre>
+			<div>
+				<pre>✦</pre>
+				<pre>{log.time}s</pre>
+			</div>
+			<pre>{log.name}</pre>
 		</li>
 	{/each}
 </ul>
 
-<style>
+<style lang="scss">
 	pre {
 		font-family: monospace;
 	}
 	li {
 		@apply bg-chess-200 rounded-md p-1 text-sm;
-	}
-	li::before {
-		content: '✦';
-		opacity: 0.2;
+		> div {
+			@apply flex justify-between;
+		}
 	}
 	li:after {
 		content: '';

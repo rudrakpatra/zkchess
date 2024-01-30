@@ -1,13 +1,14 @@
 <script lang="ts">
 	import ellipsis from '$lib/ellipsis';
-	export let username = 'N/A';
-	export let rating = 'N/A';
+	export let username = '23bdxdge252143214442b4ds1bs2bsdg44s2';
+	export let rating = '500';
 </script>
 
 <div id="player" class="absolute inset-1 layout">
 	<span
-		class=" rounded-md
-		bg-secondary text-chess-200
+		class=" 
+	rounded-md
+		bg-chess-900 text-chess-200
 		text-sm font-bold
 		grid place-items-center
 		p-1 min-w-[40px]

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { animationOnFocus } from '$lib/actions/interaction';
+
 	import AuroConnect from '$lib/components/general/AuroConnect.svelte';
 	import ellipsis from '$lib/ellipsis';
 </script>
@@ -31,9 +31,7 @@
 					goto('/game');
 				}}
 			>
-				<button use:animationOnFocus class="button p-3 mr-3" on:click={connect}>
-					Connect And Play
-				</button>
+				<button class="button p-3" on:click={connect}> Connect And Play </button>
 			</AuroConnect>
 		</span>
 	</div>
