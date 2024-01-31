@@ -25,6 +25,7 @@ describe('Chess', () => {
     zkApp: Chess;
 
   beforeAll(async () => {
+    console.log(Chess.analyzeMethods());
     if (proofsEnabled) await Chess.compile();
   });
 

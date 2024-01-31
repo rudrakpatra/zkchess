@@ -1,20 +1,23 @@
 <script context="module" lang="ts">
 	export let mina: any;
 	export const publicKey = writable<string>();
-	export const autoConnect = async () => {
+	export const getAccount = async () => {
 		mina = (window as any)?.mina;
-		if (!mina) toast.error(`Mina is not Available!`);
-
+		if (!mina) {
+			toast.error(`Mina is not Available!`);
+			return;
+		}
 		await toast.promise<Array<string>>(
-			mina.requestAccounts(),
+			mina.getAccounts(),
 			{
-				loading: 'Connecting...',
+				loading: 'Getting Accounts...',
 				success: (accounts) => {
 					publicKey.set(accounts[0]);
-					return `Connected as ${ellipsis(get(publicKey), 36)}`;
+					if (Array.isArray(accounts)) return `Found account ${ellipsis(get(publicKey), 36)}`;
+					return 'No accounts found';
 				},
 				error: (error) => {
-					return error.message;
+					return 'No accounts connected';
 				}
 			},
 			{ duration: 3000 }
