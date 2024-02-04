@@ -19,7 +19,7 @@
 		},
 		stop: (label: string) => {
 			const took = (performance.now() - timers[label]) / 1000;
-			logs = [...logs,{name: label, time: took || 0}];
+			logs = [...logs,{name: label, time: took|| 0}];
 		}
 	};
 </script>
@@ -29,9 +29,9 @@
 		<li>
 			<div>
 				<pre>✦</pre>
-				<pre>{log.time}s</pre>
+				<pre  >{log.time.toFixed(3)}s</pre>
 			</div>
-			<pre>{log.name}</pre>
+			<pre title={log.name}>{log.name}</pre>
 		</li>
 	{/each}
 </ul>
@@ -39,6 +39,7 @@
 <style lang="scss">
 	pre {
 		font-family: monospace;
+		overflow-x: hidden;
 	}
 	li {
 		@apply bg-chess-200 rounded-md p-1 text-sm;

@@ -31,6 +31,7 @@
 	import toast from 'svelte-french-toast';
 	import { createEventDispatcher } from 'svelte';
 	import { get, writable } from 'svelte/store';
+	import { ripple } from 'svelte-ripple-action';
 
 	const connect = async () => {
 		await toast.promise<Array<string>>(
@@ -60,7 +61,9 @@
 </script>
 
 <slot {connect}>
-	<button class="button" on:click={connect}>
+	<button 
+		use:ripple
+	 	class="button" on:click={connect}>
 		{#if $publicKey}
 			{ellipsis($publicKey, 12)}
 		{:else}
