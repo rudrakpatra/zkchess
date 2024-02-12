@@ -9,15 +9,19 @@ import {
   Signature,
   Bool,
 } from 'o1js';
-import { GameResult, GameState } from './GameState/GameState';
-import { Move } from './Move/Move';
-import { GameObject } from './GameLogic/GameLogic';
+import { GameResult, GameState } from './GameState/GameState.js';
+import { Move } from './Move/Move.js';
+import { GameObject } from './GameLogic/GameLogic.js';
 
 export class RollupState extends Struct({
   initialGameState: GameState,
   white: PublicKey,
   black: PublicKey,
-}) {}
+}) {
+  static from(initialGameState: GameState, white: PublicKey, black: PublicKey) {
+    return new RollupState({ initialGameState, white, black });
+  }
+}
 /**
  * shows the current `board state` is achieved from a series of valid chess move
  * & the moves performed by the correct player
@@ -81,33 +85,36 @@ export const PvPChessProgram = ZkProgram({
 
         const gameObject = new GameObject(gameState);
         gameObject.preMoveValidations(move).assertTrue('invalid move');
-        const newGameState = gameObject.toUpdated(move);
+
+        // TODO check why this like causes compile to fail
+        // const newGameState = gameObject.toUpdated(move);
 
         //UPDATE GAME STATE
-        return GameState.from(
-          newGameState.white,
-          newGameState.black,
-          newGameState.turn,
-          newGameState.enpassant,
-          newGameState.kingCastled,
-          newGameState.column,
-          newGameState.halfmove,
-          //newGameState.canDraw,
-          Bool(false),
-          // newGameState.result
-          Provable.if(
-            newGameState.black.getKing().captured,
-            //WHITE WINS
-            Field(GameResult.WHITE_WINS),
-            Provable.if(
-              newGameState.white.getKing().captured,
-              //BLACK WINS
-              Field(GameResult.BLACK_WINS),
-              //else
-              Field(GameResult.ONGOING)
-            )
-          )
-        );
+        return earlierProof.publicOutput;
+        // return GameState.from(
+        //   newGameState.white,
+        //   newGameState.black,
+        //   newGameState.turn,
+        //   newGameState.enpassant,
+        //   newGameState.kingCastled,
+        //   newGameState.column,
+        //   newGameState.halfmove,
+        //   //newGameState.canDraw,
+        //   Bool(false),
+        //   // newGameState.result
+        //   Provable.if(
+        //     newGameState.black.getKing().captured,
+        //     //WHITE WINS
+        //     Field(GameResult.WHITE_WINS),
+        //     Provable.if(
+        //       newGameState.white.getKing().captured,
+        //       //BLACK WINS
+        //       Field(GameResult.BLACK_WINS),
+        //       //else
+        //       Field(GameResult.ONGOING)
+        //     )
+        //   )
+        // );
       },
     },
 
