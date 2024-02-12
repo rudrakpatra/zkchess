@@ -1,31 +1,28 @@
-import { Field, PrivateKey, Signature, verify } from 'o1js';
+import { verify } from 'o1js';
 import type { Writable } from 'svelte/store';
 import type { GameState } from 'zkchess-contracts';
-import { PvPChessProgramProof, PvPChessProgram, RollupState, GameResult } from 'zkchess-contracts';
+import { PvPChessProgramProof, PvPChessProgram, GameResult } from 'zkchess-contracts';
 
-type Agent = {
+export type Agent = {
 	getMove(proof: PvPChessProgramProof): Promise<PvPChessProgramProof>;
 };
 
 class GameLoop {
 	private gameState: Writable<GameState>;
 
-	public async start(white: Agent, black: Agent, initialGameState: GameState) {
+	public async start(white: Agent, black: Agent, startingProof: PvPChessProgramProof) {
 		const agents = [white, black];
 		const { verificationKey } = await PvPChessProgram.compile(); // TODO caching
-		let state = initialGameState;
-		this.gameState.set(state);
 		let step = 0;
 		let ended = false;
-		let proof = await PvPChessProgram.start(
-			{} as RollupState,
-			Signature.create(PrivateKey.random(), [Field(1)]),
-			Signature.create(PrivateKey.random(), [Field(1)])
-		);
+		let proof = startingProof;
+		// let state = startingProof.publicOutput;
+		this.gameState.set(startingProof.publicOutput);
 		while (!ended) {
 			const currAgentId = step % 2;
 			const currAgent = agents[currAgentId];
-			// step 1: get Move and Proof from Agent
+
+			// step 1: get next Proof from current Agent with
 			console.log('%c Waiting for response from agent', 'color: brown;', {
 				currAgent
 			});
@@ -35,15 +32,16 @@ class GameLoop {
 			if (!(await verify(nextProof.toJSON(), verificationKey.data))) {
 				console.warn('Invalid proof received from agent', { currAgent }, step);
 			}
-			proof = nextProof;
-			state = nextProof.publicOutput;
-			this.gameState.set(state);
-			step++;
+			this.gameState.set(nextProof.publicOutput);
+
 			// step 3: check if game ended
-			const result = Number(state.result.toBigInt());
+			const result = Number(nextProof.publicOutput.result.toBigInt());
 			if ([GameResult.BLACK_WINS, GameResult.WHITE_WINS, GameResult.DRAW].includes(result)) {
 				ended = true;
 			}
+
+			proof = nextProof;
+			step++;
 		}
 	}
 }
