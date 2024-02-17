@@ -2,12 +2,21 @@
 	import type { Move } from 'svelte-chess/dist/api';
 	import { Chess } from 'svelte-chess';
 
-	export let handleMove = (e: CustomEvent<Move>) => {
+	export let readonly = false;
+	export let move = (e: CustomEvent<Move>) => {
 		console.warn('handleMove not implemented');
 	};
-	export let loadFen = (fen: string) => {
+	export let loadFEN = (fen: string) => {
 		console.warn('loadFen not implemented');
 	};
 </script>
 
-<Chess on:move={handleMove} bind:load={loadFen} />
+<div class:readonly>
+	<Chess on:move={move} bind:load={loadFEN} />
+</div>
+<style>
+	.readonly {
+		opacity: 0.5;
+		pointer-events: none;
+	}
+</style>

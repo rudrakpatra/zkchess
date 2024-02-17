@@ -3,6 +3,7 @@
 
 	import AuroConnect from '$lib/components/general/AuroConnect.svelte';
 	import ellipsis from '$lib/ellipsis';
+	import { ripple } from 'svelte-ripple-action';
 </script>
 
 <svelte:head>
@@ -31,7 +32,7 @@
 					goto('/game');
 				}}
 			>
-				<button class="button p-3" on:click={connect}> Connect And Play </button>
+				<button use:ripple class="button p-3" on:click={connect}> Connect And Play </button>
 			</AuroConnect>
 		</span>
 	</div>
