@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ellipsis from '$lib/ellipsis';
-	import toast, { LoaderIcon } from 'svelte-french-toast';
+	import toast from 'svelte-french-toast';
 
 	import DashboardLayout from './DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
@@ -11,9 +11,9 @@
 	import { onMount } from 'svelte';
 	import type { ClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 	import { ripple } from 'svelte-ripple-action';
-	import type { Move } from 'svelte-chess/dist/api';
-	import type { MoveEvent } from 'svelte-chess/dist/Chess.svelte';
+	import type { Move } from "chess.js";
 	import type { PromotionRankAsChar } from 'zkchess-interactive';
+	import Loader from '$lib/components/general/Loader.svelte';
 
 	export let data: PageData;
 	$: playerA=$publicKey;
@@ -28,9 +28,9 @@
 	let fen: string;
 	onMount(async () => {
 		console.log("onmount");
-		timeLog.start("importing zkapp client");
+		timeLog.start("compiling zkapp");
 		client=await (await import("$lib/zkapp/ZkappWorkerClient")).getClient();
-		timeLog.stop("importing zkapp client");
+		timeLog.stop("compiling zkapp");
 		toast.success('Connected to zkapp worker!');
 		clientLoaded=true;
 	});
@@ -44,10 +44,10 @@
 		transactionPending=false;
 		gameStarted=true;
 	}
-	const move=async (e:MoveEvent)=>{
+	const move=async (move:Move)=>{
 		transactionPending=true;
 		timeLog.start("moving piece");
-			await client.move(e.detail.from,e.detail.to,e.detail.promotion as PromotionRankAsChar);
+			await client.move(move.from,move.to,move.promotion as PromotionRankAsChar);
 		timeLog.stop("moving piece");
 		toast.success('moved piece!');
 		transactionPending=false;
@@ -112,58 +112,58 @@
 		<Logs bind:timeLog />
 	</div>
 	<div class="slot" slot="board">
-		<Board readonly={transactionPending} {move} bind:loadFEN/>
+		<Board readonly={transactionPending} />
 	</div>
 	<div class="slot" slot="playerB">
 		<!-- TODO use custom tokens for rating -->
 		<Player username={playerB} rating={'100'} />
 	</div>
 	<div class="slot" slot="actions">
-		<div class="absolute inset-0 grid place-content-center">
+		<div class="absolute inset-1 grid place-content-center">
 		{#if !playerA}
-		<p class="text-balance text-center text-lg mb-4">
-			Invite someone to play with you
-			<br />
+			<p class="action">
+				Invite someone to play with you
+			</p>
 			<AuroConnect let:connect>
-				<button use:ripple class="button p-3" on:click={connect}> Connect </button>
+				<button use:ripple class="button" on:click={connect}> Connect </button>
 			</AuroConnect>
-		</p>
 		{:else if !clientLoaded}
-			<p class="text-balance text-center text-lg">
-				Loading for <br/><b>
-					zkapp worker client
-				</b>
+			<p class="action">
+				Compiling <b>zkapp</b>
 			</p>
 			<div class="grid place-content-center">
-				<LoaderIcon/>
+				<Loader/>
 			</div>
 		{:else if gameStarted==false}
 			{#if transactionPending}
-			<p class="text-balance text-center text-lg">
-				Waiting for transaction
-			</p>
-			<div class="grid place-content-center">
-				<LoaderIcon/>
-			</div>
+				<p class="action">
+					Transaction in Progress 
+				</p>
+				<div class="grid place-content-center">
+					<Loader/>
+				</div>
 			{:else}
 				{#if playerB}
-					<p class="max-w-[16rem] text-center text-lg">
-						Player <b title={playerB}>{ellipsis(playerB, 18)}</b> wants to play a game
-						<button use:ripple class="button mt-3" on:click={start}>Start Game</button>
+					<p class="action">
+						Player <b title={playerB}>{ellipsis(playerB, 12)}</b>
 					</p>
+					<div class="grid place-content-center">
+						<button use:ripple class="button" on:click={start}>Start Game</button>
+					</div>
 				{:else}
-					<p class="text-balance text-center text-lg">
+					<p class="action">
 						Invite someone to play with you
-						<br />
-						<button use:ripple class="button mt-3" on:click={copyInviteLink}>Copy Invite Link</button>
 					</p>
+					<div class="grid place-content-center">
+						<button use:ripple class="button" on:click={copyInviteLink}>Copy Invite Link</button>
+					</div>
 				{/if}
 			{/if}
 		{:else}
-		<div class="absolute inset-1 overflow-y-scroll flex flex-col justify-start gap-1">
+		<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
 			<!-- <button
 				use:ripple 
-				class="button flex-1 whitespace-nowrap"
+				class="button flex-1"
 				
 				on:click={() => {
 					toast(ToastModal, {
@@ -176,13 +176,13 @@
 						},
 						duration: Infinity
 					});
-				}}
+				}}	
 			>
 				⭐test draw
 			</button>  -->
-			<button use:ripple  class="button flex-1 whitespace-nowrap" on:click={offerDraw}> 🤝 offer draw </button>
-			<button use:ripple  class="button flex-1 whitespace-nowrap" on:click={resign}> 😖 resign </button>
-			<button use:ripple  class="button flex-1 whitespace-nowrap" on:click={getFEN}> 📜 get state </button>
+			<button use:ripple  class="button flex-1 w-full" on:click={offerDraw}> 🤝 offer draw </button>
+			<button use:ripple  class="button flex-1 w-full" on:click={resign}> 😖 resign </button>
+			<button use:ripple  class="button flex-1 w-full" on:click={getFEN}> 📜 get state </button>
 		</div>
 		{/if}
 		</div>
@@ -194,6 +194,9 @@
 </DashboardLayout>
 
 <style>
+	.action{
+		@apply text-balance text-center text-lg p-2;
+	}
 	.slot {
 		@apply relative h-full w-full p-1;
 	}

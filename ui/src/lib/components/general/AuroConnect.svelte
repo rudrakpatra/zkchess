@@ -13,7 +13,7 @@
 				loading: 'Getting Accounts...',
 				success: (accounts) => {
 					publicKey.set(accounts[0]);
-					if (Array.isArray(accounts)) return `Found account ${ellipsis(get(publicKey), 36)}`;
+					if (Array.isArray(accounts)) return `Found account ${ellipsis(get(publicKey), 32)}`;
 					return 'No accounts found';
 				},
 				error: (error) => {
