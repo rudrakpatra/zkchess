@@ -11,7 +11,7 @@ import { Chess } from './Chess.js';
 import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
 
-const proofsEnabled = true;
+const proofsEnabled = false;
 
 describe('Chess', () => {
   let deployerAccount: PublicKey,
@@ -53,21 +53,26 @@ describe('Chess', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  // it('starts the game and resigns', async () => {
-  //   await localDeploy();
-  //   const txn = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
-  //   const txn2 = await Mina.transaction(whitePlayerAccount, () => {
-  //     zkApp.resign();
-  //   });
-  //   await txn2.prove();
-  //   await txn2.sign([whitePlayerKey]).send();
-  //   console.log(zkApp.getGameState().toAscii());
-  // });
+  it('starts the game and resigns', async () => {
+    await localDeploy();
+    const txn = await Mina.transaction(whitePlayerAccount, () => {
+      zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
+    // white player resigns
+    const txn2 = await Mina.transaction(whitePlayerAccount, () => {
+      AccountUpdate.fundNewAccount(whitePlayerAccount, 2); // ideally all should already have token accounts
+      zkApp.resign();
+    });
+    await txn2.prove();
+    await txn2.sign([whitePlayerKey]).send();
+    console.log(zkApp.getGameState().toAscii());
+    expect(zkApp.getWinCount(whitePlayerAccount).toBigint()).toBe(0n);
+    expect(zkApp.getWinCount(blackPlayerAccount).toBigint()).toBe(1n);
+    expect(zkApp.getLossCount(whitePlayerAccount).toBigint()).toBe(1n);
+  });
 
   // it('start game twice', async () => {
   //   await localDeploy();

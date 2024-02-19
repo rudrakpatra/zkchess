@@ -7,6 +7,8 @@ import {
   State,
   Provable,
   PublicKey,
+  Account,
+  UInt32,
 } from 'o1js';
 import { GameObject } from './GameLogic/GameLogic.js';
 import { Move } from './Move/Move.js';
@@ -421,5 +423,48 @@ export class Chess extends SmartContract {
         )
       )
     );
+    const winnerAddress = Provable.if(
+      gameState.turn,
+      this.blackKey.getAndAssertEquals(),
+      this.whiteKey.getAndAssertEquals()
+    );
+    const loserAddress = Provable.if(
+      gameState.turn,
+      this.whiteKey.getAndAssertEquals(),
+      this.blackKey.getAndAssertEquals()
+    );
+    this.updateScores(winnerAddress, loserAddress);
+  }
+
+  /**
+   * win & loss counts are stored in token balance
+   * winCount: 0-31 bits
+   * lossCount: 32-63 bits
+   */
+  private updateScores(winner: PublicKey, loser: PublicKey) {
+    this.updateWinCount(winner);
+    this.updateLossCount(loser);
+  }
+  private updateWinCount(address: PublicKey) {
+    // increment win count by 1
+    this.token.mint({ address, amount: 1n });
+  }
+  private updateLossCount(address: PublicKey) {
+    // increment loss count by 1
+    this.token.mint({ address, amount: 1n << 32n });
+  }
+  public getWinCount(address: PublicKey) {
+    const account = Account(address, this.token.id);
+    const state = account.balance.getAndAssertEquals();
+    const stateBits = state.toFields()[0].toBits();
+    const wins = Field.fromBits(stateBits.slice(0, 32));
+    return UInt32.from(wins);
+  }
+  public getLossCount(address: PublicKey) {
+    const account = Account(address, this.token.id);
+    const state = account.balance.getAndAssertEquals();
+    const stateBits = state.toFields()[0].toBits();
+    const losses = Field.fromBits(stateBits.slice(32, 64));
+    return UInt32.from(losses);
   }
 }
