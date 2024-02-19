@@ -29,7 +29,7 @@ class GameLoop {
 			const nextProof = await currAgent.getMove(proof);
 
 			// step 2: verify the Proof
-			if (!(await verify(nextProof.toJSON(), verificationKey.data))) {
+			if (!(await verify(nextProof.toJSON(), verificationKey))) {
 				console.warn('Invalid proof received from agent', { currAgent }, step);
 			}
 			this.gameState.set(nextProof.publicOutput);
