@@ -32,6 +32,9 @@ export const getClient=async()=>{
 		},
 		getFEN: async () => {
 			return await proxy.getFEN();
+		},
+		getPlayerRating: async (publicKey: string) => {
+			return await proxy.getPlayerRating(publicKey);
 		}
 	}
 };

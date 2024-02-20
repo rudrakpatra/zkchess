@@ -17,7 +17,9 @@
 
 	export let data: PageData;
 	$: playerA=$publicKey;
+	let playerARating:number;
 	$: playerB=data.challenger;
+	let playerBRating:number;
 	let client: Awaited<ReturnType<ClientAPI>>;
 
 	let clientLoaded = false;
@@ -30,6 +32,12 @@
 		console.log("onmount");
 		timeLog.start("compiling zkapp");
 		client=await (await import("$lib/zkapp/ZkappWorkerClient")).getClient();
+		if(playerA)
+		playerARating=await client.getPlayerRating(playerA);
+		if(playerB)
+		playerBRating=await client.getPlayerRating(playerB);
+		console.log("playerARating",playerARating);
+		console.log("playerBRating",playerBRating);
 		timeLog.stop("compiling zkapp");
 		toast.success('Connected to zkapp worker!');
 		clientLoaded=true;
@@ -116,7 +124,7 @@
 	</div>
 	<div class="slot" slot="playerB">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={playerB} rating={'100'} />
+		<Player username={playerB} rating={playerBRating} />
 	</div>
 	<div class="slot" slot="actions">
 		<div class="absolute inset-1 grid place-content-center">
@@ -189,7 +197,7 @@
 	</div>
 	<div class="slot" slot="playerA">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={playerA} rating={'100'} />
+		<Player username={playerA} rating={playerARating} />
 	</div>
 </DashboardLayout>
 
