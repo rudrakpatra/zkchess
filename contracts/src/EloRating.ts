@@ -11,6 +11,16 @@ const taylorCoeffs = [
   [17n, 80640n],
   0,
   [-31n, 1451520n],
+  0,
+  [691n, 319334400n],
+  0,
+  [-5461n, 24908083200n],
+  0,
+  [929569n, 41845579776000n],
+  0,
+  [-3202291n, 1422749712384000n],
+  0,
+  [221930581n, 973160803270656000n],
   // add more terms if needed, https://www.wolframalpha.com/input?i=taylor+series+of+1%2F%281%2B10%5Ex%29
 ];
 /**
@@ -33,6 +43,12 @@ export function calcApproxSol(
     const numerator = (taylorCoeffs[i] as bigint[])[0];
     const denominator = (taylorCoeffs[i] as bigint[])[1];
 
+    // console.log('i = ', i);
+    // console.log(approx1, '\t', ' Field \t', approx.toBigInt());
+    // const x1 = Number(x.toBigInt()) / 10 ** precision;
+    // approx1 +=
+    //   (Number(numerator) * (x1 * Math.log(10)) ** i) / Number(denominator);
+
     approx = approx
       .mul(10 ** precision)
       .add(
@@ -43,17 +59,21 @@ export function calcApproxSol(
           )
         )
       );
-      
     xPowI = xPowI.mul(x);
     zeros += precision;
+    if (zeros > 40) {
+      // this prevents overflow
+      xPowI = fieldDivMod(xPowI, Field(10 ** precision), assert);
+      approx = fieldDivMod(approx, Field(10 ** precision), assert);
+      zeros -= precision;
+    }
   }
-  return fieldFloorOfXByY(approx, Field(10 ** (25 + zeros - decimals)), assert);
+  return fieldDivMod(approx, Field(10 ** (25 + zeros - decimals)), assert);
 }
-
 /**
  * returns floor(x/y),
  */
-export function fieldFloorOfXByY(x: Field, y: Field, assert = false): Field {
+export function fieldDivMod(x: Field, y: Field, assert = false): Field {
   const q = Provable.witness(
     Field,
     () => new Field(x.toBigInt() / y.toBigInt())
@@ -74,7 +94,7 @@ export function calcEloChange(
   decimals = 10
 ) {
   const K = Field(20);
-  const x = fieldFloorOfXByY(diff, Field(400), assert);
+  const x = fieldDivMod(diff, Field(400), assert);
   const approx = calcApproxSol(x, precision, assert, decimals);
   return approx.mul(K);
 }
