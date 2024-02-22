@@ -9,10 +9,12 @@ import {
   PublicKey,
   Account,
   UInt32,
+  UInt64,
 } from 'o1js';
 import { GameObject } from './GameLogic/GameLogic.js';
 import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
+import { calcEloChange } from './EloRating.js';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();
@@ -62,6 +64,15 @@ export class Chess extends SmartContract {
     this.whiteKey.set(whiteKey);
     this.blackKey.set(blackKey);
     this.setGameState(gameState);
+    // if players have no rating assign a rating of 1200
+    [whiteKey, blackKey].forEach((addr) => {
+      const mintAmount = Provable.if(
+        this.getPlayerRating(addr).equals(UInt64.zero),
+        UInt64.from(1200 * 1e10),
+        UInt64.zero
+      );
+      this.increaseRating(addr, mintAmount);
+    });
   }
   @method move(move: Move) {
     const gameState = this.getGameState();
@@ -433,38 +444,51 @@ export class Chess extends SmartContract {
       this.whiteKey.getAndAssertEquals(),
       this.blackKey.getAndAssertEquals()
     );
-    this.updateScores(winnerAddress, loserAddress);
+    this.updateRating(winnerAddress, loserAddress);
   }
 
   /**
-   * win & loss counts are stored in token balance
-   * winCount: 0-31 bits
-   * lossCount: 32-63 bits
+   * Account token balance contains the elo rating of the player times 10^5
    */
-  private updateScores(winner: PublicKey, loser: PublicKey) {
-    this.updateWinCount(winner);
-    this.updateLossCount(loser);
+  private updateRating(winner: PublicKey, loser: PublicKey) {
+    const winnerRating = this.getPlayerRating(winner);
+    const loserRating = this.getPlayerRating(loser);
+    const eloDiff = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      winnerRating.sub(loserRating),
+      loserRating.sub(winnerRating)
+    );
+    let ratingChange = calcEloChange(
+      Field.fromFields(eloDiff.toFields()),
+      true
+    );
+    ratingChange = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      ratingChange,
+      Field(20 * 1e10).sub(ratingChange)
+    );
+    // ratingChange = ratingChange.rangeCheckHelper(64); // Is this needed ?
+    // Provable.asProver(() => {
+    //   console.log(
+    //     'ratingChange ',
+    //     ratingChange.toBigInt()
+    //   );
+    // });
+    this.increaseRating(winner, UInt64.from(ratingChange));
+    this.decreaseRating(loser, UInt64.from(ratingChange));
   }
-  private updateWinCount(address: PublicKey) {
-    // increment win count by 1
-    this.token.mint({ address, amount: 1n });
+  private updateRatingForDraw(address1: PublicKey, address2: PublicKey) {
+    // TODO
   }
-  private updateLossCount(address: PublicKey) {
-    // increment loss count by 1
-    this.token.mint({ address, amount: 1n << 32n });
+  private increaseRating(address: PublicKey, amount: UInt64) {
+    this.token.mint({ address, amount });
   }
-  public getWinCount(address: PublicKey) {
+  private decreaseRating(address: PublicKey, amount: UInt64) {
+    this.token.burn({ address, amount });
+  }
+
+  public getPlayerRating(address: PublicKey) {
     const account = Account(address, this.token.id);
-    const state = account.balance.getAndAssertEquals();
-    const stateBits = state.toFields()[0].toBits();
-    const wins = Field.fromBits(stateBits.slice(0, 32));
-    return UInt32.from(wins);
-  }
-  public getLossCount(address: PublicKey) {
-    const account = Account(address, this.token.id);
-    const state = account.balance.getAndAssertEquals();
-    const stateBits = state.toFields()[0].toBits();
-    const losses = Field.fromBits(stateBits.slice(32, 64));
-    return UInt32.from(losses);
+    return account.balance.getAndAssertEquals();
   }
 }
