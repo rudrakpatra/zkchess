@@ -14,7 +14,7 @@
 		"
 		title={
 		Number.isFinite(rating)?
-		"this player has win-loss ratio of {rating}%":
+		`this player has a rating of ${rating}%`:
 		"this player's rating is not available"
 		}
 	>

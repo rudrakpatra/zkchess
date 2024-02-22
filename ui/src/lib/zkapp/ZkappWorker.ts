@@ -87,10 +87,7 @@ const getAPI=async()=>{
 				return zkapp.getGameState().toFEN();
 			},
 			getPlayerRating: async (publicKey: string) => {
-				const winCount=await zkapp.getWinCount(PublicKey.fromBase58(publicKey)).toBigint();
-				const lossCount=await zkapp.getLossCount(PublicKey.fromBase58(publicKey)).toBigint();
-				if(lossCount===0n)return NaN;
-				return Number(winCount/lossCount);
+				return Number(zkapp.getPlayerRating(PublicKey.fromBase58(publicKey)).toBigInt());
 			}
 	}
 }
