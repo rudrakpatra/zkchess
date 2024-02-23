@@ -86,7 +86,7 @@ export const PvPChessProgram = ZkProgram({
         const gameObject = new GameObject(gameState);
         gameObject.preMoveValidations(move).assertTrue('invalid move');
 
-        // TODO check why this like causes compile to fail
+        // TODO check why this line causes compile to fail
         // const newGameState = gameObject.toUpdated(move);
 
         //UPDATE GAME STATE
@@ -160,7 +160,155 @@ export const PvPChessProgram = ZkProgram({
         );
       },
     },
-    // TODO resolveDraw, reportIllegalCastling .. etc
+    resolveDraw: {
+      privateInputs: [SelfProof, Bool,PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        accept: Bool,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        state.black.assertEquals(earlierProof.publicInput.black);
+        state.white.assertEquals(earlierProof.publicInput.white);
+
+        const initialGameStateFields = state.initialGameState.toFields();
+        const earlierProofFields =
+          earlierProof.publicInput.initialGameState.toFields();
+        for (let i = 0; i < 2; i++) {
+          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
+        }
+
+        const gameState = earlierProof.publicOutput;
+        // assert correct player
+        Provable.if(gameState.turn, state.white, state.black).assertEquals(
+            playerPrivateKey.toPublicKey()
+        );
+
+        gameState.result
+          .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
+          .assertTrue('game not in draw state');
+
+        gameState.canDraw.assertTrue('draw not offered');
+        //UPDATE GAME STATE
+        return GameState.from(
+            gameState.white,
+            gameState.black,
+            // gameState.turn,
+            gameState.turn.not(),
+            gameState.enpassant,
+            gameState.kingCastled,
+            gameState.column,
+            gameState.halfmove,
+            //gameState.canDraw,
+            Bool(false),
+            // gameState.result
+            Provable.if(accept, Field(GameResult.DRAW), Field(GameResult.ONGOING))
+          );
+      },
+    },
+    reportIllegalCastling:{
+      privateInputs: [SelfProof,Move,PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        move: Move,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        state.black.assertEquals(earlierProof.publicInput.black);
+        state.white.assertEquals(earlierProof.publicInput.white);
+        const initialGameStateFields = state.initialGameState.toFields();
+        const earlierProofFields =
+          earlierProof.publicInput.initialGameState.toFields();
+        for (let i = 0; i < 2; i++) {
+          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
+        }
+
+        const gameState = earlierProof.publicOutput;
+        // assert correct player
+        Provable.if(gameState.turn, state.white, state.black).assertEquals(
+          playerPrivateKey.toPublicKey()
+        );
+        gameState.result
+          .equals(Field(GameResult.ONGOING))
+          .assertTrue('game already over');
+        const gameObject = new GameObject(gameState);
+        gameObject
+        .illegalCastling(move)
+      .assertTrue('false report of illegal castling');
+
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(
+            gameState.turn,
+            //the reporting player simply wins the game
+            Field(GameResult.WHITE_WINS),
+            Field(GameResult.BLACK_WINS)
+          )
+        );
+      },
+    },
+
+    //TODO: IMPLEMENT STALEMATE
+    //PROVING STALEMATE AS CURRENTLY A 3 STEP PROCESS
+    //1. CLAIM STALEMATE + ACKNOWLEDGE STALEMATE
+    //2. OPPONENT REPORTS FALSE STALEMATE CLAIM
+    //3. DEFEND STALEMATE 
+    
+    resign:{
+      privateInputs: [SelfProof,PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        state.black.assertEquals(earlierProof.publicInput.black);
+        state.white.assertEquals(earlierProof.publicInput.white);
+        const initialGameStateFields = state.initialGameState.toFields();
+        const earlierProofFields =
+          earlierProof.publicInput.initialGameState.toFields();
+        for (let i = 0; i < 2; i++) {
+          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
+        }
+
+        const gameState = earlierProof.publicOutput;
+        // assert correct player
+        Provable.if(gameState.turn, state.white, state.black).assertEquals(
+          playerPrivateKey.toPublicKey()
+        );
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(
+            gameState.turn,
+            //the resigning player simply loses the game
+            Field(GameResult.BLACK_WINS),
+            Field(GameResult.WHITE_WINS)
+          )
+        );
+      },
+    }
   },
 });
 let Proof_ = ZkProgram.Proof(PvPChessProgram);
