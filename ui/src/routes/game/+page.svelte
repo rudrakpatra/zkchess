@@ -1,161 +1,210 @@
 <script lang="ts">
-	import type { Move as ChessMoveUI } from 'svelte-chess/dist/api';
-	import type { PromotionRankAsChar } from 'zkchess-contracts';
-	import { onDestroy, onMount } from 'svelte';
-	import { Stopwatch } from '$lib/Stopwatch';
+	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
 
 	import DashboardLayout from './DashboardLayout.svelte';
-	import Logs from './Logs.svelte';
+	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
-	import Actions from './Actions.svelte';
 	import Player from './Player.svelte';
-	import { animationOnFocus } from '$lib/actions/interaction';
-	import { browser, dev, building, version } from '$app/environment';
+	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
+	import type { PageData } from './$types';
+	import { onMount } from 'svelte';
+	import type { ClientAPI } from '$lib/zkapp/ZkappWorkerClient';
+	import { ripple } from 'svelte-ripple-action';
+	import type { Move } from "chess.js";
+	import type { PromotionRankAsChar } from 'zkchess-interactive';
+	import Loader from '$lib/components/general/Loader.svelte';
 
-	let disableCompileButton = false;
-	let stopwatch = new Stopwatch();
-	let clientIdle = false;
-	$: if (clientIdle) {
-		const time = stopwatch.reset();
-		logs.push(`zkapp took ${time}`);
-		toast.success(`zkapp took ${time}`, { icon: '⏱️' });
-	} else {
-		if (browser) stopwatch.start();
+	export let data: PageData;
+	$: playerA=$publicKey;
+	let playerARating:number;
+	$: playerB=data.challenger;
+	let playerBRating:number;
+	let client: Awaited<ReturnType<ClientAPI>>;
+
+	let clientLoaded = false;
+	let gameStarted=false;
+	let transactionPending=false;
+
+	let timeLog: TimeLog;
+	let fen: string;
+	onMount(async () => {
+		console.log("onmount");
+		timeLog.start("compiling zkapp");
+		client=await (await import("$lib/zkapp/ZkappWorkerClient")).getClient();
+		if(playerA)
+		playerARating=await client.getPlayerRating(playerA);
+		if(playerB)
+		playerBRating=await client.getPlayerRating(playerB);
+		console.log("playerARating",playerARating);
+		console.log("playerBRating",playerBRating);
+		timeLog.stop("compiling zkapp");
+		toast.success('Connected to zkapp worker!');
+		clientLoaded=true;
+	});
+	const start=async ()=>{
+		timeLog.start("starting game");
+		transactionPending=true;
+		if(playerB)
+			await client.start(playerA,playerB,fen)
+		timeLog.stop("starting game");
+		toast.success('Game started!');
+		transactionPending=false;
+		gameStarted=true;
+	}
+	const move=async (move:Move)=>{
+		transactionPending=true;
+		timeLog.start("moving piece");
+			await client.move(move.from,move.to,move.promotion as PromotionRankAsChar);
+		timeLog.stop("moving piece");
+		toast.success('moved piece!');
+		transactionPending=false;
+	}
+	const offerDraw=async ()=>{
+		transactionPending=true;
+		timeLog.start("offering draw");
+		await client.offerDraw();
+		timeLog.stop("offering draw");
+		toast.success('offered draw!');
+		transactionPending=false;
+	}
+	const acceptDraw=async ()=>{
+		transactionPending=true;
+		timeLog.start("accepting draw");
+		await client.acceptDraw();
+		timeLog.stop("accepting draw");
+		toast.success('accepted draw!');
+		transactionPending=false;
+	}
+	const rejectDraw=async ()=>{
+		transactionPending=true;
+		timeLog.start("declining draw");
+		await client.rejectDraw();
+		timeLog.stop("declining draw");
+		toast.success('declined draw!');
+		transactionPending=false;
+	}
+	const resign=async ()=>{
+		transactionPending=true;
+		timeLog.start("resigning");
+		await client.resign();
+		timeLog.stop("resigning");
+		toast.success('resigned!');
+		transactionPending=false;
+	}
+	const getFEN=async ()=>{
+		timeLog.start("getting state");
+		const fen=await client.getFEN();
+		timeLog.stop("getting state");
+		toast.success('got state!');
+		loadFEN(fen);
 	}
 
-	let gameStarted = false;
-
-	let handleCompileAndStartGame = async () => {},
-		handleMove = async (e: CustomEvent<ChessMoveUI>) => console.log('unhandled event', e),
-		handleDraw = async () => {},
-		handleResign = async () => {},
-		handleGetState = async () => {};
-
-	let loadFen: (fen: string) => void;
-	onMount(async () => {
-		stopwatch.start();
-		const { ZkappWorkerClient } = await import('$lib/zkapp/ZkappWorkerClient');
-		const client = new ZkappWorkerClient();
-		handleCompileAndStartGame = async () => {
-			disableCompileButton = true;
-			clientIdle = false;
-			await toast.promise(client.init(), {
-				loading: 'Compiling...',
-				success: 'Compiled!',
-				error: 'Compilation failed.'
-			});
-			await toast.promise(client.start(), {
-				loading: 'Starting...',
-				success: 'Game Started!',
-				error: 'Could not start the game.'
-			});
-			logs.push('Game Started!');
-			logs = logs;
-			gameStarted = true;
-			clientIdle = true;
-		};
-		handleMove = async (e: CustomEvent<ChessMoveUI>) => {
-			clientIdle = false;
-			await toast.promise(
-				client.move(e.detail.from, e.detail.to, e.detail.promotion as PromotionRankAsChar),
-				{
-					loading: 'Moving...',
-					success: 'Moved!',
-					error: 'Failed to move.'
-				}
-			);
-			logs.push(`Moved ${e.detail.from} -> ${e.detail.to}`);
-			logs = logs;
-			clientIdle = true;
-		};
-		handleDraw = async () => {
-			clientIdle = false;
-			await toast.promise(client.draw(), {
-				loading: 'Drawing...',
-				success: 'Drawn!',
-				error: 'Failed to draw.'
-			});
-			logs.push('Drawn!');
-			logs = logs;
-			clientIdle = true;
-		};
-		handleResign = async () => {
-			clientIdle = false;
-			await toast.promise(client.resign(), {
-				loading: 'Resigning...',
-				success: 'Resigned!',
-				error: 'Failed to resign.'
-			});
-			logs.push('Resigned!');
-			logs = logs;
-			clientIdle = true;
-		};
-		handleGetState = async () => {
-			clientIdle = false;
-			const state = await toast.promise(client.getState(), {
-				loading: 'Getting state...',
-				success: 'Got state!',
-				error: 'Failed to get state.'
-			});
-			loadFen(state as string);
-			logs.push('Received state!');
-			logs = logs;
-			clientIdle = true;
-		};
-		clientIdle = true;
-	});
-	onDestroy(() => {
-		stopwatch.destroy();
-	});
-
-	let logs = ['Importing zkChess...'];
+	const copyInviteLink = () => {
+		let link = window.location.href;
+		//add params to link
+		link += '?challenger=' + $publicKey;
+		//copy link to clipboard
+		navigator.clipboard.writeText(link);
+		toast.success('Copied invite link to clipboard!');
+	};
+	let loadFEN: (fen: string) => void;
 </script>
 
 <svelte:head>
 	<title>Mina zkChess game</title>
 </svelte:head>
 
-{#if gameStarted}
-	<DashboardLayout>
-		<div class="slot" slot="logs">
-			<Logs {logs} />
-		</div>
-		<div class="slot" slot="board">
-			<Board bind:handleMove bind:loadFen />
-		</div>
-		<div class="slot" slot="playerB">
-			<Player />
-		</div>
-		<div class="slot" slot="actions">
-			<Actions bind:handleDraw bind:handleResign bind:handleGetState />
-		</div>
-		<div class="slot" slot="playerA">
-			<Player />
-		</div>
-	</DashboardLayout>
-{:else}
-	<div class="fixed inset-0 grid place-content-center">
-		<p class="text-balance max-w-[16rem] text-center text-lg mb-4">
-			Welcome to zk chess example! <br />
-			This example currently runs on a <b> local test chain</b>.<br />
-		</p>
-		<button
-			class="button"
-			use:animationOnFocus
-			on:click|once={handleCompileAndStartGame}
-			disabled={disableCompileButton}
-		>
-			{#if disableCompileButton}
-				⏳ compiling and starting...
-			{:else}
-				🚀 compile & start game
-			{/if}
-		</button>
+<DashboardLayout>
+	<div class="slot" slot="logs">
+		<Logs bind:timeLog />
 	</div>
-{/if}
+	<div class="slot" slot="board">
+		<Board readonly={transactionPending} />
+	</div>
+	<div class="slot" slot="playerB">
+		<!-- TODO use custom tokens for rating -->
+		<Player username={playerB} rating={playerBRating} />
+	</div>
+	<div class="slot" slot="actions">
+		<div class="absolute inset-1 grid place-content-center">
+		{#if !playerA}
+			<p class="action">
+				Invite someone to play with you
+			</p>
+			<AuroConnect let:connect>
+				<button use:ripple class="button" on:click={connect}> Connect </button>
+			</AuroConnect>
+		{:else if !clientLoaded}
+			<p class="action">
+				Compiling <b>zkapp</b>
+			</p>
+			<div class="grid place-content-center">
+				<Loader/>
+			</div>
+		{:else if gameStarted==false}
+			{#if transactionPending}
+				<p class="action">
+					Transaction in Progress 
+				</p>
+				<div class="grid place-content-center">
+					<Loader/>
+				</div>
+			{:else}
+				{#if playerB}
+					<p class="action">
+						Player <b title={playerB}>{ellipsis(playerB, 12)}</b>
+					</p>
+					<div class="grid place-content-center">
+						<button use:ripple class="button" on:click={start}>Start Game</button>
+					</div>
+				{:else}
+					<p class="action">
+						Invite someone to play with you
+					</p>
+					<div class="grid place-content-center">
+						<button use:ripple class="button" on:click={copyInviteLink}>Copy Invite Link</button>
+					</div>
+				{/if}
+			{/if}
+		{:else}
+		<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
+			<!-- <button
+				use:ripple 
+				class="button flex-1"
+				
+				on:click={() => {
+					toast(ToastModal, {
+						props: {
+							prompt: 'opponent has offered a draw',
+							options: [
+								{ label: '👍 accept', action: () => toast.success('accepted draw') },
+								{ label: '👎 decline', action: () => toast.error('declined draw') }
+							]
+						},
+						duration: Infinity
+					});
+				}}	
+			>
+				⭐test draw
+			</button>  -->
+			<button use:ripple  class="button flex-1 w-full" on:click={offerDraw}> 🤝 offer draw </button>
+			<button use:ripple  class="button flex-1 w-full" on:click={resign}> 😖 resign </button>
+			<button use:ripple  class="button flex-1 w-full" on:click={getFEN}> 📜 get state </button>
+		</div>
+		{/if}
+		</div>
+	</div>
+	<div class="slot" slot="playerA">
+		<!-- TODO use custom tokens for rating -->
+		<Player username={playerA} rating={playerARating} />
+	</div>
+</DashboardLayout>
 
 <style>
+	.action{
+		@apply text-balance text-center text-lg p-2;
+	}
 	.slot {
 		@apply relative h-full w-full p-1;
 	}

@@ -1,8 +1,8 @@
 {
-  "name": "zkchess-contracts",
+  "name": "zkchess-interactive",
   "version": "0.1.0",
-  "description": "",
-  "author": "",
+  "description": "play chess on mina blockchain using interactive proofs",
+  "author": "rudrakpatra",
   "license": "Apache-2.0",
   "keywords": [
     "mina-zkapp",
@@ -45,6 +45,6 @@
     "typescript": "^4.7.2"
   },
   "peerDependencies": {
-    "o1js": "^0.14.1"
+    "o1js": "^0.16.2"
   }
 }

@@ -7,10 +7,14 @@ import {
   State,
   Provable,
   PublicKey,
+  Account,
+  UInt32,
+  UInt64,
 } from 'o1js';
 import { GameObject } from './GameLogic/GameLogic.js';
 import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
+import { calcEloChange } from './EloRating.js';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();
@@ -60,6 +64,15 @@ export class Chess extends SmartContract {
     this.whiteKey.set(whiteKey);
     this.blackKey.set(blackKey);
     this.setGameState(gameState);
+    // if players have no rating assign a rating of 1200
+    [whiteKey, blackKey].forEach((addr) => {
+      const mintAmount = Provable.if(
+        this.getPlayerRating(addr).equals(UInt64.zero),
+        UInt64.from(1200 * 1e10),
+        UInt64.zero
+      );
+      this.increaseRating(addr, mintAmount);
+    });
   }
   @method move(move: Move) {
     const gameState = this.getGameState();
@@ -157,7 +170,6 @@ export class Chess extends SmartContract {
       )
     );
   }
-
   //CURRENTLY A PLAYER CAN CASTLE THROUGH A VULNERABLE POSITION
   /**
    * checks if the king castles through a vulnerable position
@@ -422,5 +434,61 @@ export class Chess extends SmartContract {
         )
       )
     );
+    const winnerAddress = Provable.if(
+      gameState.turn,
+      this.blackKey.getAndAssertEquals(),
+      this.whiteKey.getAndAssertEquals()
+    );
+    const loserAddress = Provable.if(
+      gameState.turn,
+      this.whiteKey.getAndAssertEquals(),
+      this.blackKey.getAndAssertEquals()
+    );
+    this.updateRating(winnerAddress, loserAddress);
+  }
+
+  /**
+   * Account token balance contains the elo rating of the player times 10^5
+   */
+  private updateRating(winner: PublicKey, loser: PublicKey) {
+    const winnerRating = this.getPlayerRating(winner);
+    const loserRating = this.getPlayerRating(loser);
+    const eloDiff = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      winnerRating.sub(loserRating),
+      loserRating.sub(winnerRating)
+    );
+    let ratingChange = calcEloChange(
+      Field.fromFields(eloDiff.toFields()),
+      true
+    );
+    ratingChange = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      ratingChange,
+      Field(20 * 1e10).sub(ratingChange)
+    );
+    // ratingChange = ratingChange.rangeCheckHelper(64); // Is this needed ?
+    // Provable.asProver(() => {
+    //   console.log(
+    //     'ratingChange ',
+    //     ratingChange.toBigInt()
+    //   );
+    // });
+    this.increaseRating(winner, UInt64.from(ratingChange));
+    this.decreaseRating(loser, UInt64.from(ratingChange));
+  }
+  private updateRatingForDraw(address1: PublicKey, address2: PublicKey) {
+    // TODO
+  }
+  private increaseRating(address: PublicKey, amount: UInt64) {
+    this.token.mint({ address, amount });
+  }
+  private decreaseRating(address: PublicKey, amount: UInt64) {
+    this.token.burn({ address, amount });
+  }
+
+  public getPlayerRating(address: PublicKey) {
+    const account = Account(address, this.token.id);
+    return account.balance.getAndAssertEquals();
   }
 }

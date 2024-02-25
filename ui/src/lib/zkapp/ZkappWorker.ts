@@ -1,146 +1,118 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, Move, type PromotionRankAsChar, GameState } from 'zkchess-contracts';
+import * as Comlink from 'comlink';
+import { dummyBase64Proof } from 'o1js/dist/node/lib/proof-system';
+import { Pickles } from 'o1js/dist/node/snarky';
+import { AccountUpdate, Mina, PublicKey,PrivateKey,Bool, Signature} from 'o1js';
+import {GameState, PvPChessProgram, PvPChessProgramProof, RollupState, type PromotionRankAsChar} from "zkchess-interactive";
+const [, dummy] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
 
-let deployerAccount: PublicKey,
-	deployerKey: PrivateKey,
-	whitePlayerAccount: PublicKey,
-	whitePlayerKey: PrivateKey,
-	blackPlayerAccount: PublicKey,
-	blackPlayerKey: PrivateKey,
-	zkAppAddress: PublicKey,
-	zkAppPrivateKey: PrivateKey,
-	zkApp: Chess;
 
-const decoratedLog = (...args: string[]) =>
-	console.log('[worker] %c' + args.join(' '), 'color: #00ffee');
-const proofsEnabled = true;
+let time;
+const proofsEnabled = false;
+let initialRollupState:RollupState;
+export type Player={
+	publicKey:string,
+	signedJSONForStartingGame:Signature,
+}
 
-const init = async () => {
-	decoratedLog('importing contract...');
-	const { Chess } = await import('zkchess-contracts');
+async function start(white:Player, black:Player, fen?: string) {
+	if(proofsEnabled){
+		console.log('worker | generating real start');
+		initialRollupState=RollupState.from(
+			GameState.fromFEN(fen),
+			PublicKey.fromBase58(white.publicKey),
+			PublicKey.fromBase58(black.publicKey)
+		);
+		console.time('start');
+		const proof0= await PvPChessProgram.start(
+		initialRollupState,
+		Signature.fromJSON(white.signedJSONForStartingGame),
+		Signature.fromJSON(black.signedJSONForStartingGame)
+		);
+		console.timeEnd('start');
+		return proof0;
+	}
+	else{
+		console.log('worker | generating dummy start');
 
-	decoratedLog('compiling...');
-	await Chess.compile();
+		return new PvPChessProgramProof({
+			proof: dummy,
+			publicInput: RollupState.from(GameState.fromFEN(fen), PublicKey.fromBase58(white.publicKey), PublicKey.fromBase58(black.publicKey)),
+			publicOutput: GameState.fromFEN(fen),
+			maxProofsVerified: 2
+		}).toJSON();
+	}
+}
+async function move(from: string, to: string, promotion:PromotionRankAsChar) {
+	if(proofsEnabled){
+		console.log('worker | generating real move');
 
-	decoratedLog('setting up local blockchain...');
-	const Local = Mina.LocalBlockchain({ proofsEnabled });
-	Mina.setActiveInstance(Local);
-	({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
-	({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
-	({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
+		console.time('start');
+		const proof0= await PvPChessProgram.move(
+		initialRollupState,
+		Signature.fromJSON(white.signedJSONForStartingGame),
+		Signature.fromJSON(black.signedJSONForStartingGame)
+		);
+		console.timeEnd('start');
+		return proof0;
+	}
+	else{
+		console.log('worker | generating dummy move');
+		
+		return new PvPChessProgramProof({
+			proof: dummy,
+			publicInput: RollupState.from(GameState.fromFEN(fen), PublicKey.fromBase58(white.publicKey), PublicKey.fromBase58(black.publicKey)),
+			publicOutput: GameState.fromFEN(fen),
+			maxProofsVerified: 2
+		}).toJSON();
+	}
+}
+			move: async (from: string, to: string, promotion:PromotionRankAsChar) => {
+				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+					zkapp.move(Move.fromLAN(from, to, promotion || 'q'));
+				});
+				await txn.prove();
+				await txn.sign([whitePlayer.privateKey]).send();
+			},
+			offerDraw: async () => {
+				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+					zkapp.offerDraw();
+				});
+				await txn.prove();
+				await txn.sign([whitePlayer.privateKey]).send();
+			},
+			acceptDraw: async () => {
+				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+					zkapp.resolveDraw(Bool(true));
+				});
+				await txn.prove();
+				await txn.sign([whitePlayer.privateKey]).send();
+			},
+			rejectDraw: async () => {
+				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+					zkapp.resolveDraw(Bool(false));
+				});
+				await txn.prove();
+				await txn.sign([whitePlayer.privateKey]).send();
+			},
+			resign: async () => {
+				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+					zkapp.resign();
+				});
+				await txn.prove();
+				await txn.sign([whitePlayer.privateKey]).send();
+			},
+			getFEN: async () => {
+				return zkapp.getGameState().toFEN();
+			},
+			getPlayerRating: async (publicKey: string) => {
+				return Number(zkapp.getPlayerRating(PublicKey.fromBase58(publicKey)).toBigInt());
+			}
+	}
+}
 
-	zkAppPrivateKey = PrivateKey.random();
-	zkAppAddress = zkAppPrivateKey.toPublicKey();
-	decoratedLog('setting up zkApp...');
-	zkApp = new Chess(zkAppAddress);
 
-	decoratedLog('setting up zkApp deploy transaction...');
-	const deployTxn = await Mina.transaction(deployerAccount, () => {
-		AccountUpdate.fundNewAccount(deployerAccount);
-		zkApp.deploy();
-	});
-	decoratedLog('proving transaction...');
-	await deployTxn.prove();
+const exposed=await getAPI();
+Comlink.expose(exposed);
+postMessage('ready');
 
-	decoratedLog('signing transaction...');
-	await deployTxn.sign([deployerKey, zkAppPrivateKey]).send();
-	decoratedLog('deployed! press start');
-};
-
-const start = async () => {
-	decoratedLog('starting the game');
-	const startTxn = await Mina.transaction(whitePlayerAccount, () => {
-		zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
-	});
-	decoratedLog('proving transaction...');
-	await startTxn.prove();
-	decoratedLog('signing transaction...');
-	await startTxn.sign([whitePlayerKey]).send();
-	decoratedLog('game started!');
-	decoratedLog('gamestate:', zkApp.getGameState().toString());
-};
-
-const move = async (args: { from: string; to: string; promotion: PromotionRankAsChar }) => {
-	decoratedLog('moving...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.move(Move.fromLAN(args.from, args.to, args.promotion));
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('moved!');
-};
-
-const draw = async () => {
-	decoratedLog('drawing...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.offerDraw();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('drawn!');
-};
-const resign = async () => {
-	decoratedLog('resigning...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.resign();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('resigned!');
-};
-
-const getState = async () => {
-	decoratedLog('getting state...');
-	const state = zkApp.getGameState().toString();
-	decoratedLog(state);
-	return state;
-};
-
-//helpers
-
-const getPlayer = async () => {
-	return zkApp.getGameState().turn.toString() === 'true'
-		? { playerAccount: whitePlayerAccount, playerKey: whitePlayerKey }
-		: { playerAccount: blackPlayerAccount, playerKey: blackPlayerKey };
-};
-
-const functions = {
-	init,
-	start,
-	move,
-	draw,
-	resign,
-	getState
-};
-
-export type WorkerFunctions = keyof typeof functions;
-
-export type ZkappWorkerRequest = {
-	id: number;
-	fn: WorkerFunctions;
-	args: unknown;
-};
-
-export type ZkappWorkerReponse = {
-	id: number;
-	data: unknown;
-};
-
-onmessage = async (event: MessageEvent<ZkappWorkerRequest>) => {
-	const fn = functions[event.data.fn] as (args: unknown) => Promise<unknown>;
-	const returnData = await fn(event.data.args);
-	const response: ZkappWorkerReponse = {
-		id: event.data.id,
-		data: returnData
-	};
-	postMessage(response);
-};
+export type ZkappWorkerAPI =typeof exposed;

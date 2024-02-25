@@ -23,8 +23,15 @@ Some tricky situations handled are:
 2. ### stalemate
    when a player is not in check but has no legal moves.
 
+## Elo-Rating For Scoring
+After every match the players rating gets updated based on the elo rating formulae.
+
+Calculation of Elo-Rating is done using Taylor Series Approximation.
+
 ## How to run tests
 
+
+Test using node version `18.18.0`
 ```sh
 npm run test
 npm run testw # watch mode
