@@ -1,5 +1,5 @@
 import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, Move, type PromotionRankAsChar } from 'zkchess-contracts';
+import { type Chess, Move, type PromotionRankAsChar, GameState } from 'zkchess-contracts';
 
 let deployerAccount: PublicKey,
 	deployerKey: PrivateKey,
@@ -50,7 +50,7 @@ const init = async () => {
 const start = async () => {
 	decoratedLog('starting the game');
 	const startTxn = await Mina.transaction(whitePlayerAccount, () => {
-		zkApp.start(whitePlayerAccount, blackPlayerAccount);
+		zkApp.start(whitePlayerAccount, blackPlayerAccount,GameState.fromFEN());
 	});
 	decoratedLog('proving transaction...');
 	await startTxn.prove();
@@ -77,7 +77,7 @@ const draw = async () => {
 	decoratedLog('drawing...');
 	const { playerAccount, playerKey } = await getPlayer();
 	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.draw();
+		zkApp.offerDraw();
 	});
 	decoratedLog('proving transaction...');
 	await txn.prove();

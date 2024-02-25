@@ -22,6 +22,23 @@ export class RollupState extends Struct({
     return new RollupState({ initialGameState, white, black });
   }
 }
+
+
+const PvPChessProgramRoutines ={
+  matchGameState:(state:RollupState,proof:SelfProof<RollupState, GameState>)=>{
+        state.black.assertEquals(proof.publicInput.black);
+        state.white.assertEquals(proof.publicInput.white);
+        const intialGSFields = state.initialGameState.toFields();
+        const proofGSFields = proof.publicInput.initialGameState.toFields();
+        for (let i = 0; i < 2; i++) 
+            intialGSFields[i].assertEquals(proofGSFields[i]);
+  },
+  checkPlayer:(state:RollupState,earlierProof:SelfProof<RollupState,GameState>,playerPrivateKey:PrivateKey)=>{
+    Provable.if(earlierProof.publicOutput.turn, state.white, state.black).assertEquals(
+      playerPrivateKey.toPublicKey()
+    );
+  },
+}
 /**
  * shows the current `board state` is achieved from a series of valid chess move
  * & the moves performed by the correct player
@@ -63,22 +80,10 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-          playerPrivateKey.toPublicKey()
-        );
-
         gameState.result
           .equals(Field(GameResult.ONGOING))
           .assertTrue('game already over');
@@ -87,34 +92,33 @@ export const PvPChessProgram = ZkProgram({
         gameObject.preMoveValidations(move).assertTrue('invalid move');
 
         // TODO check why this line causes compile to fail
-        // const newGameState = gameObject.toUpdated(move);
+        const newGameState = gameObject.toUpdated(move);
 
         //UPDATE GAME STATE
-        return earlierProof.publicOutput;
-        // return GameState.from(
-        //   newGameState.white,
-        //   newGameState.black,
-        //   newGameState.turn,
-        //   newGameState.enpassant,
-        //   newGameState.kingCastled,
-        //   newGameState.column,
-        //   newGameState.halfmove,
-        //   //newGameState.canDraw,
-        //   Bool(false),
-        //   // newGameState.result
-        //   Provable.if(
-        //     newGameState.black.getKing().captured,
-        //     //WHITE WINS
-        //     Field(GameResult.WHITE_WINS),
-        //     Provable.if(
-        //       newGameState.white.getKing().captured,
-        //       //BLACK WINS
-        //       Field(GameResult.BLACK_WINS),
-        //       //else
-        //       Field(GameResult.ONGOING)
-        //     )
-        //   )
-        // );
+        return GameState.from(
+          newGameState.white,
+          newGameState.black,
+          newGameState.turn,
+          newGameState.enpassant,
+          newGameState.kingCastled,
+          newGameState.column,
+          newGameState.halfmove,
+          //newGameState.canDraw,
+          Bool(false),
+          // newGameState.result
+          Provable.if(
+            newGameState.black.getKing().captured,
+            //WHITE WINS
+            Field(GameResult.WHITE_WINS),
+            Provable.if(
+              newGameState.white.getKing().captured,
+              //BLACK WINS
+              Field(GameResult.BLACK_WINS),
+              //else
+              Field(GameResult.ONGOING)
+            )
+          )
+        );
       },
     },
 
@@ -126,24 +130,14 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-          playerPrivateKey.toPublicKey()
-        );
-
         gameState.result
           .equals(Field(GameResult.ONGOING))
           .assertTrue('game already over');
+
         return GameState.from(
           gameState.white,
           gameState.black,
@@ -169,27 +163,18 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-            playerPrivateKey.toPublicKey()
-        );
 
         gameState.result
           .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
           .assertTrue('game not in draw state');
 
         gameState.canDraw.assertTrue('draw not offered');
+
+
         //UPDATE GAME STATE
         return GameState.from(
             gameState.white,
@@ -216,20 +201,10 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-          playerPrivateKey.toPublicKey()
-        );
         gameState.result
           .equals(Field(GameResult.ONGOING))
           .assertTrue('game already over');
@@ -274,20 +249,10 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
-
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
+        
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-          playerPrivateKey.toPublicKey()
-        );
         gameState.result
           .equals(Field(GameResult.ONGOING))
           .assertTrue('game already over');
@@ -316,21 +281,10 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-            playerPrivateKey.toPublicKey()
-        );
-
         gameState.result
         .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
         .assertTrue('stalemate claim not reported');
@@ -362,20 +316,10 @@ export const PvPChessProgram = ZkProgram({
           playerPrivateKey: PrivateKey
         ) {
           earlierProof.verify();
-          state.black.assertEquals(earlierProof.publicInput.black);
-          state.white.assertEquals(earlierProof.publicInput.white);
-          const initialGameStateFields = state.initialGameState.toFields();
-          const earlierProofFields =
-            earlierProof.publicInput.initialGameState.toFields();
-          for (let i = 0; i < 2; i++) {
-            initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-          }
+          PvPChessProgramRoutines.matchGameState(state,earlierProof);
+          PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
           const gameState = earlierProof.publicOutput;
-          // assert correct player
-          Provable.if(gameState.turn, state.white, state.black).assertEquals(
-            playerPrivateKey.toPublicKey()
-          );
           gameState.result
           .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
           .assertTrue('Stalemate must be claimed first');
@@ -383,6 +327,8 @@ export const PvPChessProgram = ZkProgram({
           gameObject.preMoveValidations(move).assertTrue('invalid move');
           let newGameState = gameObject.toUpdated(move);
           newGameState.self().getKing().captured.assertTrue('invalid move');
+
+
           //UPDATE GAME STATE
           return GameState.from(
           newGameState.white,
@@ -413,20 +359,10 @@ export const PvPChessProgram = ZkProgram({
           playerPrivateKey: PrivateKey
         ) {
           earlierProof.verify();
-          state.black.assertEquals(earlierProof.publicInput.black);
-          state.white.assertEquals(earlierProof.publicInput.white);
-          const initialGameStateFields = state.initialGameState.toFields();
-          const earlierProofFields =
-            earlierProof.publicInput.initialGameState.toFields();
-          for (let i = 0; i < 2; i++) {
-            initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-          }
+          PvPChessProgramRoutines.matchGameState(state,earlierProof);
+          PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
           const gameState = earlierProof.publicOutput;
-          // assert correct player
-          Provable.if(gameState.turn, state.white, state.black).assertEquals(
-            playerPrivateKey.toPublicKey()
-          );
           //currently the prover is the other player,
           //he wants to play as the player who claimed stalemate
           //so skip a turn
@@ -474,20 +410,10 @@ export const PvPChessProgram = ZkProgram({
           playerPrivateKey: PrivateKey
         ) {
           earlierProof.verify();
-          state.black.assertEquals(earlierProof.publicInput.black);
-          state.white.assertEquals(earlierProof.publicInput.white);
-          const initialGameStateFields = state.initialGameState.toFields();
-          const earlierProofFields =
-            earlierProof.publicInput.initialGameState.toFields();
-          for (let i = 0; i < 2; i++) {
-            initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-          }
+          PvPChessProgramRoutines.matchGameState(state,earlierProof);
+          PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
           const gameState = earlierProof.publicOutput;
-          // assert correct player
-          Provable.if(gameState.turn, state.white, state.black).assertEquals(
-            playerPrivateKey.toPublicKey()
-          );
           gameState.result
           .equals(Field(GameResult.STALEMATE_CLAIM_REPORTED))
           .assertTrue('stalemate claim not reported');
@@ -539,20 +465,13 @@ export const PvPChessProgram = ZkProgram({
         playerPrivateKey: PrivateKey
       ) {
         earlierProof.verify();
-        state.black.assertEquals(earlierProof.publicInput.black);
-        state.white.assertEquals(earlierProof.publicInput.white);
-        const initialGameStateFields = state.initialGameState.toFields();
-        const earlierProofFields =
-          earlierProof.publicInput.initialGameState.toFields();
-        for (let i = 0; i < 2; i++) {
-          initialGameStateFields[i].assertEquals(earlierProofFields[i]);
-        }
+        PvPChessProgramRoutines.matchGameState(state,earlierProof);
+        PvPChessProgramRoutines.checkPlayer(state,earlierProof,playerPrivateKey);
 
         const gameState = earlierProof.publicOutput;
-        // assert correct player
-        Provable.if(gameState.turn, state.white, state.black).assertEquals(
-          playerPrivateKey.toPublicKey()
-        );
+        
+        
+        //UPDATE GAME STATE
         return GameState.from(
           gameState.white,
           gameState.black,

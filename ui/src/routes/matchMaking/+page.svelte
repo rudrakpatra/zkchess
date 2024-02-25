@@ -1,40 +1,44 @@
 <script lang="ts">
-	import type { DataConnection } from 'peerjs';
-	import Peer from 'peerjs';
+	import type { DataConnection ,Peer} from 'peerjs';
 	import { PrivateKey } from 'o1js';
+	import { onMount } from 'svelte';
 
 	// generate a new wallet
 	const walletPrivateKey = PrivateKey.random();
 	const wallet = walletPrivateKey.toPublicKey();
 	console.log('Your Hot wallet', wallet.toBase58());
 
-	let peer = new Peer(wallet.toBase58().toLowerCase().substring(4, 7), {
-		host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
-		secure: true,
-		debug: 2
-	});
+	let peer:Peer;
 	let conn: DataConnection;
 	let connected = false;
 	let opponentId = '';
 	let isWhite: boolean;
 
-	peer.on('error', (err) => {
-		console.error('Network: Network/peer error: ' + err);
-	});
-	peer.on('connection', (connection) => {
-		if (connected) {
-			// this can happen when a 3rd player tries to connect
-			console.warn('Network: Already connected to an opponent');
-			return;
-		}
-		conn = connection;
-		connected = true;
-		isWhite = true;
-		console.log('Network: Connected to opponent ID', connection.peer);
-	});
+	onMount(async()=>{
+		const {Peer} = await import('peerjs');
+		peer = new Peer(wallet.toBase58().toLowerCase().substring(4, 7), {
+			host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
+			secure: true,
+			debug: 2
+		});
+		peer.on('error', (err) => {
+			console.error('Network: Network/peer error: ' + err);
+		});
+		peer.on('connection', (connection) => {
+			if (connected) {
+				// this can happen when a 3rd player tries to connect
+				console.warn('Network: Already connected to an opponent');
+				return;
+			}
+			conn = connection;
+			connected = true;
+			isWhite = true;
+			console.log('Network: Connected to opponent ID', connection.peer);
+		});
+	})
 
 	function onJoin(peerId: string) {
-		// console.log("onJoin", peerId);
+		console.log("onJoin", peerId);
 		let connection = peer.connect(peerId, { reliable: true });
 		connection.on('open', () => {
 			connected = true;
@@ -49,7 +53,7 @@
 </script>
 
 <h3>share your ID with others to connect, or join using other's ID</h3>
-<p>Your ID: {peer.id}</p>
+<p>Your ID: {peer?.id}</p>
 <div style="display:flex">
 	<input type="text" bind:value={opponentId} />
 	<button on:click={() => onJoin(opponentId)}>join</button>
