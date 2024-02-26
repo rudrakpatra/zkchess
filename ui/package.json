@@ -49,7 +49,6 @@
 		"svelte-french-toast": "^1.2.0",
 		"svelte-icons-pack": "^2.1.0",
 		"svelte-ripple-action": "^1.0.5",
-		"tailwindcss-text-balance": "^0.0.7",
-		"zkchess-interactive": "^0.1.0"
+		"tailwindcss-text-balance": "^0.0.7"
 	}
 }

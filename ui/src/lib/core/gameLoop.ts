@@ -1,7 +1,7 @@
 import { verify } from 'o1js';
 import type { Writable } from 'svelte/store';
-import type { GameState } from 'zkchess-contracts';
-import { PvPChessProgramProof, PvPChessProgram, GameResult } from 'zkchess-contracts';
+import type { GameState } from 'zkchess-interactive';
+import { PvPChessProgramProof, PvPChessProgram, GameResult } from 'zkchess-interactive';
 
 export type Agent = {
 	getMove(proof: PvPChessProgramProof): Promise<PvPChessProgramProof>;

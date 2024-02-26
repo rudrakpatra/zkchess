@@ -1,7 +1,7 @@
-import type { PvPChessProgramProof } from 'zkchess-contracts';
+import type { PvPChessProgramProof } from 'zkchess-interactive';
 import type { Agent } from '../gameLoop';
 import type { PrivateKey } from 'o1js';
-import { Move } from 'zkchess-contracts';
+import { Move } from 'zkchess-interactive';
 
 export default class PlayerAgent implements Agent {
 	private onMovePlaced: ((move: Move) => void) | undefined;
