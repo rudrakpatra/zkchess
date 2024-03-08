@@ -1,42 +1,62 @@
 import * as Comlink from 'comlink';
-import { dummyBase64Proof, type JsonProof } from 'o1js/dist/node/lib/proof-system';
-import { Pickles } from 'o1js/dist/node/snarky';
-import { PublicKey,PrivateKey,Signature} from 'o1js';
-import {GameState,GameObject, PvPChessProgram, PvPChessProgramProof, RollupState, type PromotionRankAsChar, Move} from "zkchess-interactive";
+// import { dummyBase64Proof, type JsonProof } from 'o1js/dist/web/lib/proof-system';
+// 2024 hack
+type JsonProof = {
+	publicInput: string[];
+	publicOutput: string[];
+	maxProofsVerified: 0 | 1 | 2;
+	proof: string;
+};
+import { PublicKey, PrivateKey, Signature } from 'o1js';
+import {
+	GameState,
+	GameObject,
+	PvPChessProgram,
+	PvPChessProgramProof,
+	RollupState,
+	type PromotionRankAsChar,
+	Move
+} from 'zkchess-interactive';
 
-let dummy:unknown;
+let dummy: JsonProof;
 
-let time;
+// console.log('dummy', dummyBase64Proof);
+
 const proofsEnabled = false;
-let initialRollupState:RollupState;
+let initialRollupState: RollupState;
 
-export type Player={
-	publicKey:string,
-	signedJSONForStartingGame:Signature,
-}
+export type PlayerSignature = {
+	publicKey: string;
+	jsonSignature: string;
+};
 
-async function start(white:Player, black:Player, fen?: string) {
-	let jsonProof:JsonProof;
-	if(proofsEnabled){
+async function start(white: PlayerSignature, black: PlayerSignature, fen?: string) {
+	let jsonProof: JsonProof;
+	if (proofsEnabled) {
 		console.log('worker | generating real start');
-		initialRollupState=RollupState.from(
+		initialRollupState = RollupState.from(
 			GameState.fromFEN(fen),
 			PublicKey.fromBase58(white.publicKey),
 			PublicKey.fromBase58(black.publicKey)
 		);
 		console.time('start');
-		jsonProof=(await PvPChessProgram.start(
-			initialRollupState,
-			Signature.fromJSON(white.signedJSONForStartingGame),
-			Signature.fromJSON(black.signedJSONForStartingGame)
-		)).toJSON();
+		jsonProof = (
+			await PvPChessProgram.start(
+				initialRollupState,
+				Signature.fromJSON(white.jsonSignature),
+				Signature.fromJSON(black.jsonSignature)
+			)
+		).toJSON();
 		console.timeEnd('start');
-	}
-	else{
+	} else {
 		console.log('worker | generating dummy start');
-		jsonProof= new PvPChessProgramProof({
+		jsonProof = new PvPChessProgramProof({
 			proof: dummy,
-			publicInput: RollupState.from(GameState.fromFEN(fen), PublicKey.fromBase58(white.publicKey), PublicKey.fromBase58(black.publicKey)),
+			publicInput: RollupState.from(
+				GameState.fromFEN(fen),
+				PublicKey.fromBase58(white.publicKey),
+				PublicKey.fromBase58(black.publicKey)
+			),
 			publicOutput: GameState.fromFEN(fen),
 			maxProofsVerified: 2
 		}).toJSON();
@@ -44,24 +64,33 @@ async function start(white:Player, black:Player, fen?: string) {
 	return jsonProof;
 }
 
-async function move(from: string, to: string, promotion:PromotionRankAsChar,lastProofJSON:JsonProof,privateKey:string) {
-	let jsonProof:JsonProof;
-	if(proofsEnabled){
+async function move(
+	from: string,
+	to: string,
+	promotion: PromotionRankAsChar,
+	lastProofJSON: JsonProof,
+	privateKey: string
+) {
+	let jsonProof: JsonProof;
+	if (proofsEnabled) {
 		console.log('worker | generating real move');
 		console.time('start');
-		jsonProof=(await PvPChessProgram.move(
-		initialRollupState,
-		PvPChessProgramProof.fromJSON(lastProofJSON),
-		Move.fromLAN(from, to, promotion || 'q'),
-		PrivateKey.fromBase58(privateKey)
-		)).toJSON();
+		jsonProof = (
+			await PvPChessProgram.move(
+				initialRollupState,
+				PvPChessProgramProof.fromJSON(lastProofJSON),
+				Move.fromLAN(from, to, promotion || 'q'),
+				PrivateKey.fromBase58(privateKey)
+			)
+		).toJSON();
 		console.timeEnd('start');
-	}
-	else{
+	} else {
 		console.log('worker | generating dummy move');
-		const lastProof=PvPChessProgramProof.fromJSON(lastProofJSON);
-		const newGameState=new GameObject(lastProof.publicOutput).toUpdated(Move.fromLAN(from, to, promotion || 'q'));
-		jsonProof= new PvPChessProgramProof({
+		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
+		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(
+			Move.fromLAN(from, to, promotion || 'q')
+		);
+		jsonProof = new PvPChessProgramProof({
 			proof: dummy,
 			publicInput: initialRollupState,
 			publicOutput: newGameState,
@@ -139,18 +168,16 @@ async function move(from: string, to: string, promotion:PromotionRankAsChar,last
 // 	}
 // }
 
-
 if (proofsEnabled) {
 	console.time('compiling PvPChessProgram');
-	time = Date.now();
 	await PvPChessProgram.compile();
 	console.timeEnd('compiling PvPChessProgram');
 } else {
 	// bigint are serialized as strings with 'n' suffix
-	dummy = Pickles.proofOfBase64(await dummyBase64Proof(), 2)[1];
+	dummy = (await import('./dummy')) as unknown as JsonProof;
 }
 
-const api={
+const api = {
 	start,
 	move,
 	// offerDraw,
@@ -160,7 +187,7 @@ const api={
 	// getFEN,
 	// getPlayerRating
 	ready: true
-}
+};
 export type API = typeof api;
 Comlink.expose(api);
 self.postMessage('ready');

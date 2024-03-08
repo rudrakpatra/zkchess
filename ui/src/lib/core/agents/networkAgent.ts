@@ -1,4 +1,4 @@
-import { PvPChessProgramProof } from 'zkchess-contracts';
+import { PvPChessProgramProof } from 'zkchess-interactive';
 import type { Agent } from '../gameLoop';
 import type { DataConnection } from 'peerjs';
 

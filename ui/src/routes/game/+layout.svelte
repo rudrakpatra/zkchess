@@ -5,8 +5,8 @@
 	import { get } from 'svelte/store';
 
 	onMount(async () => {
-		if (!get(publicKey)) await getAccount();
-		if (!get(publicKey)) goto('/');
+		// if (!get(publicKey)) await getAccount();
+		// if (!get(publicKey)) goto('/');
 	});
 </script>
 
