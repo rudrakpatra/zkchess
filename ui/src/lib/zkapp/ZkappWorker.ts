@@ -50,6 +50,7 @@ async function start(white: PlayerSignature, black: PlayerSignature, fen?: strin
 		console.timeEnd('start');
 	} else {
 		console.log('worker | generating dummy start');
+		console.log(dummy,fen,white,black);
 		jsonProof = new PvPChessProgramProof({
 			proof: dummy,
 			publicInput: RollupState.from(
@@ -169,10 +170,14 @@ async function move(
 // }
 
 if (proofsEnabled) {
+	console.log('compiling PvPChessProgram');
 	console.time('compiling PvPChessProgram');
 	await PvPChessProgram.compile();
 	console.timeEnd('compiling PvPChessProgram');
 } else {
+	console.log('compiling PvPChessProgram');
+	console.time('compiling PvPChessProgram');
+	console.timeEnd('compiling PvPChessProgram');
 	// bigint are serialized as strings with 'n' suffix
 	dummy = (await import('./dummy')) as unknown as JsonProof;
 }

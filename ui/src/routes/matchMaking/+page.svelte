@@ -25,6 +25,7 @@
 			console.error('Network: Network/peer error: ' + err);
 		});
 		peer.on('connection', (connection) => {
+			console.log(peer);
 			if (connected) {
 				// this can happen when a 3rd player tries to connect
 				console.warn('Network: Already connected to an opponent');
@@ -35,10 +36,15 @@
 			isWhite = true;
 			console.log('Network: Connected to opponent ID', connection.peer);
 		});
+
+		const urlparams = new URLSearchParams(window.location.search);
+		if (urlparams.has('id')) {
+			opponentId = urlparams.get('id') as string;
+			setTimeout(() => onJoin(opponentId), 1000);
+		}
 	});
 
 	function onJoin(peerId: string) {
-		console.log('onJoin', peerId);
 		let connection = peer.connect(peerId, { reliable: true });
 		connection.on('open', () => {
 			connected = true;

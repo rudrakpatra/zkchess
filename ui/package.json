@@ -39,11 +39,11 @@
 		"svelte": "^4.0.5"
 	},
 	"dependencies": {
-		"peerjs": "^1.5.2",
 		"chess.js": "^1.0.0-beta.7",
 		"chessground": "^9.0.4",
 		"comlink": "^4.4.1",
 		"o1js": "^0.16.2",
+		"peerjs": "^1.5.2",
 		"sass": "^1.70.0",
 		"scss": "^0.2.4",
 		"svelte-french-toast": "^1.2.0",
