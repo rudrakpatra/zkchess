@@ -1,3 +1,29 @@
+/*
+$node --trace-warnings --max-old-space-size=8192 --experimental-vm-modules ./build/src/interact.js
+compiling...
+compiled: 55.095s
+. . . . k . . .
+. . . . p . K .
+. . . . N . . .
+. . . . . . R .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+g5 d5
+. . . . k . . .
+. . . . p . K .
+. . . . N . . .
+. . . R . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+black claimed stalemate true
+white false report true
+true
+*/
+
 import {
   AccountUpdate,
   Field,
@@ -21,9 +47,11 @@ let deployerAccount: PublicKey,
   zkAppAddress: PublicKey,
   zkAppPrivateKey: PrivateKey,
   zkApp: Chess;
-console.time('compiling');
+
+console.log('compiling...');
+console.time('compiled');
 if (proofsEnabled) await Chess.compile();
-console.timeEnd('compiling');
+console.timeEnd('compiled');
 
 const Local = Mina.LocalBlockchain({ proofsEnabled });
 Mina.setActiveInstance(Local);
@@ -51,6 +79,7 @@ const intialGameState = GameState.fromFEN(fen);
 await localDeploy();
 const txn = await Mina.transaction(whitePlayerAccount, () => {
   //this function is likely to be removed and used for testing only
+  AccountUpdate.fundNewAccount(whitePlayerAccount, 2); 
   zkApp.start(whitePlayerAccount, blackPlayerAccount, intialGameState);
 });
 await txn.prove();
@@ -75,7 +104,6 @@ for (let i = 0; i < moves.length; i++) {
   console.log(zkApp.getGameState().toAscii());
 }
 const blackClaimsStalemate = await Mina.transaction(blackPlayerAccount, () => {
-  // zkApp.interact(Field(Chess.CLAIM_STALEMATE), Move.INVALID);
   zkApp.claimStalemate();
 });
 await blackClaimsStalemate.prove();
@@ -88,10 +116,6 @@ const whitePlayerFalseReport = await Mina.transaction(
   whitePlayerAccount,
   () => {
     const move = Move.fromLAN('e8', 'd8');
-    // zkApp.interact(
-    //   Field(Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE),
-    //   move
-    // );
     zkApp.reportStalemateClaimByValidOpponentMove(move);
   }
 );
@@ -107,10 +131,6 @@ const blackPlayerDefendStalemate = await Mina.transaction(
   blackPlayerAccount,
   () => {
     const move = Move.fromLAN('d5', 'd8');
-    // zkApp.interact(
-    //   Field(Chess.DEFEND_STALEMATE_CLAIM),
-    //   move
-    // );
     zkApp.defendStalemateClaim(move);
   }
 );

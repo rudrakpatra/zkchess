@@ -55,7 +55,7 @@
 		timeLog.start('Worker');
 		const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
 		awaitWorker().then(async() => {
-			const {self,opponent,conn}=await matchmaker.matchfound();
+			const {self,opponent}=await matchmaker.matchfound();
 			timeLog.start('creating starting proof');
 			const startingproof  = PvPChessProgramProof.fromJSON(
 				await workerClient.start(self, opponent, fen)
@@ -63,7 +63,7 @@
 			timeLog.stop('creating starting proof');
 		});
 		timeLog.stop('Worker');
-		// parallely setup matchmaker
+		// parallely setup matchmaker 
 		matchmaker.setup(fen,selfPubKey,selfPvtKey).then(async() => {
 			timeLog.start('match found');
 			const {self,opponent,conn} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();

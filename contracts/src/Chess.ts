@@ -31,8 +31,8 @@ export class Chess extends SmartContract {
       .equals(
         Provable.if(
           gameState.turn,
-          this.whiteKey.getAndAssertEquals(),
-          this.blackKey.getAndAssertEquals()
+          this.whiteKey.getAndRequireEquals(),
+          this.blackKey.getAndRequireEquals()
         )
       )
       .assertTrue('sender must be the player whose turn it is');
@@ -45,8 +45,8 @@ export class Chess extends SmartContract {
   }
   public getGameState() {
     return GameState.fromEncoded([
-      this.gs0.getAndAssertEquals(),
-      this.gs1.getAndAssertEquals(),
+      this.gs0.getAndRequireEquals(),
+      this.gs1.getAndRequireEquals(),
     ]);
   }
 
@@ -436,13 +436,13 @@ export class Chess extends SmartContract {
     );
     const winnerAddress = Provable.if(
       gameState.turn,
-      this.blackKey.getAndAssertEquals(),
-      this.whiteKey.getAndAssertEquals()
+      this.blackKey.getAndRequireEquals(),
+      this.whiteKey.getAndRequireEquals()
     );
     const loserAddress = Provable.if(
       gameState.turn,
-      this.whiteKey.getAndAssertEquals(),
-      this.blackKey.getAndAssertEquals()
+      this.whiteKey.getAndRequireEquals(),
+      this.blackKey.getAndRequireEquals()
     );
     this.updateRating(winnerAddress, loserAddress);
   }
@@ -489,6 +489,6 @@ export class Chess extends SmartContract {
 
   public getPlayerRating(address: PublicKey) {
     const account = Account(address, this.token.id);
-    return account.balance.getAndAssertEquals();
+    return account.balance.getAndRequireEquals();
   }
 }

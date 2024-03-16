@@ -17,6 +17,7 @@ import {
 	type PromotionRankAsChar,
 	Move
 } from 'zkchess-interactive';
+import { dummyStr } from "./dummy";
 
 let dummy: JsonProof;
 
@@ -32,13 +33,13 @@ export type PlayerSignature = {
 
 async function start(white: PlayerSignature, black: PlayerSignature, fen?: string) {
 	let jsonProof: JsonProof;
+	initialRollupState = RollupState.from(
+		GameState.fromFEN(fen),
+		PublicKey.fromBase58(white.publicKey),
+		PublicKey.fromBase58(black.publicKey)
+	);
 	if (proofsEnabled) {
 		console.log('worker | generating real start');
-		initialRollupState = RollupState.from(
-			GameState.fromFEN(fen),
-			PublicKey.fromBase58(white.publicKey),
-			PublicKey.fromBase58(black.publicKey)
-		);
 		console.time('start');
 		jsonProof = (
 			await PvPChessProgram.start(
@@ -51,16 +52,13 @@ async function start(white: PlayerSignature, black: PlayerSignature, fen?: strin
 	} else {
 		console.log('worker | generating dummy start');
 		console.log(dummy,fen,white,black);
-		jsonProof = new PvPChessProgramProof({
+		const proof= new PvPChessProgramProof({
 			proof: dummy,
-			publicInput: RollupState.from(
-				GameState.fromFEN(fen),
-				PublicKey.fromBase58(white.publicKey),
-				PublicKey.fromBase58(black.publicKey)
-			),
+			publicInput: initialRollupState,
 			publicOutput: GameState.fromFEN(fen),
 			maxProofsVerified: 2
-		}).toJSON();
+		})
+		jsonProof=proof.toJSON();
 	}
 	return jsonProof;
 }
@@ -91,12 +89,14 @@ async function move(
 		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(
 			Move.fromLAN(from, to, promotion || 'q')
 		);
-		jsonProof = new PvPChessProgramProof({
+		 const proof= new PvPChessProgramProof({
 			proof: dummy,
 			publicInput: initialRollupState,
 			publicOutput: newGameState,
 			maxProofsVerified: 2
-		}).toJSON();
+		})
+		console.log(proof);
+		jsonProof=proof.toJSON();
 	}
 	return jsonProof;
 }
@@ -179,7 +179,14 @@ if (proofsEnabled) {
 	console.time('compiling PvPChessProgram');
 	console.timeEnd('compiling PvPChessProgram');
 	// bigint are serialized as strings with 'n' suffix
-	dummy = (await import('./dummy')) as unknown as JsonProof;
+	// bigint are serialized as strings with 'n' suffix
+
+	dummy = JSON.parse(dummyStr, (key, value) => {
+		if (typeof value === "string" && /^\d+n$/.test(value)) {
+		  return BigInt(value.substring(0, value.length - 1));
+		}
+		return value;
+	}) as unknown as JsonProof;
 }
 
 const api = {
