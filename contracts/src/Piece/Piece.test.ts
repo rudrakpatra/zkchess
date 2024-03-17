@@ -1,6 +1,6 @@
 import { Piece } from './Piece.js';
 import { Position } from '../Position/Position.js';
-import { Bool, Field } from 'o1js';
+import { Bool, Field, Provable } from 'o1js';
 import { RANKS } from './Rank.js';
 
 describe('Piece', () => {
@@ -42,12 +42,17 @@ describe('Piece', () => {
   });
   it('should be able to be displayed', () => {
     expect(
-      Piece.from(Position.from(1, 6), Bool(false), Field(RANKS.PAWN)).toFEN()
+      Piece.from(Position.from(1, 6), Bool(false), Field(RANKS.PAWN)).toString()
     ).toEqual('16+PAWN');
   });
   it('should be able to be displayed', () => {
     expect(
-      Piece.from(Position.from(7, 7), Bool(false), Field(RANKS.KING)).toFEN()
+      Piece.from(Position.from(7, 7), Bool(false), Field(RANKS.KING)).toString()
     ).toEqual('77+KING');
+  });
+  it("Provable.if",()=>{
+    const a=Piece.from(Position.from(7, 7), Bool(false), Field(RANKS.KING));
+    const b=Piece.from(Position.from(1, 6), Bool(false), Field(RANKS.PAWN));
+    expect(Provable.if(Bool(true),a,b)).toStrictEqual(a);
   });
 });

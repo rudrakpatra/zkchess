@@ -16,8 +16,11 @@ export class Position extends Struct({
   public encode(): Field[] {
     return pack([this.row, this.column], Position.ENCODING_SCHEME);
   }
+  static toFields(value:{row:Field,column:Field}):Field[] {
+    return [value.row, value.column];
+  }
   public toFields(): Field[] {
-    return this.encode();
+    return [this.row, this.column];
   }
   public set(position: Position) {
     this.row = position.row;

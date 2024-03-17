@@ -36,12 +36,16 @@ export class Piece extends Struct({
       Piece.ENCODING_SCHEME
     );
   }
-
+  
+  static toFields(value:{position:Position,captured:Bool,rank:Field}):Field[] {
+    return [...value.position.toFields(), ...value.captured.toFields(), value.rank];
+  }
+  
   public toFields(): Field[] {
-    return this.encode();
+    return [...this.position.toFields(), ...this.captured.toFields(), this.rank];
   }
 
-  public toFEN() {
+  public toString() {
     return (
       this.position.row.toString() +
       this.position.column.toString() +
