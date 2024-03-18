@@ -9,9 +9,9 @@ import {
   Signature,
   Bool,
 } from 'o1js';
-import { GameResult, GameState } from './GameState/GameState.js';
-import { Move } from './Move/Move.js';
-import { GameObject } from './GameLogic/GameLogic.js';
+import { GameResult, GameState } from '../GameState/GameState.js';
+import { Move } from '../Move/Move.js';
+import { GameObject } from '../GameLogic/GameLogic.js';
 
 export class RollupState extends Struct({
   initialGameState: GameState,

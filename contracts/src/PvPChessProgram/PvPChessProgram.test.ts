@@ -4,8 +4,8 @@ import {
   PvPChessProgramProof,
   RollupState,
 } from './PvPChessProgram';
-import { GameResult, GameState } from './GameState/GameState.js';
-import { Move } from './Move/Move';
+import { GameResult, GameState } from '../GameState/GameState.js';
+import { Move } from '../Move/Move.js';
 
 describe('PvPChessProgram', () => {
   beforeAll(async () => {

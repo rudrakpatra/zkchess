@@ -8,8 +8,8 @@ import {
 } from 'o1js';
 
 import { Chess } from './Chess.js';
-import { Move } from './Move/Move.js';
-import { GameResult, GameState } from './GameState/GameState.js';
+import { Move } from '../Move/Move.js';
+import { GameResult, GameState } from '../GameState/GameState.js';
 
 const proofsEnabled = false;
 

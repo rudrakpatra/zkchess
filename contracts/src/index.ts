@@ -1,4 +1,4 @@
-import { Chess } from './Chess.js';
+import { Chess } from './ChessContract/Chess.js';
 import { GameState, GameResult } from './GameState/GameState.js';
 import { GameObject } from './GameLogic/GameLogic.js';
 import { PlayerState } from './PlayerState/PlayerState.js';
@@ -10,7 +10,7 @@ import {
   PvPChessProgramProof,
   PvPChessProgram,
   RollupState,
-} from './PvPChessProgram.js';
+} from './PvPChessProgram/PvPChessProgram.js';
 
 export {
   Chess,

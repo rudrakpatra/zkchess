@@ -3,8 +3,8 @@ import {
   PvPChessProgram,
   RollupState,
 } from './PvPChessProgram.js';
-import { GameState } from './GameState/GameState.js';
-import { Move } from './Move/Move.js';
+import { GameState } from '../GameState/GameState.js';
+import { Move } from '../Move/Move.js';
 
 await PvPChessProgram.compile();
 

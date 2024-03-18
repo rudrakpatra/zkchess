@@ -11,10 +11,10 @@ import {
   UInt32,
   UInt64,
 } from 'o1js';
-import { GameObject } from './GameLogic/GameLogic.js';
-import { Move } from './Move/Move.js';
-import { GameResult, GameState } from './GameState/GameState.js';
-import { calcEloChange } from './EloRating.js';
+import { GameObject } from '../GameLogic/GameLogic.js';
+import { Move } from '../Move/Move.js';
+import { GameResult, GameState } from '../GameState/GameState.js';
+import { calcEloChange } from '../EloRating/EloRating.js';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();

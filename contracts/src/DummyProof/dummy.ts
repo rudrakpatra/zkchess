@@ -1,13 +1,16 @@
-import { Pickles } from "o1js/dist/node/snarky.js";
-import { dummyBase64Proof } from "o1js/dist/node/lib/proof-system.js";
-
 import { PrivateKey } from "o1js";
-import { PvPChessProgramProof, RollupState } from "./PvPChessProgram.js";
-import { GameState } from "./GameState/GameState.js";
+import { PvPChessProgramProof, RollupState } from "../PvPChessProgram/PvPChessProgram.js";
+import { GameState } from "../GameState/GameState.js";
+import fs from "fs";
 
-
-const [, dummy] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
-
+const dummyStr = fs.readFileSync("src/DummyProof/dummy.json", "utf-8");
+console.log(dummyStr.slice(0, 100)+"...\n\n\n");
+const dummy = JSON.parse(dummyStr, (key, value) => {
+    if (typeof value === 'string' && /^\d+n$/.test(value)) {
+        return BigInt(value.substring(0, value.length - 1));
+    }
+    return value;
+});
 //run dummy proof
     const white = PrivateKey.random();
     const black = PrivateKey.random();
@@ -32,3 +35,9 @@ console.log("---------------------------");
 console.log(proof.publicInput.black,black.toPublicKey());
 console.log("---------------------------");
 console.log(proof.publicOutput.encode(),initialGameState.encode());
+
+/*
+
+npm run build && node build/src/DummyProof/dummy.js
+
+*/
