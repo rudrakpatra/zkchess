@@ -17,11 +17,9 @@
 	import GameLoop from '$lib/core/gameLoop';
 	import PlayerAgent from '$lib/core/agents/playerAgent';
 	import NetworkAgent from '$lib/core/agents/networkAgent';
-	import type { DataConnection } from 'peerjs';
 	import HiOutlineSwitchVertical from "svelte-icons-pack/hi/HiOutlineSwitchVertical";
 	import Icon from 'svelte-icons-pack/Icon.svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
-	import type { PlayerSignature } from '$lib/zkapp/ZkappWorker';
 	import { PvPChessProgramProof } from 'zkchess-interactive';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 
@@ -55,23 +53,28 @@
 		timeLog.start('Worker');
 		const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
 		awaitWorker().then(async() => {
-			const {self,opponent}=await matchmaker.matchfound();
+			const {self,opponent,conn}=await matchmaker.awaitMatchFound();
 			timeLog.start('creating starting proof');
 			const startingproof  = PvPChessProgramProof.fromJSON(
 				await workerClient.start(self, opponent, fen)
 			) as PvPChessProgramProof;
 			timeLog.stop('creating starting proof');
+
+			// create agents
+			timeLog.start('creating agents');
+			selfAgent = new PlayerAgent();
+			opponentAgent= new NetworkAgent(conn);
+			gameLoop.start(selfAgent,opponentAgent,startingproof);
+			timeLog.stop('creating agents');
+
 		});
 		timeLog.stop('Worker');
 		// parallely setup matchmaker 
 		matchmaker.setup(fen,selfPubKey,selfPvtKey).then(async() => {
 			timeLog.start('match found');
-			const {self,opponent,conn} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();
+			const {opponent} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();
 			opponentPubKeyBase58 = opponent.publicKey;
 			timeLog.stop('match found');
-			// create agents
-			selfAgent = new PlayerAgent();
-			opponentAgent= new NetworkAgent(conn);
 		});
 	});
 	const start = async () => {

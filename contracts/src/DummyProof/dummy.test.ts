@@ -74,17 +74,8 @@ describe("dummy proof", () => {
 
     it("test the dummy with Serialization with PvPChessProgram", async()=>{
         const [, dummy0] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
-
-        //change the path to the file you want to save the dummy proof
-        // fs.writeFileSync("src/DummyProof/dummy.json", j!);
-        // const dummyJSON=fs.readFileSync("src/DummyProof/dummy.json", "utf-8");
-        const dummyJSON=stringify(dummy0);
-        fs.writeFileSync("src/DummyProof/dummy.json", dummyJSON!);
-        
-        // replace all Object with MlInt64
-        const dummy = parse(dummyJSON!);
+        const dummy = parse(stringify(dummy0)!);
         expect(dummy).toStrictEqual(dummy0);
-        // testDummyProof(dummy);
     });
 });
 

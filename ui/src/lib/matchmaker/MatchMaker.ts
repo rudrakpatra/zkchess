@@ -12,7 +12,8 @@ export default class MatchMaker {
 	private startingFEN: string;
 	private self: PlayerSignature;
 	private opponent: PlayerSignature;
-	private matchFoundResolver: (m:MatchFound) => void;
+	private matchFound: MatchFound|null;
+	private onMatchFound: (m:MatchFound) => void=()=>{};
 
 	async setup(startingFEN:string,selfPubKey: PublicKey,selfPvtKey: PrivateKey){
 		this.startingFEN = startingFEN;
@@ -32,17 +33,16 @@ export default class MatchMaker {
 			secure: true,
 			debug: 2
 		})
-		this.matchFoundResolver=()=>{};
 	}
 	async connect() {
 		const { PeerError } = await import('peerjs');
 		//return after successful connection
-		return await new Promise<{self:PlayerSignature,opponent:PlayerSignature,conn:DataConnection}>((resolvePlayerSignature) => {
-			new Promise<DataConnection>((resolve) => {
+		return await new Promise<MatchFound>((resolveMatchFound) => {
+			new Promise<DataConnection>((resolveConn) => {
 			this.peer.on('connection', async (newConnection) => {
 				if (this.connected) {
 					// this can happen when a 3rd player tries to connect
-					console.error('MatchMaker: Already connected to an opponent');
+					console.error('MatchMaker connect: Already connected to an opponent');
 					newConnection.emit('error',new PeerError('negotiation-failed', 'Already connected to an opponent'));
 					newConnection.close();
 					return;
@@ -54,38 +54,43 @@ export default class MatchMaker {
 				this.conn.on('data', (data) => {
 					this.opponent.jsonSignature = JSON.parse(data as string);
 					const m={self: this.self, opponent: this.opponent,conn: this.conn};
-					this.matchFoundResolver(m);
-					resolvePlayerSignature(m);
+					// resolve the match making
+					this.matchFound=m;
+					this.onMatchFound(m);
+					resolveMatchFound(m);
 				});
-				resolve(this.conn);
+				resolveConn(this.conn);
 			})}).then((newConn) => {
 				//send signature to opponent
 				newConn.on('open',()=>{
-					console.log('MatchMaker: Connected to opponent ');
+					console.log('MatchMaker connect: Connected to opponent ');
 					newConn.send(JSON.stringify(this.self.jsonSignature));
 				})
 			});
 		});
 	}
 	async accept(opponentPubKey: string){
-		return await new Promise<MatchFound>((resolvePlayerSignature) => {
+		return await new Promise<MatchFound>((resolveMatchFound) => {
 			new Promise<DataConnection>((resolve) => {
 			this.opponent.publicKey = opponentPubKey;
 				//give peerjs some time to breathe
 				setTimeout(() => {
-					console.log('MatchMaker: Connecting to opponent');
+					console.log('MatchMaker accept: Connecting to opponent');
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
 					connection.on('open', () => {
-						console.log('MatchMaker: Connected to opponent');
+						console.log('MatchMaker accept: Connected to opponent');
 						this.connected = true;
 						this.conn = connection;
 						//listen for signature
 						this.conn.on('data', (data) => {
-							console.log('MatchMaker: Received Signature from Opponent');
+							console.log('MatchMaker accept: Received Signature from Opponent');
 							this.opponent.jsonSignature = JSON.parse(data as string);
 							const m={self: this.self, opponent: this.opponent,conn: this.conn};
-							this.matchFoundResolver(m);
-							resolvePlayerSignature(m);
+
+							// resolve the match making
+							this.matchFound=m;
+							this.onMatchFound(m);
+							resolveMatchFound(m);
 						});
 						resolve(this.conn);
 					});
@@ -97,7 +102,7 @@ export default class MatchMaker {
 						this.connected = false;
 						console.error('MatchMaker: not innitiator error: ' + err);
 					});
-				}, 1000);
+				}, 3000);
 			})
 			.then((newConn) => {
 				//send signature to opponent
@@ -105,7 +110,9 @@ export default class MatchMaker {
 			});
 		});
 	}
-	matchfound(){
-		return new Promise<MatchFound>((resolve) => this.matchFoundResolver=resolve);
+	awaitMatchFound(){
+		console.log('awaitMatchFound: Waiting for match',this.matchFound);
+		if(this.matchFound) return Promise.resolve(this.matchFound);
+		return new Promise<MatchFound>(resolve => this.onMatchFound=resolve);
 	}
 }
