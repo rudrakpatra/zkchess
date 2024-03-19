@@ -14,9 +14,9 @@
 	import Loader from '$lib/components/general/Loader.svelte';
 	import MatchMaker from '$lib/matchmaker/MatchMaker';
 	import { PrivateKey } from 'o1js';
-	import GameLoop from '$lib/core/gameLoop';
-	import PlayerAgent from '$lib/core/agents/playerAgent';
-	import NetworkAgent from '$lib/core/agents/networkAgent';
+	import GameLoop from '$lib/core/GameLoop';
+	import PlayerAgent from '$lib/core/agents/PlayerAgent';
+	import NetworkAgent from '$lib/core/agents/NetworkAgent';
 	import HiOutlineSwitchVertical from "svelte-icons-pack/hi/HiOutlineSwitchVertical";
 	import Icon from 'svelte-icons-pack/Icon.svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
@@ -24,6 +24,7 @@
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 
 	export let data: PageData;
+	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
 	let selfPvtKey = PrivateKey.random();
 	let selfPubKey = selfPvtKey.toPublicKey();
@@ -33,103 +34,87 @@
 
 	let selfRating: number;
 	let opponentRating: number;
-
+	
+	// game synchronization variables
 	let gameStarted = false;
-	let transactionPending = false;
 
 	let timeLog: TimeLog;
-	let fen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 
 	// MATCHMAKER
 	const matchmaker = new MatchMaker();
 	// WORKER
 	let workerClient:workerClientAPI;
 	// GAME LOOP
-	const gameLoop = new GameLoop();
+	const gameLoop = new GameLoop(startingFen);
 	let selfAgent:PlayerAgent;
 	let opponentAgent:NetworkAgent;
+
 	onMount(async () => {
 		// setup worker
 		timeLog.start('Worker');
 		const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
 		awaitWorker().then(async() => {
 			const {self,opponent,conn}=await matchmaker.awaitMatchFound();
-			timeLog.start('creating starting proof');
-			const startingproof  = PvPChessProgramProof.fromJSON(
-				await workerClient.start(self, opponent, fen)
-			) as PvPChessProgramProof;
-			timeLog.stop('creating starting proof');
+			// timeLog.start('creating starting proof');
+			// const startingproof  = PvPChessProgramProof.fromJSON(
+			// 	await workerClient.start(self, opponent, startingFen)
+			// ) as PvPChessProgramProof;
+			// timeLog.stop('creating starting proof');
 
 			// create agents
 			timeLog.start('creating agents');
 			selfAgent = new PlayerAgent();
 			opponentAgent= new NetworkAgent(conn);
-			gameLoop.start(selfAgent,opponentAgent,startingproof);
+			gameLoop.start(selfAgent,opponentAgent,startingFen);
+			gameStarted = true;
 			timeLog.stop('creating agents');
 
 		});
 		timeLog.stop('Worker');
 		// parallely setup matchmaker 
-		matchmaker.setup(fen,selfPubKey,selfPvtKey).then(async() => {
+		matchmaker.setup(startingFen,selfPubKey,selfPvtKey).then(async() => {
 			timeLog.start('match found');
 			const {opponent} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();
 			opponentPubKeyBase58 = opponent.publicKey;
 			timeLog.stop('match found');
 		});
 	});
-	const start = async () => {
-		timeLog.start('starting game');
-		// gameLoop.start(white, black, startingproof);
-		timeLog.stop('starting game');
-		toast.success('Game started!');
-		gameStarted = true;
-	};
 	const move = async (move: Move) => {
-		timeLog.start('moving piece');
-		timeLog.stop('moving piece');
-		toast.success('moved piece!');
-	};
-	// const offerDraw = async () => {
-	// 	transactionPending = true;
-	// 	timeLog.start('offering draw');
-	// 	await client.offerDraw();
-	// 	timeLog.stop('offering draw');
-	// 	toast.success('offered draw!');
-	// };
-	// const acceptDraw = async () => {
-	// 	transactionPending = true;
-	// 	timeLog.start('accepting draw');
-	// 	await client.acceptDraw();
-	// 	timeLog.stop('accepting draw');
-	// 	toast.success('accepted draw!');
-	// };
-	// const rejectDraw = async () => {
-	// 	transactionPending = true;
-	// 	timeLog.start('declining draw');
-	// 	await client.rejectDraw();
-	// 	timeLog.stop('declining draw');
-	// 	toast.success('declined draw!');
-	// };
-	// const resign = async () => {
-	// 	transactionPending = true;
-	// 	timeLog.start('resigning');
-	// 	await client.resign();
-	// 	timeLog.stop('resigning');
-	// 	toast.success('resigned!');
-	// 	transactionPending = false;
-	// };
-	const getFEN = async () => {
-		timeLog.start('getting state');
-		// const fen = await client.getFEN();
-		timeLog.stop('getting state');
-		toast.success('got state!');
-		chessgroundAPI.set({
-			fen: fen
-		});
 	};
 
+	const offerDraw = async () => {
+		timeLog.start('offering draw');
+
+		timeLog.stop('offering draw');
+		toast.success('offered draw!');
+	};
+	const acceptDraw = async () => {
+		timeLog.start('accepting draw');
+		// await client.acceptDraw();
+		
+		timeLog.stop('accepting draw');
+		toast.success('accepted draw!');
+	};
+	const rejectDraw = async () => {
+		timeLog.start('declining draw');
+		// await client.rejectDraw();
+
+		timeLog.stop('declining draw');
+		toast.success('declined draw!');
+	};
+	const resign = async () => {
+		timeLog.start('resigning');
+		// await client.resign();
+
+		timeLog.stop('resigning');
+		toast.success('resigned!');
+	};
+
+	//_______________________________________________________________________________________
+
 	const copyInviteLink = () => {
-		let link = window.location.href;
+		let link = location.href;
 		//add params to link
 		link += '?challenger=' + selfPubKeyBase58;
 		link += '&playAsBlack=' + !playAsBlack;
@@ -138,17 +123,14 @@
 		toast.success('Copied invite link to clipboard!');
 	};
 
-	let chessgroundIsReady = false;
 	let	chessgroundAPI:ChessgroundAPI;
 
 	let playAsBlack = data.playAsBlack;
 
-	$: if(chessgroundAPI){
-		console.log('setting orientation to ',playAsBlack?'black':'white');
-		chessgroundAPI.set({
-			orientation: playAsBlack?'black':"white"
-		});
-	}
+	$: console.log('setting orientation to ',playAsBlack?'black':'white');
+
+	$: chessgroundAPI && chessgroundAPI.set({orientation: playAsBlack?'black':"white"});
+	$: chessgroundAPI && gameLoop.gameState.subscribe((state) => chessgroundAPI.set({fen:state.toFEN()}));
 </script>
 
 <svelte:head>
@@ -160,7 +142,7 @@
 		<Logs bind:timeLog />
 	</div>
 	<div class="slot" slot="board">
-		<Board bind:ready={chessgroundIsReady} bind:chessgroundAPI/>
+		<Board bind:chessgroundAPI {startingFen}/>
 		{#if !opponentPubKeyBase58}
 		<div class="playAsCheckBox">
 			<input id="playAsCheckBox" type="checkbox" bind:checked={playAsBlack}>
@@ -177,65 +159,41 @@
 	</div>
 	<div class="slot" slot="actions">
 		<div class="absolute inset-1 grid place-content-center">
-			{#if !selfPubKey}
-				<p class="action">Invite someone to play with you</p>
-				<AuroConnect let:connect>
-					<div class="grid place-content-center">
-						<button use:ripple class="button" on:click={connect}> Connect </button>
-					</div>
-				</AuroConnect>
-				<!-- {:else if !clientLoaded}
-				<p class="action">
-					Compiling <b>zkapp</b>
-				</p>
-				<div class="grid place-content-center">
-					<Loader />
-				</div> -->
-			{:else if gameStarted == false}
-				{#if transactionPending}
-					<p class="action">Transaction in Progress</p>
-					<div class="grid place-content-center">
-						<Loader />
-					</div>
-				{:else if opponentPubKeyBase58}
-					<p class="action">
-						Player <b title={opponentPubKeyBase58}>{ellipsis(opponentPubKeyBase58, 12)}</b>
-					</p>
-					<div class="grid place-content-center">
-						<button use:ripple class="button" on:click={start}>Start Game</button>
-					</div>
-				{:else}
-					<p class="action">Invite using link</p>
-					<div class="grid place-content-center">
-						<button use:ripple class="button" on:click={copyInviteLink}>Copy Invite Link</button>
-					</div>
-				{/if}
-			{:else}
+			{#if gameStarted}
 				<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
 					<!-- <button
-				use:ripple 
-				class="button flex-1"
+							use:ripple 
+							class="button flex-1"
 				
-				on:click={() => {
-					toast(ToastModal, {
-						props: {
-							prompt: 'opponent has offered a draw',
-							options: [
-								{ label: '👍 accept', action: () => toast.success('accepted draw') },
-								{ label: '👎 decline', action: () => toast.error('declined draw') }
-							]
-						},
-						duration: Infinity
-					});
-				}}	
-			>
-				⭐test draw
-			</button>  -->
-					<!-- <button use:ripple class="button flex-1 w-full" on:click={offerDraw}>
+							on:click={() => {
+								toast(ToastModal, {
+									props: {
+										prompt: 'opponent has offered a draw',
+										options: [
+											{ label: '👍 accept', action: () => toast.success('accepted draw') },
+											{ label: '👎 decline', action: () => toast.error('declined draw') }
+										]
+									},
+									duration: Infinity
+								});
+							}}	
+						>
+							⭐test draw
+						</button>  -->
+					<button use:ripple class="button flex-1 w-full" on:click={offerDraw}>
 						🤝 offer draw
 					</button>
 					<button use:ripple class="button flex-1 w-full" on:click={resign}> 😖 resign </button>
-					<button use:ripple class="button flex-1 w-full" on:click={getFEN}> 📜 get state </button> -->
+				</div>
+			{:else if opponentPubKeyBase58}
+				<p class="action">Waiting for opponent to accept</p>
+				<div class="grid place-content-center">
+					<Loader />
+				</div>
+			{:else}
+				<p class="action">Invite using link</p>
+				<div class="grid place-content-center">
+					<button use:ripple class="button" on:click={copyInviteLink}>Copy Invite Link</button>
 				</div>
 			{/if}
 		</div>

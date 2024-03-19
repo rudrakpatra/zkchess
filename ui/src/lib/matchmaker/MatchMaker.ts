@@ -12,7 +12,7 @@ export default class MatchMaker {
 	private startingFEN: string;
 	private self: PlayerSignature;
 	private opponent: PlayerSignature;
-	private matchFound: MatchFound|null;
+	private matchFound: MatchFound|null=null;
 	private onMatchFound: (m:MatchFound) => void=()=>{};
 
 	async setup(startingFEN:string,selfPubKey: PublicKey,selfPvtKey: PrivateKey){
@@ -47,6 +47,7 @@ export default class MatchMaker {
 					newConnection.close();
 					return;
 				}
+				console.log('MatchMaker connect: Connected to opponent');
 				this.opponent.publicKey = newConnection.peer;
 				this.conn = newConnection;
 				this.connected = true;
@@ -63,10 +64,11 @@ export default class MatchMaker {
 			})}).then((newConn) => {
 				//send signature to opponent
 				newConn.on('open',()=>{
-					console.log('MatchMaker connect: Connected to opponent ');
+					console.log('MatchMaker connect: Sending Signature... ');
 					newConn.send(JSON.stringify(this.self.jsonSignature));
 				})
 			});
+			console.log('MatchMaker connect: Connecting to opponent... ');
 		});
 	}
 	async accept(opponentPubKey: string){
@@ -75,7 +77,7 @@ export default class MatchMaker {
 			this.opponent.publicKey = opponentPubKey;
 				//give peerjs some time to breathe
 				setTimeout(() => {
-					console.log('MatchMaker accept: Connecting to opponent');
+					console.log('MatchMaker accept: Connecting to opponent... ');
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
 					connection.on('open', () => {
 						console.log('MatchMaker accept: Connected to opponent');
@@ -95,17 +97,18 @@ export default class MatchMaker {
 						resolve(this.conn);
 					});
 					connection.on('close', () => {
-						console.error('MatchMaker: Opponent Closed Connection');
+						console.error('MatchMaker accept: Opponent Closed Connection');
 						this.connected = false;
 					});
 					connection.on('error', (err) => {
 						this.connected = false;
-						console.error('MatchMaker: not innitiator error: ' + err);
+						console.error('MatchMaker accept: not innitiator error: ' + err);
 					});
 				}, 3000);
 			})
 			.then((newConn) => {
 				//send signature to opponent
+				console.log('MatchMaker accept: Sending Signature... ');
 				newConn.send(JSON.stringify(this.self.jsonSignature));
 			});
 		});
