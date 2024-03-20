@@ -115,7 +115,7 @@
 
 	let playAsBlack = data.playAsBlack;
 
-	$: console.log('setting orientation to ',playAsBlack?'black':'white');
+	// $: console.log('setting orientation to ',playAsBlack?'black':'white');
 
 	$: 	chessgroundAPI && 
 		chessgroundAPI.set({
@@ -127,9 +127,7 @@
 
 	let placeMove:any;
 	$: {
-		console.log("pp");
 		placeMove=(e:unknown)=>{
-			console.log("ss",e);
 			const move=(e as any).detail as Move;
 			gameMachine.placeMove(move.from,move.to,(move.promotion||'q') as PromotionRankAsChar);
 		}

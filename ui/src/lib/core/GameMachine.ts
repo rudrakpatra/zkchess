@@ -13,12 +13,12 @@ class Sync<T>{
 	public consume(){
 		const pop=()=>{
 			const item=get(this.list)[0];
-			console.warn("Consumed",item);
+			// console.warn("Consumed",item);
 			this.unsubscriber && this.unsubscriber();
 			this.list.update(moves=>moves.slice(1));
 			return item;
 		}
-		console.log("Consuming",get(this.list),get(this.list).length);
+		// console.log("Consuming",get(this.list),get(this.list).length);
 		if(get(this.list).length>0) return pop();
 		return new Promise<T>(res=>{
 			if(get(this.list).length>0) res(pop());
@@ -42,13 +42,13 @@ class GameLoop {
 		this.local.push(new GameObject(get(this.gameState)).toUpdated(Move.fromLAN(from, to, (promotion||'q') as PromotionRankAsChar)));
 	}
 	public verify(){
-		console.log("%cChecking game result",'color:blue;');
+		// console.log("%cChecking game result",'color:blue;');
 		const result=Number(get(this.gameState).result.toBigInt());
 		if ([GameResult.WHITE_WINS,GameResult.BLACK_WINS, GameResult.DRAW,GameResult.DRAW_BY_STALEMATE].includes(result))
 		return;
 	}
 	public async playAsWhite(conn:DataConnection) {
-		console.log("Playing as white")
+		// console.log("Playing as white")
 		for (let i = 0; i < 10; i++) {
 			const gs=await this.local.consume();
 			this.verify();
@@ -70,7 +70,7 @@ class GameLoop {
 		// console.log("GAME ENDED AS " ,gs2.toFEN());
 	}
 	public async playAsBlack(conn:DataConnection) {
-		console.log("Playing as black")
+		// console.log("Playing as black")
 		for(let i=0;i<10;i++){
 			const gs=await this.network.consume();
 			this.verify();

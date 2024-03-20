@@ -12,10 +12,10 @@
 	
 	let chessJS=new Chess();
 
-	$: console.log(`%c${fen}`,'color:pink;');
+	// $: console.log(`%c${fen}`,'color:pink;');
 	$:if(chessgroundAPI){
 		chessJS.load(fen);
-		console.log("it's now turn of "+chessJS.turn());
+		// console.log("it's now turn of "+chessJS.turn());
 		chessgroundAPI.set({
 			fen: chessJS.fen(),
 			turnColor: chessJS.turn()=='w'?'white':'black',
