@@ -14,13 +14,11 @@
 	import Loader from '$lib/components/general/Loader.svelte';
 	import MatchMaker from '$lib/matchmaker/MatchMaker';
 	import { PrivateKey } from 'o1js';
-	import GameLoop from '$lib/core/GameLoop';
-	import PlayerAgent from '$lib/core/agents/PlayerAgent';
-	import NetworkAgent from '$lib/core/agents/NetworkAgent';
+	import GameMachine from '$lib/core/GameMachine';
 	import HiOutlineSwitchVertical from "svelte-icons-pack/hi/HiOutlineSwitchVertical";
 	import Icon from 'svelte-icons-pack/Icon.svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
-	import { PvPChessProgramProof } from 'zkchess-interactive';
+	import type { PromotionRankAsChar } from 'zkchess-interactive';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 
 	export let data: PageData;
@@ -42,13 +40,11 @@
 
 
 	// MATCHMAKER
-	const matchmaker = new MatchMaker();
+	let matchmaker = new MatchMaker();;
 	// WORKER
 	let workerClient:workerClientAPI;
-	// GAME LOOP
-	const gameLoop = new GameLoop(startingFen);
-	let selfAgent:PlayerAgent;
-	let opponentAgent:NetworkAgent;
+	// GAME MACHINE
+	let gameMachine=new GameMachine(startingFen);
 
 	onMount(async () => {
 		// setup worker
@@ -56,19 +52,14 @@
 		const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
 		awaitWorker().then(async() => {
 			const {self,opponent,conn}=await matchmaker.awaitMatchFound();
+			gameStarted = true;
 			// timeLog.start('creating starting proof');
 			// const startingproof  = PvPChessProgramProof.fromJSON(
 			// 	await workerClient.start(self, opponent, startingFen)
 			// ) as PvPChessProgramProof;
 			// timeLog.stop('creating starting proof');
-
-			// create agents
-			timeLog.start('creating agents');
-			selfAgent = new PlayerAgent();
-			opponentAgent= new NetworkAgent(conn);
-			gameLoop.start(selfAgent,opponentAgent,startingFen);
-			gameStarted = true;
-			timeLog.stop('creating agents');
+			gameMachine.attachPeer(conn);
+			playAsBlack?gameMachine.playAsBlack(conn):gameMachine.playAsWhite(conn);
 
 		});
 		timeLog.stop('Worker');
@@ -80,9 +71,6 @@
 			timeLog.stop('match found');
 		});
 	});
-	const move = async (move: Move) => {
-	};
-
 	const offerDraw = async () => {
 		timeLog.start('offering draw');
 
@@ -129,10 +117,24 @@
 
 	$: console.log('setting orientation to ',playAsBlack?'black':'white');
 
-	$: chessgroundAPI && chessgroundAPI.set({orientation: playAsBlack?'black':"white"});
-	$: chessgroundAPI && gameLoop.gameState.subscribe((state) => chessgroundAPI.set({fen:state.toFEN()}));
-</script>
+	$: 	chessgroundAPI && 
+		chessgroundAPI.set({
+			orientation: playAsBlack?'black':"white"
+		});
 
+	let fen=startingFen;
+	$: 	chessgroundAPI && gameMachine.gameState.subscribe((state) => fen=state.toFEN());
+
+	let placeMove:any;
+	$: {
+		console.log("pp");
+		placeMove=(e:unknown)=>{
+			console.log("ss",e);
+			const move=(e as any).detail as Move;
+			gameMachine.placeMove(move.from,move.to,(move.promotion||'q') as PromotionRankAsChar);
+		}
+	}
+</script>
 <svelte:head>
 	<title>Mina zkChess game</title>
 </svelte:head>
@@ -142,7 +144,7 @@
 		<Logs bind:timeLog />
 	</div>
 	<div class="slot" slot="board">
-		<Board bind:chessgroundAPI {startingFen}/>
+		<Board on:move={placeMove} bind:chessgroundAPI {fen}/>
 		{#if !opponentPubKeyBase58}
 		<div class="playAsCheckBox">
 			<input id="playAsCheckBox" type="checkbox" bind:checked={playAsBlack}>

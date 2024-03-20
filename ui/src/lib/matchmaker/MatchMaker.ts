@@ -56,6 +56,7 @@ export default class MatchMaker {
 					this.opponent.jsonSignature = JSON.parse(data as string);
 					const m={self: this.self, opponent: this.opponent,conn: this.conn};
 					// resolve the match making
+					this.conn.removeAllListeners();
 					this.matchFound=m;
 					this.onMatchFound(m);
 					resolveMatchFound(m);
@@ -76,10 +77,11 @@ export default class MatchMaker {
 			new Promise<DataConnection>((resolve) => {
 			this.opponent.publicKey = opponentPubKey;
 				//give peerjs some time to breathe
-				setTimeout(() => {
+				const t=setInterval(() => {
 					console.log('MatchMaker accept: Connecting to opponent... ');
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
 					connection.on('open', () => {
+						clearInterval(t);
 						console.log('MatchMaker accept: Connected to opponent');
 						this.connected = true;
 						this.conn = connection;
@@ -90,10 +92,12 @@ export default class MatchMaker {
 							const m={self: this.self, opponent: this.opponent,conn: this.conn};
 
 							// resolve the match making
+							this.conn.removeAllListeners();
 							this.matchFound=m;
 							this.onMatchFound(m);
 							resolveMatchFound(m);
 						});
+						console.log("disturb...")
 						resolve(this.conn);
 					});
 					connection.on('close', () => {
@@ -104,7 +108,7 @@ export default class MatchMaker {
 						this.connected = false;
 						console.error('MatchMaker accept: not innitiator error: ' + err);
 					});
-				}, 3000);
+				}, 1000);
 			})
 			.then((newConn) => {
 				//send signature to opponent
