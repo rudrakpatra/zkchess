@@ -73,12 +73,18 @@ export default class MatchMaker {
 		});
 	}
 	async accept(opponentPubKey: string){
-		return await new Promise<MatchFound>((resolveMatchFound) => {
+		return await new Promise<MatchFound>((resolveMatchFound,rejectMatchFound) => {
 			new Promise<DataConnection>((resolve) => {
 			this.opponent.publicKey = opponentPubKey;
 				//give peerjs some time to breathe
+				let tries=5;
 				const t=setInterval(() => {
 					console.log('MatchMaker accept: Connecting to opponent... ');
+					if(--tries==0){
+						console.log("t=",t);
+						clearInterval(t);
+						rejectMatchFound("Could Not Connect to Opponent");
+					}
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
 					connection.on('open', () => {
 						clearInterval(t);
@@ -105,8 +111,8 @@ export default class MatchMaker {
 						this.connected = false;
 					});
 					connection.on('error', (err) => {
-						this.connected = false;
 						console.error('MatchMaker accept: not innitiator error: ' + err);
+						this.connected = false;
 					});
 				}, 1000);
 			})

@@ -49,7 +49,7 @@ class GameLoop {
 	}
 	public async playAsWhite(conn:DataConnection) {
 		// console.log("Playing as white")
-		for (let i = 0; i < 10; i++) {
+		while(true){
 			const gs=await this.local.consume();
 			this.verify();
 			console.log(`%c${gs.toAscii()}`,'color:blue;');
@@ -71,7 +71,7 @@ class GameLoop {
 	}
 	public async playAsBlack(conn:DataConnection) {
 		// console.log("Playing as black")
-		for(let i=0;i<10;i++){
+		while(true){
 			const gs=await this.network.consume();
 			this.verify();
 			this.gameState.set(gs);

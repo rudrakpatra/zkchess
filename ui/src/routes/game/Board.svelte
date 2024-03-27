@@ -9,35 +9,45 @@
 
 	export let fen:string;
 	export let chessgroundAPI : ChessgroundAPI;
-	
+	export let playAsBlack:boolean;
+	export let gameStarted:boolean;
 	let chessJS=new Chess();
 
 	// $: console.log(`%c${fen}`,'color:pink;');
-	$:if(chessgroundAPI){
+	$:if(chessgroundAPI && gameStarted){
 		chessJS.load(fen);
 		// console.log("it's now turn of "+chessJS.turn());
 		chessgroundAPI.set({
+			turnColor:chessJS.turn()==='w'?'white':'black',
 			fen: chessJS.fen(),
-			turnColor: chessJS.turn()=='w'?'white':'black',
 			movable: {
-				free:true,
+				free:false,
 				dests: SQUARES.reduce((dests,sqr,i)=>{
 					const ms = chessJS.moves({square: sqr, verbose: true});
 					return  ms.length ?dests.set(sqr, ms.map(m => m.to)):dests;
-				},new Map()),
-				color: chessJS.turn()=='w'?'white':'black',
+				},new Map())
+			}
+		});
+	};
+	const chessgroundHook=(el:HTMLDivElement)=>{
+		chessgroundAPI=Chessground(el,{
+			premovable:{
+					enabled:false,
+				},
+			movable:{
+				free:false,
+				dests:new Map(),
+				color:playAsBlack?'black':'white',
 				events: {
 					after: (orig, dest) => {
-						console.log('after',orig,dest);
 						const move = chessJS.move({from: orig, to: dest, promotion: 'q'});
 						if (move === null) return 'snapback';
 						dispatch('move',move);
 					}
 				}
 			}
-		});
+		})
 	};
-	const chessgroundHook=(el:HTMLDivElement)=>chessgroundAPI= Chessground(el);
 	const dispatch=createEventDispatcher();
 </script>
 

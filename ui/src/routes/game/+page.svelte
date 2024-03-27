@@ -1,5 +1,4 @@
 <script lang="ts">
-
 	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
 	import DashboardLayout from './DashboardLayout.svelte';
@@ -32,7 +31,8 @@
 
 	let selfRating: number;
 	let opponentRating: number;
-	
+	// match maker variables
+	let matchFailed = false;
 	// game synchronization variables
 	let gameStarted = false;
 
@@ -48,27 +48,33 @@
 
 	onMount(async () => {
 		// setup worker
-		timeLog.start('Worker');
+		timeLog.start("Compiled Contracts");
 		const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
 		awaitWorker().then(async() => {
 			const {self,opponent,conn}=await matchmaker.awaitMatchFound();
 			gameStarted = true;
 			// timeLog.start('creating starting proof');
 			// const startingproof  = PvPChessProgramProof.fromJSON(
-			// 	await workerClient.start(self, opponent, startingFen)
-			// ) as PvPChessProgramProof;
-			// timeLog.stop('creating starting proof');
+				// 	await workerClient.start(self, opponent, startingFen)
+				// ) as PvPChessProgramProof;
+				// timeLog.stop('creating starting proof');
 			gameMachine.attachPeer(conn);
 			playAsBlack?gameMachine.playAsBlack(conn):gameMachine.playAsWhite(conn);
-
 		});
-		timeLog.stop('Worker');
+		timeLog.stop("Compiled Contracts");
 		// parallely setup matchmaker 
 		matchmaker.setup(startingFen,selfPubKey,selfPvtKey).then(async() => {
-			timeLog.start('match found');
-			const {opponent} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();
-			opponentPubKeyBase58 = opponent.publicKey;
-			timeLog.stop('match found');
+			try{
+				timeLog.start('match found');
+				const {opponent} = opponentPubKeyBase58?await matchmaker.accept(opponentPubKeyBase58):await matchmaker.connect();
+				opponentPubKeyBase58 = opponent.publicKey;
+				timeLog.stop('match found');
+			}
+			catch(e){
+				console.error(e);
+				matchFailed=true;
+				toast.error('Match failed: '+e);
+			}
 		});
 	});
 	const offerDraw = async () => {
@@ -142,7 +148,7 @@
 		<Logs bind:timeLog />
 	</div>
 	<div class="slot" slot="board">
-		<Board on:move={placeMove} bind:chessgroundAPI {fen}/>
+		<Board on:move={placeMove} bind:chessgroundAPI {fen} {playAsBlack} {gameStarted}/>
 		{#if !opponentPubKeyBase58}
 		<div class="playAsCheckBox">
 			<input id="playAsCheckBox" type="checkbox" bind:checked={playAsBlack}>
@@ -186,10 +192,17 @@
 					<button use:ripple class="button flex-1 w-full" on:click={resign}> 😖 resign </button>
 				</div>
 			{:else if opponentPubKeyBase58}
-				<p class="action">Waiting for opponent to accept</p>
-				<div class="grid place-content-center">
-					<Loader />
-				</div>
+				{#if matchFailed}
+					<p class="action">Match failed</p>
+					<div class="grid place-content-center">
+						<button use:ripple class="button" on:click={()=>{location.reload()}}>Reload Page</button>
+					</div>
+				{:else}
+					<p class="action">Waiting for opponent to accept</p>
+					<div class="grid place-content-center">
+						<Loader />
+					</div>
+				{/if}
 			{:else}
 				<p class="action">Invite using link</p>
 				<div class="grid place-content-center">
