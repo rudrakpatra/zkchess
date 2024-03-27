@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	/* style-scrollbars-css */
+	::-webkit-scrollbar {
+		width: 0rem;
+		height: 0rem;
+	}
+}
+@layer components {
+	.button {
+		@apply block w-fit relative select-none whitespace-nowrap;
+		@apply rounded-lg shadow-lg outline-none;
+		@apply p-2 text-lg font-semibold;
+		@apply bg-secondary text-background;
+		@apply ring-4 ring-inset ring-secondary;
+		&:disabled {
+			pointer-events: none;
+			@apply opacity-50;
+		}
+	}
+}

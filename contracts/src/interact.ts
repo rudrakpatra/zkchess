@@ -1,3 +1,29 @@
+/*
+$node --trace-warnings --max-old-space-size=8192 --experimental-vm-modules ./build/src/interact.js
+compiling...
+compiled: 55.095s
+. . . . k . . .
+. . . . p . K .
+. . . . N . . .
+. . . . . . R .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+g5 d5
+. . . . k . . .
+. . . . p . K .
+. . . . N . . .
+. . . R . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+black claimed stalemate true
+white false report true
+true
+*/
+
 import {
   AccountUpdate,
   Field,
@@ -7,7 +33,7 @@ import {
   PublicKey,
 } from 'o1js';
 
-import { Chess } from './Chess.js';
+import { Chess } from './ChessContract/Chess.js';
 import { Move } from './Move/Move.js';
 import { GameResult, GameState } from './GameState/GameState.js';
 
@@ -21,9 +47,11 @@ let deployerAccount: PublicKey,
   zkAppAddress: PublicKey,
   zkAppPrivateKey: PrivateKey,
   zkApp: Chess;
-console.time('compiling');
+
+console.log('compiling...');
+console.time('compiled');
 if (proofsEnabled) await Chess.compile();
-console.timeEnd('compiling');
+console.timeEnd('compiled');
 
 const Local = Mina.LocalBlockchain({ proofsEnabled });
 Mina.setActiveInstance(Local);
@@ -46,36 +74,71 @@ async function localDeploy() {
   // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
   await txn.sign([deployerKey, zkAppPrivateKey]).send();
 }
-
-// three moves
+const fen = '4k3/4p1K1/4N3/6R1/8/8/8/8 w - - 0 1';
+const intialGameState = GameState.fromFEN(fen);
 await localDeploy();
 const txn = await Mina.transaction(whitePlayerAccount, () => {
-  zkApp.start(whitePlayerAccount, blackPlayerAccount, GameState.fromFEN());
+  //this function is likely to be removed and used for testing only
+  AccountUpdate.fundNewAccount(whitePlayerAccount, 2); 
+  zkApp.start(whitePlayerAccount, blackPlayerAccount, intialGameState);
 });
 await txn.prove();
 await txn.sign([whitePlayerKey]).send();
 console.log(zkApp.getGameState().toAscii());
 
 const moves = [
-  ['b1', 'c3'],
-  ['b8', 'c6'],
-  ['e2', 'e3'],
+  ['g5', 'd5'], //white player rook from g5 to d5 leading stalemate
+  //black claims stalemate
+  //white denies stalemate with a black's move that looks valid
+  //black shows that the move is invalid as white can now capture the king
 ];
-
 for (let i = 0; i < moves.length; i++) {
   const player = i % 2 == 0 ? whitePlayerAccount : blackPlayerAccount;
   const key = i % 2 == 0 ? whitePlayerKey : blackPlayerKey;
-  console.log('-----MOVE----\n', moves[i][0], moves[i][1]);
-  console.time('move');
+  console.log(moves[i][0], moves[i][1]);
   const txn2 = await Mina.transaction(player, () => {
     zkApp.move(Move.fromLAN(moves[i][0], moves[i][1], 'r'));
   });
   await txn2.prove();
   await txn2.sign([key]).send();
   console.log(zkApp.getGameState().toAscii());
-  console.timeEnd('move');
-  console.log('-------------\n');
 }
+const blackClaimsStalemate = await Mina.transaction(blackPlayerAccount, () => {
+  zkApp.claimStalemate();
+});
+await blackClaimsStalemate.prove();
+await blackClaimsStalemate.sign([blackPlayerKey]).send();
+Provable.log(
+  'black claimed stalemate',
+  zkApp.getGameState().result.equals(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+);
+const whitePlayerFalseReport = await Mina.transaction(
+  whitePlayerAccount,
+  () => {
+    const move = Move.fromLAN('e8', 'd8');
+    zkApp.reportStalemateClaimByValidOpponentMove(move);
+  }
+);
+await whitePlayerFalseReport.prove();
+await whitePlayerFalseReport.sign([whitePlayerKey]).send();
+
+Provable.log(
+  'white false report',
+  zkApp.getGameState().result.equals(GameResult.STALEMATE_CLAIM_REPORTED)
+);
+
+const blackPlayerDefendStalemate = await Mina.transaction(
+  blackPlayerAccount,
+  () => {
+    const move = Move.fromLAN('d5', 'd8');
+    zkApp.defendStalemateClaim(move);
+  }
+);
+
+await blackPlayerDefendStalemate.prove();
+await blackPlayerDefendStalemate.sign([blackPlayerKey]).send();
+//check if draw by stalemate
+Provable.log(zkApp.getGameState().result.equals(GameResult.DRAW_BY_STALEMATE));
 
 // it('starts the game and resigns', async () => {
 //   await localDeploy();

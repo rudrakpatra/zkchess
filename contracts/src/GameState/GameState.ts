@@ -91,8 +91,41 @@ export class GameState extends Struct({
       result
     );
   }
+  static toFields(value: {
+    white: PlayerState;
+    black: PlayerState;
+    turn: Bool;
+    enpassant: Bool;
+    kingCastled: Bool;
+    column: Field;
+    halfmove: Field;
+    canDraw: Bool;
+    result: Field;
+  }): Field[] {
+    return [
+      ...value.white.toFields(),
+      ...value.black.toFields(),
+      value.turn.toField(),
+      value.enpassant.toField(),
+      value.kingCastled.toField(),
+      value.column,
+      value.halfmove,
+      value.canDraw.toField(),
+      value.result,
+    ];
+  }
   public toFields(): Field[] {
-    return this.encode();
+    return [
+      ...this.white.toFields(),
+      ...this.black.toFields(),
+      this.turn.toField(),
+      this.enpassant.toField(),
+      this.kingCastled.toField(),
+      this.column,
+      this.halfmove,
+      this.canDraw.toField(),
+      this.result,
+    ]
   }
   public encode(): Field[] {
     return pack(

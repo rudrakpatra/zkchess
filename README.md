@@ -3,10 +3,13 @@ I made this project primarily to understand how Mina works.
 
 # TLDR
 ### A smartcontract/zkApp to play chess.
-1. Proves that every move is played correctly and the final result win,loose,draw.
-2. Players can also create chess puzzles using a custom inital state of the Board.
-### A simple UI demo
-<img src="https://github.com/rudrakpatra/zkchess/assets/84844790/8f50b938-ce12-4d50-bccd-5742b22f0736" height="500"/>
+1. Proves that every move is played correctly and the final result `win` ,`loose` ,`draw` (along with `draw_by_stalemate`),
+2. Players can also create chess puzzles using a custom inital state of the Board. Solve puzzles without revealing the solutions.
+
+### UI demo 
+Here is a video demo [watch video on youtube](https://youtu.be/5b8q2ik4Uo8)
+
+<img src="https://github.com/rudrakpatra/zkchess/assets/84844790/8a2abdff-a65e-4644-bde4-936eb23f831c" style="min-width:100%"/>
 
 # Usage
 1. Chess matches are verified onchain and player ratings can be trusted.
@@ -23,21 +26,11 @@ The smart contract has 4 methods.
 2. a `ChessMove` consists of a path of size 8 and promotion choice.
 3. finally updates the piece's position to the end of the path.
 
-   ### A possible way of handling Draws and Stalemates
+   ### How handling Draws and Stalemates Work
      If a player has no valid move to play and its king is not in check, then it's a stalemate and the game is a draw.
-     
-     For this, a move will also take a `possibleNextMove` of the other player which proves that a stalement cannot occur.
-      
-     ```
-     type Move={path: Position[], promotion:Field}
-     move(myMove:Move, possibleNextMove:Move, offerDraw:Bool )
-     
-     if (offerDraw is true)
-     //then we simply allow the next player to accept draw on the next turn.
-   
-     else if (possibleNextMove is invalid)
-     //then there is a chance of stalemate allowing the next player to accept the draw.
-      ```
+      Handling stalemates is tricky any normal approach would take enough time to be unfeasible.
+      However ,taking some reasonable compromises, we can greatly reduce it exponentially using a _interactive_ approach.
+      Take a look at the [readme](https://github.com/rudrakpatra/zkchess/tree/gameloop/contracts#readme) in the contracts folder for a more detailed explanation.
   
 ### 🤝 `draw()`
 1. the player calls this to accept a draw request.
@@ -46,7 +39,9 @@ The smart contract has 4 methods.
 ### 😖 `resign()`
 1. the player calls this to resign.
 
-# Getting Started
+ Take a look at the [readme](https://github.com/rudrakpatra/zkchess/tree/gameloop/contracts#readme) in the contracts folder for other methods that handles possible disputes.
+
+# Contributing Is Easy
 clone this repository
 go to contracts folder and run 
 `npm install` and then `npm run test` to test the contract.
@@ -56,4 +51,5 @@ run `npm run build` to build the contracts
 go to ui folder and run
 `npm install` and then `npm run dev` to run it on dev mode
 
+# Video links
 you can check out this [youtube video](https://youtu.be/4SH52WuMwkI) (last updated on Nov 1, 2023) 

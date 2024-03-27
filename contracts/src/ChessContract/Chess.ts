@@ -7,10 +7,14 @@ import {
   State,
   Provable,
   PublicKey,
+  Account,
+  UInt32,
+  UInt64,
 } from 'o1js';
-import { GameObject } from './GameLogic/GameLogic.js';
-import { Move } from './Move/Move.js';
-import { GameResult, GameState } from './GameState/GameState.js';
+import { GameObject } from '../GameLogic/GameLogic.js';
+import { Move } from '../Move/Move.js';
+import { GameResult, GameState } from '../GameState/GameState.js';
+import { calcEloChange } from '../EloRating/EloRating.js';
 
 export class Chess extends SmartContract {
   @state(Field) gs0 = State<Field>();
@@ -27,8 +31,8 @@ export class Chess extends SmartContract {
       .equals(
         Provable.if(
           gameState.turn,
-          this.whiteKey.getAndAssertEquals(),
-          this.blackKey.getAndAssertEquals()
+          this.whiteKey.getAndRequireEquals(),
+          this.blackKey.getAndRequireEquals()
         )
       )
       .assertTrue('sender must be the player whose turn it is');
@@ -41,8 +45,8 @@ export class Chess extends SmartContract {
   }
   public getGameState() {
     return GameState.fromEncoded([
-      this.gs0.getAndAssertEquals(),
-      this.gs1.getAndAssertEquals(),
+      this.gs0.getAndRequireEquals(),
+      this.gs1.getAndRequireEquals(),
     ]);
   }
 
@@ -60,6 +64,15 @@ export class Chess extends SmartContract {
     this.whiteKey.set(whiteKey);
     this.blackKey.set(blackKey);
     this.setGameState(gameState);
+    // if players have no rating assign a rating of 1200
+    [whiteKey, blackKey].forEach((addr) => {
+      const mintAmount = Provable.if(
+        this.getPlayerRating(addr).equals(UInt64.zero),
+        UInt64.from(1200 * 1e10),
+        UInt64.zero
+      );
+      this.increaseRating(addr, mintAmount);
+    });
   }
   @method move(move: Move) {
     const gameState = this.getGameState();
@@ -101,9 +114,9 @@ export class Chess extends SmartContract {
     );
   }
 
-  // /**
-  //  * offers a draw to the opponent
-  //  */
+  /**
+   * offers a draw to the opponent
+   */
   @method offerDraw() {
     const gameState = this.getGameState();
     this.assertSenderIsPlayer(gameState);
@@ -157,202 +170,6 @@ export class Chess extends SmartContract {
       )
     );
   }
-
-  // static readonly CLAIM_STALEMATE = 0;
-  // static readonly ACKNOWLEDGE_STALEMATE_CLAIM = 1;
-  // static readonly OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE = 2;
-  // static readonly REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE = 3;
-  // static readonly DEFEND_STALEMATE_CLAIM = 4;
-  // static readonly REPORT_ILLEGAL_CASTLING = 5;
-
-  // @method interact(mode: Field, move: Move) {
-  //   const gameState = this.getGameState();
-  //   const gameObject = new GameObject(gameState);
-  //   const preMoveValidations = gameObject.preMoveValidations(move);
-  //   const updatedGameState = gameObject.toUpdated(move);
-  //   const kingCapturedUpdatedGameState = updatedGameState
-  //     .self()
-  //     .getKing().captured;
-  //   const oneTurnSkipped = GameState.from(
-  //     gameState.white,
-  //     gameState.black,
-  //     // gameState.turn,
-  //     gameState.turn.not(),
-  //     gameState.enpassant,
-  //     gameState.kingCastled,
-  //     gameState.column,
-  //     gameState.halfmove,
-  //     gameState.canDraw,
-  //     gameState.result
-  //   );
-  //   const gameObjectOneTurnSkipped = new GameObject(oneTurnSkipped);
-  //   const preMoveValidationsTurnSkipped =
-  //     gameObjectOneTurnSkipped.preMoveValidations(move);
-  //   const newGameStates = [
-  //     {
-  //       mode: Chess.CLAIM_STALEMATE,
-  //       cond: [gameState.result.equals(Field(GameResult.ONGOING))],
-  //       error: 'cannot claim if game is not ongoing',
-  //       state: GameState.from(
-  //         gameState.white,
-  //         gameState.black,
-  //         //turn,
-  //         gameState.turn.not(),
-  //         gameState.enpassant,
-  //         gameState.kingCastled,
-  //         gameState.column,
-  //         gameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
-  //       ),
-  //     },
-  //     {
-  //       mode: Chess.ACKNOWLEDGE_STALEMATE_CLAIM,
-  //       cond: [
-  //         gameState.result.equals(
-  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
-  //         ),
-  //       ],
-  //       error: 'cannot acknowledge, no stalemate is claimed',
-  //       state: GameState.from(
-  //         gameState.white,
-  //         gameState.black,
-  //         //turn,
-  //         gameState.turn.not(),
-  //         gameState.enpassant,
-  //         gameState.kingCastled,
-  //         gameState.column,
-  //         gameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Field(GameResult.DRAW_BY_STALEMATE)
-  //       ),
-  //     },
-  //     {
-  //       mode: Chess.OVERRIDE_STALEMATE_CLAIM_BY_KING_CAPTURE,
-  //       cond: [
-  //         gameState.result.equals(
-  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
-  //         ),
-  //         preMoveValidations,
-  //         kingCapturedUpdatedGameState,
-  //       ],
-  //       error: 'cannot override stalemate claim by king capture',
-  //       state: GameState.from(
-  //         updatedGameState.white,
-  //         updatedGameState.black,
-  //         //turn,
-  //         updatedGameState.turn.not(),
-  //         updatedGameState.enpassant,
-  //         updatedGameState.kingCastled,
-  //         updatedGameState.column,
-  //         updatedGameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Provable.if(
-  //           gameState.turn,
-  //           Field(GameResult.WHITE_WINS),
-  //           Field(GameResult.BLACK_WINS)
-  //         )
-  //       ),
-  //     },
-  //     {
-  //       mode: Chess.REPORT_STALEMATE_CLAIM_BY_VALID_OPPONENT_MOVE,
-  //       cond: [
-  //         gameState.result.equals(
-  //           Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
-  //         ),
-  //         preMoveValidationsTurnSkipped,
-  //       ],
-  //       error: 'cannot report stalemate claim by valid opponent move',
-  //       state: GameState.from(
-  //         updatedGameState.white,
-  //         updatedGameState.black,
-  //         //turn
-  //         updatedGameState.turn.not(),
-  //         updatedGameState.enpassant,
-  //         updatedGameState.kingCastled,
-  //         updatedGameState.column,
-  //         updatedGameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Field(GameResult.STALEMATE_CLAIM_REPORTED)
-  //       ),
-  //     },
-  //     {
-  //       mode: Chess.DEFEND_STALEMATE_CLAIM,
-  //       cond: [
-  //         gameState.result.equals(Field(GameResult.STALEMATE_CLAIM_REPORTED)),
-  //         preMoveValidationsTurnSkipped,
-  //         //show that your king can be captured now
-  //         kingCapturedUpdatedGameState,
-  //       ],
-  //       error: 'incorrect defence of stalemate claim',
-  //       state: GameState.from(
-  //         updatedGameState.white,
-  //         updatedGameState.black,
-  //         //turn
-  //         updatedGameState.turn.not(),
-  //         updatedGameState.enpassant,
-  //         updatedGameState.kingCastled,
-  //         updatedGameState.column,
-  //         updatedGameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Field(GameResult.DRAW_BY_STALEMATE)
-  //       ),
-  //     },
-  //     {
-  //       mode: Chess.REPORT_ILLEGAL_CASTLING,
-  //       cond: [
-  //         gameState.result.equals(Field(GameResult.ONGOING)),
-  //         gameObject.illegalCastling(move),
-  //       ],
-  //       error: 'false report of illegal castling',
-  //       state: GameState.from(
-  //         gameState.white,
-  //         gameState.black,
-  //         //turn,
-  //         gameState.turn.not(),
-  //         gameState.enpassant,
-  //         gameState.kingCastled,
-  //         gameState.column,
-  //         gameState.halfmove,
-  //         //canDraw,
-  //         Bool(false),
-  //         //result
-  //         Provable.if(
-  //           gameState.turn,
-  //           //the reporting player simply wins the game
-  //           Field(GameResult.WHITE_WINS),
-  //           Field(GameResult.BLACK_WINS)
-  //         )
-  //       ),
-  //     },
-  //   ];
-  //   // satisfy one of these conditions
-  //   newGameStates.forEach((s) => {
-  //     Provable.if(
-  //       mode.equals(s.mode),
-  //       s.cond.reduce(Bool.or),
-  //       Bool(true)
-  //     ).assertTrue(s.error);
-  //   });
-  //   this.setGameState(
-  //     Provable.switch(
-  //       newGameStates.map((s) => mode.equals(s.mode)),
-  //       GameState,
-  //       newGameStates.map((s) => s.state)
-  //     )
-  //   );
-  // }
-
   //CURRENTLY A PLAYER CAN CASTLE THROUGH A VULNERABLE POSITION
   /**
    * checks if the king castles through a vulnerable position
@@ -617,5 +434,61 @@ export class Chess extends SmartContract {
         )
       )
     );
+    const winnerAddress = Provable.if(
+      gameState.turn,
+      this.blackKey.getAndRequireEquals(),
+      this.whiteKey.getAndRequireEquals()
+    );
+    const loserAddress = Provable.if(
+      gameState.turn,
+      this.whiteKey.getAndRequireEquals(),
+      this.blackKey.getAndRequireEquals()
+    );
+    this.updateRating(winnerAddress, loserAddress);
+  }
+
+  /**
+   * Account token balance contains the elo rating of the player times 10^5
+   */
+  private updateRating(winner: PublicKey, loser: PublicKey) {
+    const winnerRating = this.getPlayerRating(winner);
+    const loserRating = this.getPlayerRating(loser);
+    const eloDiff = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      winnerRating.sub(loserRating),
+      loserRating.sub(winnerRating)
+    );
+    let ratingChange = calcEloChange(
+      Field.fromFields(eloDiff.toFields()),
+      true
+    );
+    ratingChange = Provable.if(
+      winnerRating.greaterThan(loserRating),
+      ratingChange,
+      Field(20 * 1e10).sub(ratingChange)
+    );
+    // ratingChange = ratingChange.rangeCheckHelper(64); // Is this needed ?
+    // Provable.asProver(() => {
+    //   console.log(
+    //     'ratingChange ',
+    //     ratingChange.toBigInt()
+    //   );
+    // });
+    this.increaseRating(winner, UInt64.from(ratingChange));
+    this.decreaseRating(loser, UInt64.from(ratingChange));
+  }
+  private updateRatingForDraw(address1: PublicKey, address2: PublicKey) {
+    // TODO
+  }
+  private increaseRating(address: PublicKey, amount: UInt64) {
+    this.token.mint({ address, amount });
+  }
+  private decreaseRating(address: PublicKey, amount: UInt64) {
+    this.token.burn({ address, amount });
+  }
+
+  public getPlayerRating(address: PublicKey) {
+    const account = Account(address, this.token.id);
+    return account.balance.getAndRequireEquals();
   }
 }

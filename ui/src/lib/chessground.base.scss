@@ -1,0 +1,81 @@
+.cg-default-style.cg-wrap {
+    box-sizing: content-box;
+    position: relative;
+    display: block;
+    @apply box-content relative block;
+    cg-container{
+        @apply absolute inset-0 w-full h-full block;
+    }
+    cg-board{
+        @apply absolute inset-0 w-full h-full cursor-pointer;
+        background-size: cover;
+    }
+    cg-board square{
+        @apply absolute inset-0 w-1/8 h-1/8 pointer-events-none;
+    }
+    cg-board square.move-dest{
+        @apply pointer-events-auto;
+    }
+    cg-board square.last-move{
+        @apply will-change-transform;
+    }
+    piece{
+        @apply absolute inset-0 w-1/8 h-1/8 bg-cover z-2 will-change-transform pointer-events-none;
+        .dragging{
+            @apply cursor-move z-11;
+        }
+        .anim{
+            @apply z-8;
+        }
+        .fading{
+            @apply z-1 opacity-50;
+        }
+        .ghost{
+            @apply opacity-30;
+        }
+        svg{
+            @apply overflow-hidden relative w-full h-full pointer-events-none z-2 opacity-60;
+        }
+    }
+    cg-auto-pieces, .cg-shapes, .cg-custom-svgs{
+        @apply overflow-visible absolute inset-0 pointer-events-none;
+    }
+    cg-auto-pieces piece{
+        @apply opacity-30;
+    }
+    .cg-shapes{
+        @apply overflow-hidden opacity-60 z-2;
+    }
+    .cg-custom-svgs{
+        @apply z-9;
+        svg{
+            @apply overflow-visible;
+        }
+    }
+    coords{
+        @apply absolute flex pointer-events-none opacity-80 font-sans text-xs;
+        font-family: sans-serif;
+        font-size: 9px;
+    }
+    coords.ranks{
+        @apply left-4 top-0 flex-col-reverse h-full w-12;
+    }
+    coords.ranks.black{
+        @apply flex-col;
+    }
+    coords.ranks.left{
+        @apply left-0 items-end;
+    }
+    coords.files{
+        @apply bottom-0 left-24 flex-row w-full h-16 uppercase text-center;
+    }
+    coords.files.black{
+        @apply flex-row-reverse;
+    }
+    coords coord{
+        @apply flex-1;
+    }
+    coords.ranks coord{
+        @apply transform translate-y-39%;
+    }
+}

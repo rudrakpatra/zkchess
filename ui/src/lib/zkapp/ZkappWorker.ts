@@ -1,146 +1,205 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey } from 'o1js';
-import { type Chess, Move, type PromotionRankAsChar } from 'zkchess-contracts';
+import * as Comlink from 'comlink';
+// import { dummyBase64Proof, type JsonProof } from 'o1js/dist/web/lib/proof-system';
+// 2024 hack
+type JsonProof = {
+	publicInput: string[];
+	publicOutput: string[];
+	maxProofsVerified: 0 | 1 | 2;
+	proof: string;
+};
+import { PublicKey, PrivateKey, Signature } from 'o1js';
+import {
+	GameState,
+	GameObject,
+	PvPChessProgram,
+	PvPChessProgramProof,
+	RollupState,
+	type PromotionRankAsChar,
+	Move
+} from 'zkchess-interactive';
+import { dummyStr } from "./dummy";
 
-let deployerAccount: PublicKey,
-	deployerKey: PrivateKey,
-	whitePlayerAccount: PublicKey,
-	whitePlayerKey: PrivateKey,
-	blackPlayerAccount: PublicKey,
-	blackPlayerKey: PrivateKey,
-	zkAppAddress: PublicKey,
-	zkAppPrivateKey: PrivateKey,
-	zkApp: Chess;
+let dummy: JsonProof;
 
-const decoratedLog = (...args: string[]) =>
-	console.log('[worker] %c' + args.join(' '), 'color: #00ffee');
-const proofsEnabled = true;
+// console.log('dummy', dummyBase64Proof);
 
-const init = async () => {
-	decoratedLog('importing contract...');
-	const { Chess } = await import('zkchess-contracts');
+const proofsEnabled = false;
+let initialRollupState: RollupState;
 
-	decoratedLog('compiling...');
-	await Chess.compile();
-
-	decoratedLog('setting up local blockchain...');
-	const Local = Mina.LocalBlockchain({ proofsEnabled });
-	Mina.setActiveInstance(Local);
-	({ privateKey: deployerKey, publicKey: deployerAccount } = Local.testAccounts[0]);
-	({ privateKey: whitePlayerKey, publicKey: whitePlayerAccount } = Local.testAccounts[1]);
-	({ privateKey: blackPlayerKey, publicKey: blackPlayerAccount } = Local.testAccounts[2]);
-
-	zkAppPrivateKey = PrivateKey.random();
-	zkAppAddress = zkAppPrivateKey.toPublicKey();
-	decoratedLog('setting up zkApp...');
-	zkApp = new Chess(zkAppAddress);
-
-	decoratedLog('setting up zkApp deploy transaction...');
-	const deployTxn = await Mina.transaction(deployerAccount, () => {
-		AccountUpdate.fundNewAccount(deployerAccount);
-		zkApp.deploy();
-	});
-	decoratedLog('proving transaction...');
-	await deployTxn.prove();
-
-	decoratedLog('signing transaction...');
-	await deployTxn.sign([deployerKey, zkAppPrivateKey]).send();
-	decoratedLog('deployed! press start');
+export type PlayerSignature = {
+	publicKey: string;
+	jsonSignature: string;
 };
 
-const start = async () => {
-	decoratedLog('starting the game');
-	const startTxn = await Mina.transaction(whitePlayerAccount, () => {
-		zkApp.start(whitePlayerAccount, blackPlayerAccount);
-	});
-	decoratedLog('proving transaction...');
-	await startTxn.prove();
-	decoratedLog('signing transaction...');
-	await startTxn.sign([whitePlayerKey]).send();
-	decoratedLog('game started!');
-	decoratedLog('gamestate:', zkApp.getGameState().toString());
-};
+async function start(white: PlayerSignature, black: PlayerSignature, fen?: string) {
+	let jsonProof: JsonProof;
+	initialRollupState = RollupState.from(
+		GameState.fromFEN(fen),
+		PublicKey.fromBase58(white.publicKey),
+		PublicKey.fromBase58(black.publicKey)
+	);
+	if (proofsEnabled) {
+		console.log('worker | generating real start');
+		console.time('start');
+		jsonProof = (
+			await PvPChessProgram.start(
+				initialRollupState,
+				Signature.fromJSON(white.jsonSignature),
+				Signature.fromJSON(black.jsonSignature)
+			)
+		).toJSON();
+		console.timeEnd('start');
+	} else {
+		console.log('worker | generating dummy start');
+		console.log(dummy,fen,white,black);
+		const proof= new PvPChessProgramProof({
+			proof: dummy,
+			publicInput: initialRollupState,
+			publicOutput: GameState.fromFEN(fen),
+			maxProofsVerified: 2
+		})
+		jsonProof=proof.toJSON();
+	}
+	return jsonProof;
+}
 
-const move = async (args: { from: string; to: string; promotion: PromotionRankAsChar }) => {
-	decoratedLog('moving...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.move(Move.fromLAN(args.from, args.to, args.promotion));
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('moved!');
-};
+async function move(
+	from: string,
+	to: string,
+	promotion: PromotionRankAsChar,
+	lastProofJSON: JsonProof,
+	privateKey: string
+) {
+	let jsonProof: JsonProof;
+	if (proofsEnabled) {
+		console.log('worker | generating real move');
+		console.time('start');
+		jsonProof = (
+			await PvPChessProgram.move(
+				initialRollupState,
+				PvPChessProgramProof.fromJSON(lastProofJSON),
+				Move.fromLAN(from, to, promotion || 'q'),
+				PrivateKey.fromBase58(privateKey)
+			)
+		).toJSON();
+		console.timeEnd('start');
+	} else {
+		console.log('worker | generating dummy move');
+		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
+		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(
+			Move.fromLAN(from, to, promotion || 'q')
+		);
+		 const proof= new PvPChessProgramProof({
+			proof: dummy,
+			publicInput: initialRollupState,
+			publicOutput: newGameState,
+			maxProofsVerified: 2
+		})
+		console.log(proof);
+		jsonProof=proof.toJSON();
+	}
+	return jsonProof;
+}
 
-const draw = async () => {
-	decoratedLog('drawing...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.draw();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('drawn!');
-};
-const resign = async () => {
-	decoratedLog('resigning...');
-	const { playerAccount, playerKey } = await getPlayer();
-	const txn = await Mina.transaction(playerAccount, () => {
-		zkApp.resign();
-	});
-	decoratedLog('proving transaction...');
-	await txn.prove();
-	decoratedLog('signing transaction...');
-	await txn.sign([playerKey]).send();
-	decoratedLog('resigned!');
-};
+// async function offerDraw(lastProofJSON:string,privateKey:string) {
+// 	if(proofsEnabled){
+// 		console.log('worker | generating real offerDraw');
 
-const getState = async () => {
-	decoratedLog('getting state...');
-	const state = zkApp.getGameState().toString();
-	decoratedLog(state);
-	return state;
-};
+// 		console.time('start');
+// 		const proof= await PvPChessProgram.offerDraw(
+// 		initialRollupState,
+// 		Signature.fromJSON(white.signedJSONForStartingGame),
+// 		Signature.fromJSON(black.signedJSONForStartingGame)
+// 		);
+// 		console.timeEnd('start');
+// 		return proof0;
+// 	}
+// 	else{
+// 		console.log('worker | generating dummy offerDraw');
+// 		const gameObject=GameObject.from()
+// 		return new PvPChessProgramProof({
+// 			proof: dummy,
+// 			publicInput: RollupState.from(GameState.fromFEN(fen), PublicKey.fromBase58(white.publicKey), PublicKey.fromBase58(black.publicKey)),
+// 			publicOutput: new GameObject(),
+// 			maxProofsVerified: 2
+// 		}).toJSON();
+// 	}
+// }
+// 			move: async (from: string, to: string, promotion:PromotionRankAsChar) => {
+// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+// 					zkapp.move(Move.fromLAN(from, to, promotion || 'q'));
+// 				});
+// 				await txn.prove();
+// 				await txn.sign([whitePlayer.privateKey]).send();
+// 			},
+// 			offerDraw: async () => {
+// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+// 					zkapp.offerDraw();
+// 				});
+// 				await txn.prove();
+// 				await txn.sign([whitePlayer.privateKey]).send();
+// 			},
+// 			acceptDraw: async () => {
+// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+// 					zkapp.resolveDraw(Bool(true));
+// 				});
+// 				await txn.prove();
+// 				await txn.sign([whitePlayer.privateKey]).send();
+// 			},
+// 			rejectDraw: async () => {
+// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+// 					zkapp.resolveDraw(Bool(false));
+// 				});
+// 				await txn.prove();
+// 				await txn.sign([whitePlayer.privateKey]).send();
+// 			},
+// 			resign: async () => {
+// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
+// 					zkapp.resign();
+// 				});
+// 				await txn.prove();
+// 				await txn.sign([whitePlayer.privateKey]).send();
+// 			},
+// 			getFEN: async () => {
+// 				return zkapp.getGameState().toFEN();
+// 			},
+// 			getPlayerRating: async (publicKey: string) => {
+// 				return Number(zkapp.getPlayerRating(PublicKey.fromBase58(publicKey)).toBigInt());
+// 			}
+// 	}
+// }
 
-//helpers
+if (proofsEnabled) {
+	console.log('compiling PvPChessProgram');
+	console.time('compiling PvPChessProgram');
+	await PvPChessProgram.compile();
+	console.timeEnd('compiling PvPChessProgram');
+} else {
+	console.log('compiling PvPChessProgram');
+	console.time('compiling PvPChessProgram');
+	console.timeEnd('compiling PvPChessProgram');
+	// bigint are serialized as strings with 'n' suffix
+	// bigint are serialized as strings with 'n' suffix
 
-const getPlayer = async () => {
-	return zkApp.getGameState().turn.toString() === 'true'
-		? { playerAccount: whitePlayerAccount, playerKey: whitePlayerKey }
-		: { playerAccount: blackPlayerAccount, playerKey: blackPlayerKey };
-};
+	dummy = JSON.parse(dummyStr, (key, value) => {
+		if (typeof value === "string" && /^\d+n$/.test(value)) {
+		  return BigInt(value.substring(0, value.length - 1));
+		}
+		return value;
+	}) as unknown as JsonProof;
+}
 
-const functions = {
-	init,
+const api = {
 	start,
 	move,
-	draw,
-	resign,
-	getState
+	// offerDraw,
+	// acceptDraw,
+	// rejectDraw,
+	// resign,
+	// getFEN,
+	// getPlayerRating
+	ready: true
 };
-
-export type WorkerFunctions = keyof typeof functions;
-
-export type ZkappWorkerRequest = {
-	id: number;
-	fn: WorkerFunctions;
-	args: unknown;
-};
-
-export type ZkappWorkerReponse = {
-	id: number;
-	data: unknown;
-};
-
-onmessage = async (event: MessageEvent<ZkappWorkerRequest>) => {
-	const fn = functions[event.data.fn] as (args: unknown) => Promise<unknown>;
-	const returnData = await fn(event.data.args);
-	const response: ZkappWorkerReponse = {
-		id: event.data.id,
-		data: returnData
-	};
-	postMessage(response);
-};
+export type API = typeof api;
+Comlink.expose(api);
+self.postMessage('ready');

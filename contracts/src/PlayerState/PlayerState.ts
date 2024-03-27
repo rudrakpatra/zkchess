@@ -53,8 +53,22 @@ export class PlayerState extends Struct({
       PlayerState.ENCODING_SCHEME
     );
   }
+  static toFields(value: {
+    pieces: Piece[];
+    castling: { kingSide: Bool; queenSide: Bool };
+  }): Field[] {
+    return [
+      ...value.pieces.flatMap((p) => p.toFields()),
+      value.castling.kingSide.toField(),
+      value.castling.queenSide.toField(),
+    ];
+  }
   public toFields(): Field[] {
-    return this.encode();
+    return [
+      ...this.pieces.flatMap((p) => p.toFields()),
+      this.castling.kingSide.toField(),
+      this.castling.queenSide.toField(),
+    ]
   }
 
   public isUncapturedPieceAt(position: Position): Bool {

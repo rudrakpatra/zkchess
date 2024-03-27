@@ -1,20 +1,22 @@
 <script lang="ts">
 	import ellipsis from '$lib/ellipsis';
-	export let username = '23bdxdge252143214442b4ds1bs2bsdg44s2';
-	export let rating = '500';
+	export let username = 'Not found';
+	export let rating: number;
 </script>
 
 <div id="player" class="absolute inset-1 layout">
 	<span
-		class=" 
-	rounded-md
+		class=" rounded-md
 		bg-secondary text-chess-200
 		text-sm font-bold
 		grid place-items-center
 		p-1 min-w-[40px]
 		"
+		title={Number.isFinite(rating)
+			? `this player has a rating of ${rating}%`
+			: "this player's rating is not available"}
 	>
-		{rating}
+		{Number.isFinite(rating) ? rating : '?'}
 	</span>
 	<span class="text-lg font-medium flex-1 min-w-0 self-center">
 		<span class="long text-center overflow-hidden text-ellipsis"> {username} </span>

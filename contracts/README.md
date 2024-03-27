@@ -1,7 +1,7 @@
-# zkchess-contracts
+# zkchess-interactive
 
 ```sh
-npm i zkchess-contracts
+npm i zkchess-interactive
 ```
 
 This contract is an **interactive** version of game-verification.
@@ -22,9 +22,28 @@ Some tricky situations handled are:
    king passes through an attacked square while castling.
 2. ### stalemate
    when a player is not in check but has no legal moves.
+   
+### Methods to handle disputes are namely
+1. reportIllegalCastling
+2. claimStalemate
+3. acknowledgeStalemateClaim
+4. overrideStalemateClaimByCapturingKing
+5. reportStalemateClaimByValidOpponentMove
+6. defendStalemateClaim
+   
+Checkout the `Chess.ts` & `PvPChessProgram.ts` files
+
+## Elo-Rating For Scoring
+After every match the players rating gets updated based on the elo rating formulae.
+
+Calculation of Elo-Rating is done using Taylor Series Approximation. 
+
+Checkout the `EloRating.ts` file
 
 ## How to run tests
 
+
+Test using node version `18.18.0`
 ```sh
 npm run test
 npm run testw # watch mode
