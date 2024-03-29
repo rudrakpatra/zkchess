@@ -1,14 +1,19 @@
-<div class="custom lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+<script lang="ts">
+  export let size=30;
+  export let invert=true;
+</script>
+<div 
+style="
+width:{size}px;
+height:{size}px;
+transform-origin: 0% 0%;
+scale: {size/80};
+filter:invert({invert?1:0});
+" 
+class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
 
 <style>
-  .custom{
-    width: 30px;
-    height: 30px;
-    transform-origin: 0% 0%;
-    scale: .375;
-    filter:invert(1)
-  }
-  .lds-spinner {
+.lds-spinner {
   color: official;
   display: inline-block;
   position: relative;

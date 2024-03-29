@@ -81,7 +81,6 @@ export default class MatchMaker {
 				const t=setInterval(() => {
 					console.log('MatchMaker accept: Connecting to opponent... ');
 					if(--tries==0){
-						console.log("t=",t);
 						clearInterval(t);
 						rejectMatchFound("Could Not Connect to Opponent");
 					}

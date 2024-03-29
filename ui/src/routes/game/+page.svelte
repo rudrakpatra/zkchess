@@ -1,24 +1,23 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
-	import DashboardLayout from './DashboardLayout.svelte';
+	import DashboardLayout from '../../lib/DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';
 	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
-	import { ripple } from 'svelte-ripple-action';
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
 	import MatchMaker from '$lib/matchmaker/MatchMaker';
 	import { PrivateKey } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
-	import HiOutlineSwitchVertical from "svelte-icons-pack/hi/HiOutlineSwitchVertical";
-	import Icon from 'svelte-icons-pack/Icon.svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
 	import type { PromotionRankAsChar } from 'zkchess-interactive';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
+	import RippleButton from '$lib/components/general/RippleButton.svelte';
 
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -113,9 +112,31 @@
 		link += '?challenger=' + selfPubKeyBase58;
 		link += '&playAsBlack=' + !playAsBlack;
 		//copy link to clipboard
-		navigator.clipboard.writeText(link);
-		toast.success('Copied invite link to clipboard!');
+		toast.promise(copyToClipboard(link),{ 	
+			loading: 'Copying invite link to clipboard...',
+		 	success: 'Copied invite link to clipboard!',
+			error: 'Failed to copy invite link to clipboard!'
+		});
 	};
+
+	function copyToClipboard(text:string) {
+		if(dev){
+			const textArea = document.createElement("textarea");
+			textArea.value = text;
+			document.body.appendChild(textArea);
+			textArea.focus({preventScroll:true});
+			textArea.select();
+			return new Promise<void>((res,rej)=>{
+				if(document.execCommand('copy'))res();
+				else rej();
+				document.body.removeChild(textArea);
+			});
+		}
+		else{
+			return navigator.clipboard.writeText(text);
+		}
+	}
+
 
 	let	chessgroundAPI:ChessgroundAPI;
 
@@ -149,19 +170,18 @@
 	</div>
 	<div class="slot" slot="board">
 		<Board on:move={placeMove} bind:chessgroundAPI {fen} {playAsBlack} {gameStarted}/>
-		{#if !opponentPubKeyBase58}
-		<div class="playAsCheckBox">
-			<input id="playAsCheckBox" type="checkbox" bind:checked={playAsBlack}>
-			<label for="playAsCheckBox" >
-				<Icon src={HiOutlineSwitchVertical} size="32"  />
-				play as {playAsBlack ? 'white' : 'black'}
-			</label>
-		</div>
+		{#if !opponentPubKeyBase58 && chessgroundAPI}
+			<div class="absolute inset-0 grid place-content-center rounded-md bg-chess-400 bg-opacity-60 z-50">
+				<p class="action">Invite someone using link</p>
+				<div class="grid place-content-center">
+					<RippleButton on:click={copyInviteLink}>Copy Invite Link</RippleButton>
+				</div>
+			</div>
 		{/if}
 	</div>
 	<div class="slot" slot="playerB">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={opponentPubKeyBase58} rating={opponentRating} />
+		<Player username={opponentPubKeyBase58} rating={opponentRating} link={"/player"} />
 	</div>
 	<div class="slot" slot="actions">
 		<div class="absolute inset-1 grid place-content-center">
@@ -186,16 +206,14 @@
 						>
 							⭐test draw
 						</button>  -->
-					<button use:ripple class="button flex-1 w-full" on:click={offerDraw}>
-						🤝 offer draw
-					</button>
-					<button use:ripple class="button flex-1 w-full" on:click={resign}> 😖 resign </button>
+					<RippleButton class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
+					<RippleButton class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
 				</div>
 			{:else if opponentPubKeyBase58}
 				{#if matchFailed}
 					<p class="action">Match failed</p>
 					<div class="grid place-content-center">
-						<button use:ripple class="button" on:click={()=>{location.reload()}}>Reload Page</button>
+						<RippleButton on:click={()=>{location.reload()}}>Reload Page</RippleButton>
 					</div>
 				{:else}
 					<p class="action">Waiting for opponent to accept</p>
@@ -204,32 +222,25 @@
 					</div>
 				{/if}
 			{:else}
-				<p class="action">Invite using link</p>
+				<p class="action">Switch Side</p>
 				<div class="grid place-content-center">
-					<button use:ripple class="button" on:click={copyInviteLink}>Copy Invite Link</button>
+					<RippleButton class="w-[15ch] text-center text-white">
+						<input id="playAsBlackCheckBox" class="hidden" type="checkbox" bind:checked={playAsBlack}>
+						<label for="playAsBlackCheckBox" class="select-none cursor-pointer" >
+							Play as {playAsBlack ? 'White' : 'Black'}
+						</label>
+					</RippleButton>
 				</div>
 			{/if}
 		</div>
 	</div>
 	<div class="slot" slot="playerA">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={selfPubKeyBase58} rating={selfRating} />
+		<Player username={selfPubKeyBase58} rating={selfRating} link={"/player"} />
 	</div>
 </DashboardLayout>
 
 <style lang="scss">
-	.playAsCheckBox{
-		@apply absolute;
-		top:50%;
-		right:-10px;
-		transform: translate(100% ,-50%);
-		input[type="checkbox"]{
-			@apply hidden;
-		}
-		label{
-			@apply select-none cursor-pointer flex items-center gap-2;
-		}
-	}
 	.action {
 		@apply text-balance p-2 text-center text-lg;
 	}

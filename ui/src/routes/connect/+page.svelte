@@ -1,15 +1,15 @@
 <script lang="ts">
 	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
+	import RippleButton from '$lib/components/general/RippleButton.svelte';
 	import ellipsis from '$lib/ellipsis';
-	import { ripple } from 'svelte-ripple-action';
 </script>
 
 <AuroConnect let:connect>
-	<button use:ripple class="button" on:click={connect}>
-		{#if $publicKey}
+	<RippleButton on:click={connect}>
+			{#if $publicKey}
 			{ellipsis($publicKey, 12)}
-		{:else}
+			{:else}
 			Connect
-		{/if}
-	</button>
+			{/if}
+	</RippleButton>
 </AuroConnect>

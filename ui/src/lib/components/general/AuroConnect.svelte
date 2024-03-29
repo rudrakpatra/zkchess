@@ -31,9 +31,11 @@
 	import toast from 'svelte-french-toast';
 	import { createEventDispatcher } from 'svelte';
 	import { get, writable } from 'svelte/store';
-	import { ripple } from 'svelte-ripple-action';
+	import RippleButton from './RippleButton.svelte';
+
 
 	const connect = async () => {
+		if(!mina) toast.error(`Mina is not Available!`);
 		await toast.promise<Array<string>>(
 			mina.requestAccounts(),
 			{
@@ -60,14 +62,12 @@
 	$: $publicKey && dispatch('connection', { publicKey });
 </script>
 
-<slot {connect}>
-	<button 
-		use:ripple
-	 	class="button" on:click={connect}>
+<slot {connect} {mina}>
+	<RippleButton on:click={connect}>
 		{#if $publicKey}
-			{ellipsis($publicKey, 12)}
+		{ellipsis($publicKey, 12)}
 		{:else}
-			Connect
+		Connect
 		{/if}
-	</button>
+	</RippleButton>
 </slot>
