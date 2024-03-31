@@ -1,9 +1,9 @@
 import type { PlayerSignature } from '$lib/zkapp/ZkappWorker';
-import { GameState, PvPChessProgramProof } from 'zkchess-interactive';
+import { GameState } from 'zkchess-interactive';
 import type { Peer, DataConnection } from 'peerjs';
 import { PrivateKey, PublicKey, Signature } from 'o1js';
 
-type MatchFound={self:PlayerSignature,opponent:PlayerSignature,conn:DataConnection};
+export type MatchFound={self:PlayerSignature,opponent:PlayerSignature,conn:DataConnection};
 
 export default class MatchMaker {
 	private peer: Peer;
@@ -12,8 +12,6 @@ export default class MatchMaker {
 	private startingFEN: string;
 	private self: PlayerSignature;
 	private opponent: PlayerSignature;
-	private matchFound: MatchFound|null=null;
-	private onMatchFound: (m:MatchFound) => void=()=>{};
 
 	async setup(startingFEN:string,selfPubKey: PublicKey,selfPvtKey: PrivateKey){
 		this.startingFEN = startingFEN;
@@ -57,8 +55,6 @@ export default class MatchMaker {
 					const m={self: this.self, opponent: this.opponent,conn: this.conn};
 					// resolve the match making
 					this.conn.removeAllListeners();
-					this.matchFound=m;
-					this.onMatchFound(m);
 					resolveMatchFound(m);
 				});
 				resolveConn(this.conn);
@@ -98,8 +94,6 @@ export default class MatchMaker {
 
 							// resolve the match making
 							this.conn.removeAllListeners();
-							this.matchFound=m;
-							this.onMatchFound(m);
 							resolveMatchFound(m);
 						});
 						console.log("disturb...")
@@ -121,10 +115,5 @@ export default class MatchMaker {
 				newConn.send(JSON.stringify(this.self.jsonSignature));
 			});
 		});
-	}
-	awaitMatchFound(){
-		console.log('awaitMatchFound: Waiting for match',this.matchFound);
-		if(this.matchFound) return Promise.resolve(this.matchFound);
-		return new Promise<MatchFound>(resolve => this.onMatchFound=resolve);
 	}
 }

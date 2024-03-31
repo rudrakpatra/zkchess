@@ -1,13 +1,5 @@
 import * as Comlink from 'comlink';
-// import { dummyBase64Proof, type JsonProof } from 'o1js/dist/web/lib/proof-system';
-// 2024 hack
-type JsonProof = {
-	publicInput: string[];
-	publicOutput: string[];
-	maxProofsVerified: 0 | 1 | 2;
-	proof: string;
-};
-import { PublicKey, PrivateKey, Signature } from 'o1js';
+import { PublicKey, PrivateKey, Signature, Bool, Field, type JsonProof } from 'o1js';
 import {
 	GameState,
 	GameObject,
@@ -17,13 +9,14 @@ import {
 	type PromotionRankAsChar,
 	Move
 } from 'zkchess-interactive';
-import { dummyStr } from "./dummy";
-
-let dummy: JsonProof;
-
-// console.log('dummy', dummyBase64Proof);
 
 const proofsEnabled = false;
+
+
+let verificationKey:{
+    data: string;
+    hash: Field;
+};
 let initialRollupState: RollupState;
 
 export type PlayerSignature = {
@@ -51,13 +44,7 @@ async function start(white: PlayerSignature, black: PlayerSignature, fen?: strin
 		console.timeEnd('start');
 	} else {
 		console.log('worker | generating dummy start');
-		console.log(dummy,fen,white,black);
-		const proof= new PvPChessProgramProof({
-			proof: dummy,
-			publicInput: initialRollupState,
-			publicOutput: GameState.fromFEN(fen),
-			maxProofsVerified: 2
-		})
+		const proof= await PvPChessProgramProof.dummy(initialRollupState,GameState.fromFEN(fen),2)
 		jsonProof=proof.toJSON();
 	}
 	return jsonProof;
@@ -71,6 +58,7 @@ async function move(
 	privateKey: string
 ) {
 	let jsonProof: JsonProof;
+	const move=Move.fromLAN(from, to, promotion || 'q');
 	if (proofsEnabled) {
 		console.log('worker | generating real move');
 		console.time('start');
@@ -78,7 +66,7 @@ async function move(
 			await PvPChessProgram.move(
 				initialRollupState,
 				PvPChessProgramProof.fromJSON(lastProofJSON),
-				Move.fromLAN(from, to, promotion || 'q'),
+				move,
 				PrivateKey.fromBase58(privateKey)
 			)
 		).toJSON();
@@ -86,16 +74,8 @@ async function move(
 	} else {
 		console.log('worker | generating dummy move');
 		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
-		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(
-			Move.fromLAN(from, to, promotion || 'q')
-		);
-		 const proof= new PvPChessProgramProof({
-			proof: dummy,
-			publicInput: initialRollupState,
-			publicOutput: newGameState,
-			maxProofsVerified: 2
-		})
-		console.log(proof);
+		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(move);
+		const proof= await PvPChessProgramProof.dummy(initialRollupState,newGameState,2);
 		jsonProof=proof.toJSON();
 	}
 	return jsonProof;
@@ -172,21 +152,11 @@ async function move(
 if (proofsEnabled) {
 	console.log('compiling PvPChessProgram');
 	console.time('compiling PvPChessProgram');
-	await PvPChessProgram.compile();
+	verificationKey=(await PvPChessProgram.compile()).verificationKey;
 	console.timeEnd('compiling PvPChessProgram');
 } else {
-	console.log('compiling PvPChessProgram');
-	console.time('compiling PvPChessProgram');
-	console.timeEnd('compiling PvPChessProgram');
-	// bigint are serialized as strings with 'n' suffix
-	// bigint are serialized as strings with 'n' suffix
-
-	dummy = JSON.parse(dummyStr, (key, value) => {
-		if (typeof value === "string" && /^\d+n$/.test(value)) {
-		  return BigInt(value.substring(0, value.length - 1));
-		}
-		return value;
-	}) as unknown as JsonProof;
+	verificationKey={data: '', hash: Field.from(0)};
+	console.log('using PvPChessProgramDummy');
 }
 
 const api = {
@@ -198,6 +168,7 @@ const api = {
 	// resign,
 	// getFEN,
 	// getPlayerRating
+	verificationKey,
 	ready: true
 };
 export type API = typeof api;

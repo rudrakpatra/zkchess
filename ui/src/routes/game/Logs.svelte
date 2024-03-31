@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	export type TimeLog = {
 		start: (label: string) => void;
-		stop: (label: string) => void;
+		stop: (label: string) => number;
 	};
 </script>
 
@@ -20,6 +20,7 @@
 		stop: (label: string) => {
 			const took = (performance.now() - timers[label]) / 1000;
 			logs = [...logs,{name: label, time: took|| 0}];
+			return took;
 		}
 	};
 </script>

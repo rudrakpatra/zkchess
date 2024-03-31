@@ -12,7 +12,7 @@
 	export let chessgroundAPI : ChessgroundAPI;
 	export let playAsBlack:boolean;
 	export let gameStarted:boolean;
-	let chessJS=new Chess();
+	export let chessJS=new Chess();
 
 	// $: console.log(`%c${fen}`,'color:pink;');
 	$:if(chessgroundAPI && gameStarted){
