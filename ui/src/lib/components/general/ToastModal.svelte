@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import toast_ from 'svelte-french-toast';
 	import type { Toast } from 'svelte-french-toast';
-	import { ripple } from 'svelte-ripple-action';
+	import RippleButton from './RippleButton.svelte';
 
 	export let toast: Toast;
 	let { prompt, options } = (toast as any).props;
@@ -19,15 +19,13 @@
 	</div>
 	<div class="flex gap-1">
 		{#each options as option, i}
-			<button
-				use:ripple
-				bind:this={actionEls[i]}
-				class="button flex-1"
+			<RippleButton
+				bind:el={actionEls[i]}
 				on:click={() => {
 					option.action();
 					toast_.dismiss(toast.id);
-				}}>{option.label}</button
-			>
+				}}>{option.label}
+			</RippleButton>
 		{/each}
 	</div>
 </span>

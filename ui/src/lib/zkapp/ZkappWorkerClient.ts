@@ -9,7 +9,6 @@ export const awaitWorker = async () => {
 	await new Promise<void>((resolve) => {
 		const listener = (message: MessageEvent<unknown>) => {
 			if (message.data === 'ready') {
-				console.log('Ready1');
 				worker.removeEventListener('message', listener);
 				resolve();
 			}
@@ -17,7 +16,6 @@ export const awaitWorker = async () => {
 		worker.addEventListener('message', listener);
 		workerClient.ready.then((ready) => {
 			if (ready) {
-				console.log('Ready2');
 				resolve();
 				worker.removeEventListener('message', listener);
 			}

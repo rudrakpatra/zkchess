@@ -6,12 +6,13 @@
 	import { Chessground } from 'chessground'
 	import { createEventDispatcher } from 'svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
+	import Loader from '$lib/components/general/Loader.svelte';
 
 	export let fen:string;
 	export let chessgroundAPI : ChessgroundAPI;
 	export let playAsBlack:boolean;
 	export let gameStarted:boolean;
-	let chessJS=new Chess();
+	export let chessJS=new Chess();
 
 	// $: console.log(`%c${fen}`,'color:pink;');
 	$:if(chessgroundAPI && gameStarted){
@@ -22,6 +23,7 @@
 			fen: chessJS.fen(),
 			movable: {
 				free:false,
+				color:gameStarted?playAsBlack?'black':'white':undefined,
 				dests: SQUARES.reduce((dests,sqr,i)=>{
 					const ms = chessJS.moves({square: sqr, verbose: true});
 					return  ms.length ?dests.set(sqr, ms.map(m => m.to)):dests;
@@ -37,7 +39,7 @@
 			movable:{
 				free:false,
 				dests:new Map(),
-				color:playAsBlack?'black':'white',
+				color:gameStarted?playAsBlack?'black':'white':undefined,
 				events: {
 					after: (orig, dest) => {
 						const move = chessJS.move({from: orig, to: dest, promotion: 'q'});
@@ -52,3 +54,8 @@
 </script>
 
 <div class="absolute w-full h-full" use:chessgroundHook/>
+{#if !chessgroundAPI}
+<div class="absolute inset-0 grid place-content-center">
+	<Loader size={50} invert={true}/>
+</div>	
+{/if}
