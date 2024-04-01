@@ -200,6 +200,7 @@
 		gameMachine.playAsBlack(matchFound.conn):
 		gameMachine.playAsWhite(matchFound.conn);
 	});
+	$:chessgroundAPI.set({orientation: playAsBlack?'black':"white"})
 </script>
 <svelte:head>
 	<title>Mina zkChess game</title>
