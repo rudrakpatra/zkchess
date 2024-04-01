@@ -3,7 +3,7 @@ import { GameState } from 'zkchess-interactive';
 import type { Peer, DataConnection } from 'peerjs';
 import { PrivateKey, PublicKey, Signature } from 'o1js';
 
-export type MatchFound={self:PlayerSignature,opponent:PlayerSignature,conn:DataConnection};
+export type MatchFound = { self: PlayerSignature; opponent: PlayerSignature; conn: DataConnection };
 
 export default class MatchMaker {
 	private peer: Peer;
@@ -13,76 +13,78 @@ export default class MatchMaker {
 	private self: PlayerSignature;
 	private opponent: PlayerSignature;
 
-	async setup(startingFEN:string,selfPubKey: PublicKey,selfPvtKey: PrivateKey){
+	async setup(startingFEN: string, selfPubKey: PublicKey, selfPvtKey: PrivateKey) {
 		this.startingFEN = startingFEN;
 
-		this.self= {
+		this.self = {
 			publicKey: selfPubKey.toBase58(),
-			jsonSignature:
-				Signature.create(
-					selfPvtKey,
-					GameState.fromFEN(this.startingFEN).toFields()
-				).toJSON()
+			jsonSignature: Signature.create(
+				selfPvtKey,
+				GameState.fromFEN(this.startingFEN).toFields()
+			).toJSON()
 		};
-		this.opponent = {publicKey: '', jsonSignature: ''};
+		this.opponent = { publicKey: '', jsonSignature: '' };
 		const { Peer } = await import('peerjs');
 		this.peer = new Peer(this.self.publicKey, {
 			host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
 			secure: true,
-			debug: 2
-		})
+			debug: 3
+		});
 	}
 	async connect() {
 		const { PeerError } = await import('peerjs');
 		//return after successful connection
 		return await new Promise<MatchFound>((resolveMatchFound) => {
 			new Promise<DataConnection>((resolveConn) => {
-			this.peer.on('connection', async (newConnection) => {
-				if (this.connected) {
-					// this can happen when a 3rd player tries to connect
-					console.error('MatchMaker connect: Already connected to an opponent');
-					newConnection.emit('error',new PeerError('negotiation-failed', 'Already connected to an opponent'));
-					newConnection.close();
-					return;
-				}
-				console.log('MatchMaker connect: Connected to opponent');
-				this.opponent.publicKey = newConnection.peer;
-				this.conn = newConnection;
-				this.connected = true;
-				//listen for signature
-				this.conn.on('data', (data) => {
-					this.opponent.jsonSignature = JSON.parse(data as string);
-					const m={self: this.self, opponent: this.opponent,conn: this.conn};
-					// resolve the match making
-					this.conn.removeAllListeners();
-					resolveMatchFound(m);
+				this.peer.on('connection', async (newConnection) => {
+					if (this.connected) {
+						// this can happen when a 3rd player tries to connect
+						console.error('MatchMaker connect: Already connected to an opponent');
+						newConnection.emit(
+							'error',
+							new PeerError('negotiation-failed', 'Already connected to an opponent')
+						);
+						newConnection.close();
+						return;
+					}
+					console.log('MatchMaker connect: Connected to opponent');
+					this.opponent.publicKey = newConnection.peer;
+					this.conn = newConnection;
+					this.connected = true;
+					//listen for signature
+					this.conn.on('data', (data) => {
+						this.opponent.jsonSignature = JSON.parse(data as string);
+						const m = { self: this.self, opponent: this.opponent, conn: this.conn };
+						// resolve the match making
+						this.conn.removeAllListeners();
+						resolveMatchFound(m);
+					});
+					resolveConn(this.conn);
 				});
-				resolveConn(this.conn);
-			})}).then((newConn) => {
+			}).then((newConn) => {
 				//send signature to opponent
-				newConn.on('open',()=>{
+				newConn.on('open', () => {
 					console.log('MatchMaker connect: Sending Signature... ');
 					newConn.send(JSON.stringify(this.self.jsonSignature));
-				})
+				});
 			});
 			console.log('MatchMaker connect: Connecting to opponent... ');
 		});
 	}
-	async accept(opponentPubKey: string){
-		return await new Promise<MatchFound>((resolveMatchFound,rejectMatchFound) => {
+	async accept(opponentPubKey: string) {
+		return await new Promise<MatchFound>((resolveMatchFound, rejectMatchFound) => {
 			new Promise<DataConnection>((resolve) => {
-			this.opponent.publicKey = opponentPubKey;
-				//give peerjs some time to breathe
-				let tries=5;
-				const t=setInterval(() => {
+				this.opponent.publicKey = opponentPubKey;
+				//give peerjs some time to set up sockets
+				setTimeout(() => {
 					console.log('MatchMaker accept: Connecting to opponent... ');
-					if(--tries==0){
-						clearInterval(t);
-						rejectMatchFound("Could Not Connect to Opponent");
-					}
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
+					const c = setTimeout(() => {
+						//cancel connection
+						rejectMatchFound('Could Not Connect to Opponent');
+					}, 2000);
 					connection.on('open', () => {
-						clearInterval(t);
+						clearTimeout(c);
 						console.log('MatchMaker accept: Connected to opponent');
 						this.connected = true;
 						this.conn = connection;
@@ -90,13 +92,13 @@ export default class MatchMaker {
 						this.conn.on('data', (data) => {
 							console.log('MatchMaker accept: Received Signature from Opponent');
 							this.opponent.jsonSignature = JSON.parse(data as string);
-							const m={self: this.self, opponent: this.opponent,conn: this.conn};
+							const m = { self: this.self, opponent: this.opponent, conn: this.conn };
 
 							// resolve the match making
 							this.conn.removeAllListeners();
 							resolveMatchFound(m);
 						});
-						console.log("disturb...")
+						console.log('disturb...');
 						resolve(this.conn);
 					});
 					connection.on('close', () => {
@@ -107,9 +109,8 @@ export default class MatchMaker {
 						console.error('MatchMaker accept: not innitiator error: ' + err);
 						this.connected = false;
 					});
-				}, 1000);
-			})
-			.then((newConn) => {
+				}, 500);
+			}).then((newConn) => {
 				//send signature to opponent
 				console.log('MatchMaker accept: Sending Signature... ');
 				newConn.send(JSON.stringify(this.self.jsonSignature));
