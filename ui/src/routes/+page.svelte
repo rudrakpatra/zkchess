@@ -14,7 +14,7 @@
 	<div class="container max-w-xl flex flex-col items-center mx-auto text-center overflow-y-scroll overscroll-contain">
 		<img class="h-32 mb-10 opacity-20 hidden md:block" src="king.png" alt="" />
 		<div
-			class="flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-3 mb-10 text-white"
+			class="flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-3 mb-10 text-white py-2"
 		>
 			<div class="heading text-xl md:text-2xl bg-secondary rotate-2">MINA</div>
 			<div class="heading text-2xl md:text-4xl bg-primary -rotate-2">zkchess</div>
