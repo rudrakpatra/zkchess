@@ -1,8 +1,5 @@
 import { PrivateKey, Signature } from 'o1js';
-import {
-  PvPChessProgram,
-  RollupState,
-} from './PvPChessProgram.js';
+import { PvPChessProgram, RollupState } from './PvPChessProgram.js';
 import { GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
 
@@ -12,11 +9,11 @@ const whiteKey = PrivateKey.random();
 const blackKey = PrivateKey.random();
 
 const initialGameState = GameState.fromFEN();
-const rollupstate=RollupState.from(
+const rollupstate = RollupState.from(
   initialGameState,
   whiteKey.toPublicKey(),
   blackKey.toPublicKey()
-)
+);
 const proof0 = await PvPChessProgram.start(
   rollupstate,
   Signature.create(whiteKey, initialGameState.toFields()),
@@ -38,3 +35,7 @@ const proof2 = await PvPChessProgram.move(
   Move.fromLAN('d7', 'd5'),
   blackKey
 );
+
+/*
+node build\src\PvPChessProgram\PvPChessProgramNodeTest.js
+*/

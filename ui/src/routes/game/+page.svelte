@@ -4,7 +4,7 @@
 	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
-	import DashboardLayout from '../../lib/DashboardLayout.svelte';
+	import DashboardLayout from './DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';

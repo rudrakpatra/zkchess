@@ -82,7 +82,7 @@ export default class MatchMaker {
 					const c = setTimeout(() => {
 						//cancel connection
 						rejectMatchFound('Could Not Connect to Opponent');
-					}, 2000);
+					}, 1500);
 					connection.on('open', () => {
 						clearTimeout(c);
 						console.log('MatchMaker accept: Connected to opponent');
@@ -109,7 +109,7 @@ export default class MatchMaker {
 						console.error('MatchMaker accept: not innitiator error: ' + err);
 						this.connected = false;
 					});
-				}, 500);
+				}, 1500);
 			}).then((newConn) => {
 				//send signature to opponent
 				console.log('MatchMaker accept: Sending Signature... ');
