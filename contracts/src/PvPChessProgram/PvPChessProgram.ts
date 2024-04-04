@@ -100,11 +100,11 @@ export const PvPChessProgram = ZkProgram({
           .equals(Field(GameResult.ONGOING))
           .assertTrue('game already over');
 
-        const gameObject = new GameObject(gameState);
-        gameObject.preMoveValidations(move).assertTrue('invalid move');
+        const gameObject = new GameObject(gameState, move);
+        gameObject.preMoveValidations().assertTrue('invalid move');
 
         // TODO check why this line causes compile to fail
-        const newGameState = gameObject.toUpdated(move);
+        const newGameState = gameObject.getNextGameState();
 
         //UPDATE GAME STATE
         return GameState.from(
@@ -134,129 +134,129 @@ export const PvPChessProgram = ZkProgram({
       },
     },
 
-    // offerDraw: {
-    //   privateInputs: [SelfProof, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    offerDraw: {
+      privateInputs: [SelfProof, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING))
-    //       .assertTrue('game already over');
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.ONGOING))
+          .assertTrue('game already over');
 
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(true),
-    //       // gameState.result
-    //       Field(GameResult.ONGOING_OFFERED_DRAW)
-    //     );
-    //   },
-    // },
-    // resolveDraw: {
-    //   privateInputs: [SelfProof, Bool, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     accept: Bool,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(true),
+          // gameState.result
+          Field(GameResult.ONGOING_OFFERED_DRAW)
+        );
+      },
+    },
+    resolveDraw: {
+      privateInputs: [SelfProof, Bool, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        accept: Bool,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
+        const gameState = earlierProof.publicOutput;
 
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
-    //       .assertTrue('game not in draw state');
+        gameState.result
+          .equals(Field(GameResult.ONGOING_OFFERED_DRAW))
+          .assertTrue('game not in draw state');
 
-    //     gameState.canDraw.assertTrue('draw not offered');
+        gameState.canDraw.assertTrue('draw not offered');
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Provable.if(accept, Field(GameResult.DRAW), Field(GameResult.ONGOING))
-    //     );
-    //   },
-    // },
-    // reportIllegalCastling: {
-    //   privateInputs: [SelfProof, Move, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     move: Move,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+        //UPDATE GAME STATE
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(accept, Field(GameResult.DRAW), Field(GameResult.ONGOING))
+        );
+      },
+    },
+    reportIllegalCastling: {
+      privateInputs: [SelfProof, Move, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        move: Move,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING))
-    //       .assertTrue('game already over');
-    //     const gameObject = new GameObject(gameState);
-    //     gameObject
-    //       .illegalCastling(move)
-    //       .assertTrue('false report of illegal castling');
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.ONGOING))
+          .assertTrue('game already over');
+        const gameObject = new GameObject(gameState, move);
+        gameObject
+          .illegalCastling()
+          .assertTrue('false report of illegal castling');
 
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Provable.if(
-    //         gameState.turn,
-    //         //the reporting player simply wins the game
-    //         Field(GameResult.WHITE_WINS),
-    //         Field(GameResult.BLACK_WINS)
-    //       )
-    //     );
-    //   },
-    // },
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(
+            gameState.turn,
+            //the reporting player simply wins the game
+            Field(GameResult.WHITE_WINS),
+            Field(GameResult.BLACK_WINS)
+          )
+        );
+      },
+    },
 
     // //TODO: IMPLEMENT STALEMATE
     // //PROVING STALEMATE AS CURRENTLY A 3 STEP PROCESS
@@ -264,280 +264,280 @@ export const PvPChessProgram = ZkProgram({
     // //2. OPPONENT REPORTS FALSE STALEMATE CLAIM
     // //3. DEFEND STALEMATE
 
-    // claimStalemate: {
-    //   privateInputs: [SelfProof, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    claimStalemate: {
+      privateInputs: [SelfProof, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING))
-    //       .assertTrue('game already over');
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(true),
-    //       // gameState.result
-    //       Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
-    //     );
-    //   },
-    // },
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.ONGOING))
+          .assertTrue('game already over');
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(true),
+          // gameState.result
+          Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED)
+        );
+      },
+    },
 
-    // acknowledgeStalemateClaim: {
-    //   privateInputs: [SelfProof, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    acknowledgeStalemateClaim: {
+      privateInputs: [SelfProof, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
-    //       .assertTrue('stalemate claim not reported');
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
+          .assertTrue('stalemate claim not reported');
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Field(GameResult.DRAW_BY_STALEMATE)
-    //     );
-    //   },
-    // },
+        //UPDATE GAME STATE
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Field(GameResult.DRAW_BY_STALEMATE)
+        );
+      },
+    },
 
-    // overrideStalemateClaimByCapturingKing: {
-    //   privateInputs: [SelfProof, Move, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     move: Move,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    overrideStalemateClaimByCapturingKing: {
+      privateInputs: [SelfProof, Move, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        move: Move,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
-    //       .assertTrue('Stalemate must be claimed first');
-    //     const gameObject = new GameObject(gameState);
-    //     gameObject.preMoveValidations(move).assertTrue('invalid move');
-    //     let newGameState = gameObject.toUpdated(move);
-    //     newGameState.self().getKing().captured.assertTrue('invalid move');
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
+          .assertTrue('Stalemate must be claimed first');
+        const gameObject = new GameObject(gameState, move);
+        gameObject.preMoveValidations().assertTrue('invalid move');
+        let newGameState = gameObject.getNextGameState();
+        newGameState.self().getKing().captured.assertTrue('invalid move');
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       newGameState.white,
-    //       newGameState.black,
-    //       gameState.turn.not(),
-    //       newGameState.enpassant,
-    //       newGameState.kingCastled,
-    //       newGameState.column,
-    //       newGameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Provable.if(
-    //         gameState.turn,
-    //         Field(GameResult.WHITE_WINS),
-    //         Field(GameResult.BLACK_WINS)
-    //       )
-    //     );
-    //   },
-    // },
+        //UPDATE GAME STATE
+        return GameState.from(
+          newGameState.white,
+          newGameState.black,
+          gameState.turn.not(),
+          newGameState.enpassant,
+          newGameState.kingCastled,
+          newGameState.column,
+          newGameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(
+            gameState.turn,
+            Field(GameResult.WHITE_WINS),
+            Field(GameResult.BLACK_WINS)
+          )
+        );
+      },
+    },
 
-    // reportStalemateClaimByValidOpponentMove: {
-    //   privateInputs: [SelfProof, Move, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     move: Move,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    reportStalemateClaimByValidOpponentMove: {
+      privateInputs: [SelfProof, Move, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        move: Move,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     //currently the prover is the other player,
-    //     //he wants to play as the player who claimed stalemate
-    //     //so skip a turn
-    //     const skipATurn = GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       gameState.canDraw,
-    //       gameState.result
-    //     );
+        const gameState = earlierProof.publicOutput;
+        //currently the prover is the other player,
+        //he wants to play as the player who claimed stalemate
+        //so skip a turn
+        const skipATurn = GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          gameState.canDraw,
+          gameState.result
+        );
 
-    //     const gameObject = new GameObject(skipATurn);
-    //     gameObject.preMoveValidations(move).assertTrue('invalid move');
-    //     //the prover shows a move that is valid
-    //     const newGameState = gameObject.toUpdated(move);
+        const gameObject = new GameObject(skipATurn, move);
+        gameObject.preMoveValidations().assertTrue('invalid move');
+        //the prover shows a move that is valid
+        const newGameState = gameObject.getNextGameState();
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       newGameState.white,
-    //       newGameState.black,
-    //       gameState.turn.not(),
-    //       newGameState.enpassant,
-    //       newGameState.kingCastled,
-    //       newGameState.column,
-    //       newGameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Field(GameResult.STALEMATE_CLAIM_REPORTED)
-    //     );
-    //   },
-    // },
+        //UPDATE GAME STATE
+        return GameState.from(
+          newGameState.white,
+          newGameState.black,
+          gameState.turn.not(),
+          newGameState.enpassant,
+          newGameState.kingCastled,
+          newGameState.column,
+          newGameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Field(GameResult.STALEMATE_CLAIM_REPORTED)
+        );
+      },
+    },
 
-    // defendStalemateClaim: {
-    //   privateInputs: [SelfProof, Move, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     move: Move,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+    defendStalemateClaim: {
+      privateInputs: [SelfProof, Move, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        move: Move,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
-    //     gameState.result
-    //       .equals(Field(GameResult.STALEMATE_CLAIM_REPORTED))
-    //       .assertTrue('stalemate claim not reported');
+        const gameState = earlierProof.publicOutput;
+        gameState.result
+          .equals(Field(GameResult.STALEMATE_CLAIM_REPORTED))
+          .assertTrue('stalemate claim not reported');
 
-    //     //so skip a turn
-    //     const skipATurn = GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       gameState.canDraw,
-    //       gameState.result
-    //     );
+        //so skip a turn
+        const skipATurn = GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          gameState.canDraw,
+          gameState.result
+        );
 
-    //     const gameObject = new GameObject(skipATurn);
-    //     gameObject.preMoveValidations(move).assertTrue('invalid move');
-    //     const newGameState = gameObject.toUpdated(move);
-    //     //check if you have proved that the opponent can capture your king
-    //     newGameState
-    //       .self()
-    //       .getKing()
-    //       .captured.assertTrue('incorrect defence of claim');
+        const gameObject = new GameObject(skipATurn, move);
+        gameObject.preMoveValidations().assertTrue('invalid move');
+        const newGameState = gameObject.getNextGameState();
+        //check if you have proved that the opponent can capture your king
+        newGameState
+          .self()
+          .getKing()
+          .captured.assertTrue('incorrect defence of claim');
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       newGameState.white,
-    //       newGameState.black,
-    //       gameState.turn.not(),
-    //       newGameState.enpassant,
-    //       newGameState.kingCastled,
-    //       newGameState.column,
-    //       newGameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // newGameState.result
-    //       Field(GameResult.DRAW_BY_STALEMATE)
-    //     );
-    //   },
-    // },
-    // resign: {
-    //   privateInputs: [SelfProof, PrivateKey],
-    //   method(
-    //     state: RollupState,
-    //     earlierProof: SelfProof<RollupState, GameState>,
-    //     playerPrivateKey: PrivateKey
-    //   ) {
-    //     earlierProof.verify();
-    //     PvPChessProgramRoutines.matchGameState(state, earlierProof);
-    //     PvPChessProgramRoutines.checkPlayer(
-    //       state,
-    //       earlierProof,
-    //       playerPrivateKey
-    //     );
+        //UPDATE GAME STATE
+        return GameState.from(
+          newGameState.white,
+          newGameState.black,
+          gameState.turn.not(),
+          newGameState.enpassant,
+          newGameState.kingCastled,
+          newGameState.column,
+          newGameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // newGameState.result
+          Field(GameResult.DRAW_BY_STALEMATE)
+        );
+      },
+    },
+    resign: {
+      privateInputs: [SelfProof, PrivateKey],
+      method(
+        state: RollupState,
+        earlierProof: SelfProof<RollupState, GameState>,
+        playerPrivateKey: PrivateKey
+      ) {
+        earlierProof.verify();
+        PvPChessProgramRoutines.matchGameState(state, earlierProof);
+        PvPChessProgramRoutines.checkPlayer(
+          state,
+          earlierProof,
+          playerPrivateKey
+        );
 
-    //     const gameState = earlierProof.publicOutput;
+        const gameState = earlierProof.publicOutput;
 
-    //     //UPDATE GAME STATE
-    //     return GameState.from(
-    //       gameState.white,
-    //       gameState.black,
-    //       // gameState.turn,
-    //       gameState.turn.not(),
-    //       gameState.enpassant,
-    //       gameState.kingCastled,
-    //       gameState.column,
-    //       gameState.halfmove,
-    //       //gameState.canDraw,
-    //       Bool(false),
-    //       // gameState.result
-    //       Provable.if(
-    //         gameState.turn,
-    //         //the resigning player simply loses the game
-    //         Field(GameResult.BLACK_WINS),
-    //         Field(GameResult.WHITE_WINS)
-    //       )
-    //     );
-    //   },
-    // },
+        //UPDATE GAME STATE
+        return GameState.from(
+          gameState.white,
+          gameState.black,
+          // gameState.turn,
+          gameState.turn.not(),
+          gameState.enpassant,
+          gameState.kingCastled,
+          gameState.column,
+          gameState.halfmove,
+          //gameState.canDraw,
+          Bool(false),
+          // gameState.result
+          Provable.if(
+            gameState.turn,
+            //the resigning player simply loses the game
+            Field(GameResult.BLACK_WINS),
+            Field(GameResult.WHITE_WINS)
+          )
+        );
+      },
+    },
   },
 });
 

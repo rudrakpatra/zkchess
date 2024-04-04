@@ -11,7 +11,7 @@ import { Chess } from './Chess.js';
 import { Move } from '../Move/Move.js';
 import { GameResult, GameState } from '../GameState/GameState.js';
 
-const proofsEnabled = false;
+const proofsEnabled = true;
 
 describe('Chess', () => {
   let deployerAccount: PublicKey,
@@ -25,6 +25,7 @@ describe('Chess', () => {
     zkApp: Chess;
 
   beforeAll(async () => {
+    console.log(Chess.analyzeMethods());
     if (proofsEnabled) await Chess.compile();
   });
 
@@ -72,13 +73,15 @@ describe('Chess', () => {
     console.log(
       zkApp.getPlayerRating(whitePlayerAccount).toBigInt() / 10n ** 10n
     );
-    expect(//white player rating -=10
+    expect(
+      //white player rating -=10
       zkApp.getPlayerRating(whitePlayerAccount).toBigInt() / 10n ** 10n
     ).toBe(1190n);
     console.log(
       zkApp.getPlayerRating(blackPlayerAccount).toBigInt() / 10n ** 10n
     );
-    expect(//black player rating +=10
+    expect(
+      //black player rating +=10
       zkApp.getPlayerRating(blackPlayerAccount).toBigInt() / 10n ** 10n
     ).toBe(1210n);
   });

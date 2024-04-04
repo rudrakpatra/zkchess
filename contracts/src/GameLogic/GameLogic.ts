@@ -203,12 +203,12 @@ export class GameEvent {
   }
 }
 export class GameObject {
-  state: GameState;
-  constructor(gameState: GameState) {
-    this.state = gameState;
+  gameEvent: GameEvent;
+  constructor(gameState: GameState, move: Move) {
+    this.gameEvent = new GameEvent(gameState, move);
   }
-  public preMoveValidations(move: Move) {
-    const gameEvent = new GameEvent(this.state, move);
+  public preMoveValidations() {
+    const gameEvent = this.gameEvent;
     const movesPawn = gameEvent.movesPawn();
     const movesKnight = gameEvent.movesKnight();
     const movesBishop = gameEvent.movesBishop();
@@ -227,20 +227,21 @@ export class GameObject {
       .map((m) => Object.values(m).reduce(Bool.or))
       .reduce(Bool.or);
   }
-  public illegalCastling(move: Move) {
+  public illegalCastling() {
+    const move = this.gameEvent.move;
     //check if this move is valid
-    this.preMoveValidations(move);
-
-    const whiteToPlay = this.state.turn;
+    this.preMoveValidations();
+    const gameState = this.gameEvent.gameState;
+    const whiteToPlay = gameState.turn;
     const opponentsCastlingRow = Provable.if(whiteToPlay, Field(0), Field(7));
 
-    this.state.kingCastled.assertTrue('the king did not castle last move');
+    gameState.kingCastled.assertTrue('the king did not castle last move');
 
     // king side castling
     // 0 1 2 3 4 5 6 7
     // ? ? ? ? . K R .
 
-    const kingCastledSide = this.state
+    const kingCastledSide = gameState
       .opponent()
       .getKing()
       .position.column.equals(Field(5));
@@ -255,7 +256,7 @@ export class GameObject {
     // queen side castling
     // 0 1 2 3 4 5 6 7
     // . . K R . ? ? ?
-    const queenSideCastledSide = this.state
+    const queenSideCastledSide = gameState
       .opponent()
       .getKing()
       .position.column.equals(Field(2));
@@ -280,14 +281,16 @@ export class GameObject {
    * **warning** does not update result
    * @param move
    */
-  public toUpdated(move: Move) {
-    const gameEvent = new GameEvent(this.state, move);
+  public getNextGameState() {
+    const gameEvent = this.gameEvent;
+    const gameState = gameEvent.gameState;
+    const move = gameEvent.move;
     const movePromotesPawn = gameEvent.movePromotesPawn();
     const movesPawn = gameEvent.movesPawn();
     const movesKing = gameEvent.movesKing();
     const gameAdvances = gameEvent.gameAdvances();
-    const self = this.state.self();
-    const opponent = this.state.opponent();
+    const self = gameState.self();
+    const opponent = gameState.opponent();
     const newSelfPieces = self.pieces.map((p) => {
       const isSelectedPiece = p.position.equals(gameEvent.moveStart);
       //king side rook move when castling
@@ -370,10 +373,10 @@ export class GameObject {
       newOpponentCastling
     );
 
-    const newWhite = Provable.if(this.state.turn, newSelf, newOpponent);
-    const newBlack = Provable.if(this.state.turn, newOpponent, newSelf);
+    const newWhite = Provable.if(gameState.turn, newSelf, newOpponent);
+    const newBlack = Provable.if(gameState.turn, newOpponent, newSelf);
 
-    const newTurn = this.state.turn.not();
+    const newTurn = gameState.turn.not();
 
     const newEnpassant = movesPawn.twoSquaresForwardFromStart;
 
@@ -387,32 +390,32 @@ export class GameObject {
     const newHalfmove = Provable.if(
       gameAdvances,
       Field(0),
-      this.state.halfmove.add(Field(1))
+      gameState.halfmove.add(Field(1))
     );
 
     const newCanDraw = Bool(false);
 
-    const newResult = this.state.result;
+    const newResult = gameState.result;
 
     return GameState.from(
       newWhite,
-      // this.state.white,
+      // gameState.white,
       newBlack,
-      // this.state.black,
+      // gameState.black,
       newTurn,
-      // this.state.turn,
+      // gameState.turn,
       newEnpassant,
-      // this.state.enpassant,
+      // gameState.enpassant,
       newKingCastled,
-      // this.state.kingCastled,
+      // gameState.kingCastled,
       newColumn,
-      // this.state.column,
+      // gameState.column,
       newHalfmove,
-      // this.state.halfmove,
+      // gameState.halfmove,
       newCanDraw,
-      // this.state.canDraw,
+      // gameState.canDraw,
       newResult
-      // this.state.result
+      // gameState.result
     );
   }
 }

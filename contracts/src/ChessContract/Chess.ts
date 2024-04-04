@@ -81,9 +81,9 @@ export class Chess extends SmartContract {
       .equals(Field(GameResult.ONGOING))
       .assertTrue('game already over');
 
-    const gameObject = new GameObject(gameState);
-    gameObject.preMoveValidations(move).assertTrue('invalid move');
-    const newGameState = gameObject.toUpdated(move);
+    const gameObject = new GameObject(gameState, move);
+    gameObject.preMoveValidations().assertTrue('invalid move');
+    const newGameState = gameObject.getNextGameState();
 
     //UPDATE GAME STATE
     this.setGameState(
@@ -181,10 +181,8 @@ export class Chess extends SmartContract {
     gameState.result
       .equals(Field(GameResult.ONGOING))
       .assertTrue('game already over');
-    const gameObject = new GameObject(gameState);
-    gameObject
-      .illegalCastling(move)
-      .assertTrue('false report of illegal castling');
+    const gameObject = new GameObject(gameState, move);
+    gameObject.illegalCastling().assertTrue('false report of illegal castling');
     //UPDATE GAME STATE
     this.setGameState(
       GameState.from(
@@ -277,9 +275,9 @@ export class Chess extends SmartContract {
     gameState.result
       .equals(Field(GameResult.ONGOING_AND_STALEMATE_CLAIMED))
       .assertTrue('Stalemate must be claimed first');
-    const gameObject = new GameObject(gameState);
-    gameObject.preMoveValidations(move).assertTrue('invalid move');
-    let newGameState = gameObject.toUpdated(move);
+    const gameObject = new GameObject(gameState, move);
+    gameObject.preMoveValidations().assertTrue('invalid move');
+    let newGameState = gameObject.getNextGameState();
     newGameState.self().getKing().captured.assertTrue('invalid move');
     //UPDATE GAME STATE
     this.setGameState(
@@ -330,10 +328,10 @@ export class Chess extends SmartContract {
       gameState.result
     );
 
-    const gameObject = new GameObject(skipATurn);
-    gameObject.preMoveValidations(move).assertTrue('invalid move');
+    const gameObject = new GameObject(skipATurn, move);
+    gameObject.preMoveValidations().assertTrue('invalid move');
     //the prover shows a move that is valid
-    const newGameState = gameObject.toUpdated(move);
+    const newGameState = gameObject.getNextGameState();
     //UPDATE GAME STATE
     this.setGameState(
       GameState.from(
@@ -383,9 +381,9 @@ export class Chess extends SmartContract {
       gameState.result
     );
 
-    const gameObject = new GameObject(skipATurn);
-    gameObject.preMoveValidations(move).assertTrue('invalid move');
-    const newGameState = gameObject.toUpdated(move);
+    const gameObject = new GameObject(skipATurn, move);
+    gameObject.preMoveValidations().assertTrue('invalid move');
+    const newGameState = gameObject.getNextGameState();
     //check if you have proved that the opponent can capture your king
     newGameState
       .self()
