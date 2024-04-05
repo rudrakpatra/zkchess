@@ -1,5 +1,6 @@
 # Welcome to the next generation of Gaming using MINA !
 I made this project primarily to understand how Mina works.
+This project shows that it is possible to write game logic as complex as chess in Mina's o1js style of coding.
 
 # TLDR
 ### A smartcontract/zkApp to play chess.
