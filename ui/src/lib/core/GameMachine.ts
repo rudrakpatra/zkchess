@@ -27,6 +27,7 @@ class GameMachine {
 				const proofLocal = await this.local.consume();
 				if (await this.verify(proofLocal)) {
 					console.log(`%c${proofLocal.publicOutput.toAscii()}`, 'color:blue;');
+					this.fen.set(proofLocal.publicOutput.toFEN());
 					conn.send(proofLocal.toJSON());
 					this.lastProof.set(proofLocal);
 					break;
@@ -66,6 +67,7 @@ class GameMachine {
 				const proofLocal = await this.local.consume();
 				if (await this.verify(proofLocal)) {
 					console.log(`%c${proofLocal.publicOutput.toAscii()}`, 'color:blue;');
+					this.fen.set(proofLocal.publicOutput.toFEN());
 					conn.send(proofLocal.toJSON());
 					this.lastProof.set(proofLocal);
 					break;

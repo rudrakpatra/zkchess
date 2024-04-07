@@ -18,9 +18,9 @@
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
+	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
 	import {
 		type PromotionRankAsChar,
-		PvPChessProgram,
 		PvPChessProgramProof
 	} from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
@@ -44,27 +44,26 @@
 
 	let timeLog: TimeLog;
 
-	const offerDraw = async () => {
+	let offerDraw = async () => {
 		timeLog.start('offering draw');
-
 		timeLog.stop('offering draw');
 		toast.success('offered draw!');
 	};
-	const acceptDraw = async () => {
+	let acceptDraw = async () => {
 		timeLog.start('accepting draw');
 		// await client.acceptDraw();
 
 		timeLog.stop('accepting draw');
 		toast.success('accepted draw!');
 	};
-	const rejectDraw = async () => {
+	let rejectDraw = async () => {
 		timeLog.start('declining draw');
 		// await client.rejectDraw();
 
 		timeLog.stop('declining draw');
 		toast.success('declined draw!');
 	};
-	const resign = async () => {
+	let resign = async () => {
 		timeLog.start('resigning');
 		// await client.resign();
 
@@ -73,7 +72,8 @@
 	};
 
 	//_______________________________________________________________________________________
-
+	let startPeer = new Sync<boolean>();
+	let linkCopied=false;
 	const copyInviteLink = () => {
 		let link = location.href;
 		//add params to link
@@ -85,6 +85,8 @@
 			success: 'Copied invite link to clipboard!',
 			error: 'Failed to copy invite link to clipboard!'
 		});
+		startPeer.push(true);
+		linkCopied=true;
 	};
 
 	function copyToClipboard(text: string) {
@@ -107,6 +109,16 @@
 	let chessgroundAPI: ChessgroundAPI;
 
 	let playAsBlack = data.playAsBlack;
+	const trySwitchingSide = () => {
+		if(linkCopied){
+			toast.error('Cannot switch sides now');
+		}
+		else{
+			playAsBlack = !playAsBlack;
+			const msg='Switched to '+(playAsBlack ? 'Black' : 'White');
+			toast.success(msg);
+		}
+	};
 	let fen = startingFen;
 
 	let placeMove: any;
@@ -143,6 +155,7 @@
 
 					while (await connectionTries.consume()) {
 						try {
+							!opponentPubKeyBase58 && await startPeer.consume()
 							const match = await toast.promise(
 								opponentPubKeyBase58
 									? matchmaker.accept(opponentPubKeyBase58)
@@ -152,7 +165,7 @@
 									success: (match) => {
 										opponentPubKeyBase58 = match.opponent.publicKey;
 										matchFound_UI = true;
-										const t = timeLog.stop('Match found');
+										const t = timeLog.stop('Match found').toPrecision(3);
 										return 'Match found in ' + t + 's';
 									},
 									error: (e) => {
@@ -196,16 +209,43 @@
 		//attach input
 		placeMove = async (e: unknown) => {
 			const move = (e as any).detail as Move;
-			const to = move.to;
-			const from = move.from;
-			const promotion = (move.promotion || 'q') as PromotionRankAsChar;
+			const moveJson ={
+				to:move.to,
+				from:move.from,
+				promotion:(move.promotion || 'q') as PromotionRankAsChar
+			} as JsonMove;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
-			timeLog.start(`move ${move.from} -> ${move.to}`);
-			const newProof = await workerClient.move(from, to, promotion, lastProof, privateKey);
-			timeLog.stop(`move ${move.from} -> ${move.to}`);
+			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
+		//draw
+		offerDraw = async () => {
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.offerDraw(lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+		acceptDraw = async () => {
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.acceptDraw(true,lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+		rejectDraw = async () => {
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.acceptDraw(false,lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+		//resign
+		resign = async () => {
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.resign(lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+
 		gameStarted_UI = true;
 
 		playAsBlack
@@ -213,6 +253,8 @@
 			: gameMachine.playAsWhite(matchFound.conn);
 	});
 	$: chessgroundAPI && chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
+
+	$:gameStarted_UI && timeLog.stop((fen.match(" w")?"White":"Black")+'s turn');
 </script>
 
 <svelte:head>
@@ -294,16 +336,8 @@
 			{:else}
 				<p class="label">Switch Side</p>
 				<div class="grid place-content-center">
-					<RippleButton class="w-[15ch] text-center text-white">
-						<input
-							id="playAsBlackCheckBox"
-							class="hidden"
-							type="checkbox"
-							bind:checked={playAsBlack}
-						/>
-						<label for="playAsBlackCheckBox" class="select-none cursor-pointer">
-							Play as {playAsBlack ? 'White' : 'Black'}
-						</label>
+					<RippleButton on:click={trySwitchingSide} class="w-[15ch] text-center text-white">
+						Play as {playAsBlack ? 'White' : 'Black'}
 					</RippleButton>
 				</div>
 			{/if}

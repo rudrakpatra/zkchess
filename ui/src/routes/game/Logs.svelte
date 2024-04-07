@@ -23,21 +23,40 @@
 			return took;
 		}
 	};
+	const scrollIntoView = (node: HTMLElement) => {
+		//calculate the scroll distance of the element
+		// const scrollDistance= node.offsetTop -(node.parentElement?.scrollTop || 0);
+		// if(scrollDistance<200)
+			node.scrollIntoView({ behavior: 'smooth', block: 'end'});
+	};
 </script>
 
 <ul class="absolute inset-1 flex flex-col gap-1 overflow-y-scroll">
-	{#each logs as log}
-		<li>
-			<div>
-				<pre>✦</pre>
-				<pre  >{log.time.toFixed(3)}s</pre>
-			</div>
-			<pre title={log.name}>{log.name}</pre>
-		</li>
+	{#each logs as log,i}	
+		{#if i == logs.length - 1}
+			<li use:scrollIntoView>
+				<div>
+					<pre>✦{i}</pre>
+					<pre>{log.time.toFixed(3)}s</pre>
+				</div>
+				<pre title={log.name}>{log.name}</pre>
+			</li>
+		{:else}
+			<li>
+				<div>
+					<pre>✦{i}</pre>
+					<pre>{log.time.toFixed(3)}s</pre>
+				</div>
+				<pre title={log.name}>{log.name}</pre>
+			</li>
+		{/if}
 	{/each}
 </ul>
 
 <style lang="scss">
+	ul{
+		scroll-behavior: smooth;
+	}
 	pre {
 		font-family: monospace;
 		overflow-x: hidden;

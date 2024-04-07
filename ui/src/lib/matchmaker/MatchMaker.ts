@@ -1,21 +1,24 @@
-import type { PlayerSignature } from '$lib/zkapp/ZkappWorker';
 import { GameState } from 'zkchess-interactive';
 import type { Peer, DataConnection } from 'peerjs';
 import { PrivateKey, PublicKey, Signature } from 'o1js';
 
-export type MatchFound = { self: PlayerSignature; opponent: PlayerSignature; conn: DataConnection };
+export type PlayerConsent = {
+	publicKey: string;
+	jsonSignature: string;
+};
+
+export type MatchFound = { self: PlayerConsent; opponent: PlayerConsent; conn: DataConnection };
 
 export default class MatchMaker {
 	private peer: Peer;
 	private connected: boolean;
 	private conn: DataConnection;
 	private startingFEN: string;
-	private self: PlayerSignature;
-	private opponent: PlayerSignature;
+	private self: PlayerConsent;
+	private opponent: PlayerConsent;
 
 	async setup(startingFEN: string, selfPubKey: PublicKey, selfPvtKey: PrivateKey) {
 		this.startingFEN = startingFEN;
-
 		this.self = {
 			publicKey: selfPubKey.toBase58(),
 			jsonSignature: Signature.create(
@@ -28,7 +31,7 @@ export default class MatchMaker {
 		this.peer = new Peer(this.self.publicKey, {
 			host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
 			secure: true,
-			debug: 3
+			debug: 2
 		});
 	}
 	async connect() {

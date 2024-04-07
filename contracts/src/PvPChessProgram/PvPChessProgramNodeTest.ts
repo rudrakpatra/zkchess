@@ -4,7 +4,7 @@ import { GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
 
 console.log('PvPChessProgramNodeTest');
-console.log(await PvPChessProgram.analyzeMethods());
+console.log(Object.entries(await PvPChessProgram.analyzeMethods()).map(([k, v]) => k + ' ' + v.rows).join('\n'));
 await PvPChessProgram.compile();
 console.log('PvPChessProgramNodeTest: compiled');
 
@@ -45,5 +45,5 @@ const proof2 = await PvPChessProgram.move(
 console.log('proof2\n', proof2.publicOutput.toAscii());
 
 /*
-node build\src\PvPChessProgram\PvPChessProgramNodeTest.js
+node build/src/PvPChessProgram/PvPChessProgramNodeTest.js
 */
