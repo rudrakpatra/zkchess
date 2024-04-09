@@ -42,7 +42,7 @@
 		"chess.js": "^1.0.0-beta.7",
 		"chessground": "^9.0.4",
 		"comlink": "^4.4.1",
-		"o1js": "^0.16.2",
+		"o1js": "^0.17.0",
 		"peerjs": "^1.5.2",
 		"sass": "^1.70.0",
 		"scss": "^0.2.4",
@@ -51,6 +51,6 @@
 		"svelte-ripple-action": "^1.0.5",
 		"tailwind-merge": "^2.2.2",
 		"tailwindcss-text-balance": "^0.0.7",
-		"zkchess-interactive": "^0.1.1"
+		"zkchess-interactive": "^0.1.2"
 	}
 }

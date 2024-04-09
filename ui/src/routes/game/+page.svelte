@@ -1,10 +1,11 @@
 <script lang="ts">
+	import ToastModal from '$lib/components/general/ToastModal/Renderable.svelte';
 	import { get } from 'svelte/store';
 	import { dev } from '$app/environment';
 	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
-	import DashboardLayout from '../../lib/DashboardLayout.svelte';
+	import DashboardLayout from './DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';
@@ -18,12 +19,13 @@
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
+	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
 	import {
 		type PromotionRankAsChar,
-		PvPChessProgram,
 		PvPChessProgramProof
 	} from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
+	import { toastModal } from '$lib/components/general/ToastModal';
 
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -44,27 +46,28 @@
 
 	let timeLog: TimeLog;
 
-	const offerDraw = async () => {
-		timeLog.start('offering draw');
 
+	let drawPending=false;
+	let offerDraw = async () => {
+		timeLog.start('offering draw');
 		timeLog.stop('offering draw');
 		toast.success('offered draw!');
 	};
-	const acceptDraw = async () => {
+	let acceptDraw = async () => {
 		timeLog.start('accepting draw');
 		// await client.acceptDraw();
 
 		timeLog.stop('accepting draw');
 		toast.success('accepted draw!');
 	};
-	const rejectDraw = async () => {
+	let rejectDraw = async () => {
 		timeLog.start('declining draw');
 		// await client.rejectDraw();
 
 		timeLog.stop('declining draw');
 		toast.success('declined draw!');
 	};
-	const resign = async () => {
+	let resign = async () => {
 		timeLog.start('resigning');
 		// await client.resign();
 
@@ -73,7 +76,8 @@
 	};
 
 	//_______________________________________________________________________________________
-
+	let startPeer = new Sync<boolean>();
+	let linkCopied=false;
 	const copyInviteLink = () => {
 		let link = location.href;
 		//add params to link
@@ -85,6 +89,8 @@
 			success: 'Copied invite link to clipboard!',
 			error: 'Failed to copy invite link to clipboard!'
 		});
+		startPeer.push(true);
+		linkCopied=true;
 	};
 
 	function copyToClipboard(text: string) {
@@ -107,6 +113,16 @@
 	let chessgroundAPI: ChessgroundAPI;
 
 	let playAsBlack = data.playAsBlack;
+	const trySwitchingSide = () => {
+		if(linkCopied){
+			toast.error('Cannot switch sides now');
+		}
+		else{
+			playAsBlack = !playAsBlack;
+			const msg='Switched to '+(playAsBlack ? 'Black' : 'White');
+			toast.success(msg);
+		}
+	};
 	let fen = startingFen;
 
 	let placeMove: any;
@@ -143,6 +159,7 @@
 
 					while (await connectionTries.consume()) {
 						try {
+							!opponentPubKeyBase58 && await startPeer.consume()
 							const match = await toast.promise(
 								opponentPubKeyBase58
 									? matchmaker.accept(opponentPubKeyBase58)
@@ -152,11 +169,27 @@
 									success: (match) => {
 										opponentPubKeyBase58 = match.opponent.publicKey;
 										matchFound_UI = true;
-										const t = timeLog.stop('Match found');
+										const t = timeLog.stop('Match found').toPrecision(3);
 										return 'Match found in ' + t + 's';
 									},
 									error: (e) => {
 										matchFailed_UI = true;
+										toastModal({
+											prompt:e,
+
+											options:[
+												{
+													label:"↻ Retry",
+													action:async()=>{connectionTries.push(true)}
+												},
+												{
+													label:"⟳ Reload",
+													action:async()=>{
+														location.reload();
+													}
+												}
+											]
+										})
 										return 'Match failed';
 									}
 								}
@@ -196,16 +229,108 @@
 		//attach input
 		placeMove = async (e: unknown) => {
 			const move = (e as any).detail as Move;
-			const to = move.to;
-			const from = move.from;
-			const promotion = (move.promotion || 'q') as PromotionRankAsChar;
+			const moveJson ={
+				to:move.to,
+				from:move.from,
+				promotion:(move.promotion || 'q') as PromotionRankAsChar
+			} as JsonMove;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
-			timeLog.start(`move ${move.from} -> ${move.to}`);
-			const newProof = await workerClient.move(from, to, promotion, lastProof, privateKey);
-			timeLog.stop(`move ${move.from} -> ${move.to}`);
+			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
+		gameMachine.onOngoing=()=>{
+			if(drawPending){
+				drawPending=false;
+				toast.success('draw offer withdrawn');
+			}
+		}
+		gameMachine.onDrawOffered=()=>{
+			// const threeSeconds= ()=> new Promise((res)=>setTimeout(res,3000));
+			toastModal({
+					prompt: 'Opponent has offered a draw',
+					options: [
+						{ 
+							label: '👍 accept',
+						 	action: ()=>
+								toast.promise(
+									acceptDraw(),
+										{
+											loading:"Accepting Draw",
+											success:"Accepted!",
+											error:"Could not accept Draw"
+										}
+									)
+						},
+						{ 	label: '👎 decline', 
+							action:()=>
+								toast.promise(
+									rejectDraw(),
+										{
+											loading:"Declining Draw",
+											success:"Declined!",
+											error:"Could not decline Draw"
+										}
+									)
+						}
+					]
+				}
+			);
+		}
+		gameMachine.onDraw=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.success('draw!');
+		}
+		gameMachine.onWin=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.success('won!');
+		}
+		gameMachine.onLoose=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.error('lost!');
+		}
+
+		const checkTurn=()=>{
+			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean()
+			const myTurn= turn===!playAsBlack;
+			if(!myTurn){
+				toast.error("Not your turn");
+				return true;
+			}
+			return false;
+		}
+		//draw
+		offerDraw = async () => {
+			if (checkTurn()) return
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.offerDraw(lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			drawPending=true;
+		};
+		acceptDraw = async () => {
+			if (checkTurn()) return
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.acceptDraw(true,lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+		rejectDraw = async () => {
+			if (checkTurn()) return
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.acceptDraw(false,lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+		//resign
+		resign = async () => {
+			if (checkTurn()) return
+			const lastProof = get(gameMachine.lastProof).toJSON();
+			const privateKey = selfPvtKey.toBase58();
+			const newProof = await workerClient.resign(lastProof, privateKey);
+			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+		};
+
 		gameStarted_UI = true;
 
 		playAsBlack
@@ -213,6 +338,8 @@
 			: gameMachine.playAsWhite(matchFound.conn);
 	});
 	$: chessgroundAPI && chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
+
+	$:gameStarted_UI && timeLog.stop((fen.match(" w")?"White":"Black")+'\'s turn');
 </script>
 
 <svelte:head>
@@ -251,25 +378,6 @@
 			{#if matchFound_UI}
 				{#if gameStarted_UI}
 					<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
-						<!-- <button
-								use:ripple 
-								class="button flex-1"
-					
-								on:click={() => {
-									toast(ToastModal, {
-										props: {
-											prompt: 'opponent has offered a draw',
-											options: [
-												{ label: '👍 accept', label: () => toast.success('accepted draw') },
-												{ label: '👎 decline', label: () => toast.error('declined draw') }
-											]
-										},
-										duration: Infinity
-									});
-								}}	
-							>
-								⭐test draw
-							</button>  -->
 						<RippleButton class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
 						<RippleButton class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
 					</div>
@@ -294,16 +402,8 @@
 			{:else}
 				<p class="label">Switch Side</p>
 				<div class="grid place-content-center">
-					<RippleButton class="w-[15ch] text-center text-white">
-						<input
-							id="playAsBlackCheckBox"
-							class="hidden"
-							type="checkbox"
-							bind:checked={playAsBlack}
-						/>
-						<label for="playAsBlackCheckBox" class="select-none cursor-pointer">
-							Play as {playAsBlack ? 'White' : 'Black'}
-						</label>
+					<RippleButton on:click={trySwitchingSide} class="w-[15ch] text-center text-white">
+						Play as {playAsBlack ? 'White' : 'Black'}
 					</RippleButton>
 				</div>
 			{/if}

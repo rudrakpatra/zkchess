@@ -1,6 +1,6 @@
 import * as Comlink from 'comlink';
-import ZkappWorker from './ZkappWorker?worker';
-import type { API } from './ZkappWorker';
+import ZkappWorker from './ZkappWorkerDummy?worker';
+import type { API } from './ZkappWorkerDummy';
 
 export const worker = new ZkappWorker();
 export const workerClient = Comlink.wrap<API>(worker);

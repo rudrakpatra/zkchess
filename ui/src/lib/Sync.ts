@@ -7,6 +7,9 @@ export default class Sync<T> {
 	public push(value: T) {
 		this.list.update((list) => [...list, value]);
 	}
+	public peek(){
+		return get(this.list)[0];
+	}
 	public consume() {
 		const pop = () => {
 			const item = get(this.list)[0];

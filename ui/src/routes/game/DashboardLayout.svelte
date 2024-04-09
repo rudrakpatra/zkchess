@@ -42,11 +42,11 @@
 			@apply h-full w-full rounded-md;
 			@apply bg-chess-400;
 		}
-		#fab{
+		#fab {
 			@apply z-50;
-			@apply fixed w-fit h-fit bottom-2 right-2;
+			@apply fixed bottom-2 right-2 h-fit w-fit;
 			@apply p-2;
-			@apply rounded-full;	
+			@apply rounded-full;
 		}
 	}
 	// landscape-view
@@ -65,7 +65,7 @@
 	}
 	// mobile view
 	@media (max-width: 44rem) {
-		main{
+		main {
 			@apply overflow-x-hidden;
 			scroll-snap-type: mandatory;
 		}
@@ -73,15 +73,15 @@
 			place-content: start;
 			grid-template: 3rem 100cqw 3rem 9.5rem 1fr/ 100cqw;
 			grid-template-areas:
-			'playerB'
-			'board'
-			'playerA'
-			'actions'
-			'logs';
+				'playerB'
+				'board'
+				'playerA'
+				'actions'
+				'logs';
 			// div {
 			// 	@apply bg-red-400;
 			// }
-			#logs{				
+			#logs {
 				height: calc(100cqh - 1rem);
 			}
 		}

@@ -7,7 +7,8 @@ import {
 	PvPChessProgramProof,
 	RollupState,
 	type PromotionRankAsChar,
-	Move
+	Move,
+	GameResult
 } from 'zkchess-interactive';
 
 const proofsEnabled = false;
@@ -74,80 +75,48 @@ async function move(
 	} else {
 		console.log('worker | generating dummy move');
 		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
-		const newGameState = new GameObject(lastProof.publicOutput).toUpdated(move);
+		const newGameState = new GameObject(lastProof.publicOutput,move).getNextGameState();
 		const proof= await PvPChessProgramProof.dummy(initialRollupState,newGameState,2);
 		jsonProof=proof.toJSON();
 	}
 	return jsonProof;
 }
 
-// async function offerDraw(lastProofJSON:string,privateKey:string) {
-// 	if(proofsEnabled){
-// 		console.log('worker | generating real offerDraw');
+async function offerDraw(lastProofJSON:JsonProof,privateKey:string) {
+	let jsonProof: JsonProof;
+	if(proofsEnabled){
+		console.log('worker | generating real offerDraw');
 
-// 		console.time('start');
-// 		const proof= await PvPChessProgram.offerDraw(
-// 		initialRollupState,
-// 		Signature.fromJSON(white.signedJSONForStartingGame),
-// 		Signature.fromJSON(black.signedJSONForStartingGame)
-// 		);
-// 		console.timeEnd('start');
-// 		return proof0;
-// 	}
-// 	else{
-// 		console.log('worker | generating dummy offerDraw');
-// 		const gameObject=GameObject.from()
-// 		return new PvPChessProgramProof({
-// 			proof: dummy,
-// 			publicInput: RollupState.from(GameState.fromFEN(fen), PublicKey.fromBase58(white.publicKey), PublicKey.fromBase58(black.publicKey)),
-// 			publicOutput: new GameObject(),
-// 			maxProofsVerified: 2
-// 		}).toJSON();
-// 	}
-// }
-// 			move: async (from: string, to: string, promotion:PromotionRankAsChar) => {
-// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
-// 					zkapp.move(Move.fromLAN(from, to, promotion || 'q'));
-// 				});
-// 				await txn.prove();
-// 				await txn.sign([whitePlayer.privateKey]).send();
-// 			},
-// 			offerDraw: async () => {
-// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
-// 					zkapp.offerDraw();
-// 				});
-// 				await txn.prove();
-// 				await txn.sign([whitePlayer.privateKey]).send();
-// 			},
-// 			acceptDraw: async () => {
-// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
-// 					zkapp.resolveDraw(Bool(true));
-// 				});
-// 				await txn.prove();
-// 				await txn.sign([whitePlayer.privateKey]).send();
-// 			},
-// 			rejectDraw: async () => {
-// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
-// 					zkapp.resolveDraw(Bool(false));
-// 				});
-// 				await txn.prove();
-// 				await txn.sign([whitePlayer.privateKey]).send();
-// 			},
-// 			resign: async () => {
-// 				const txn = await Mina.transaction(whitePlayer.publicKey, () => {
-// 					zkapp.resign();
-// 				});
-// 				await txn.prove();
-// 				await txn.sign([whitePlayer.privateKey]).send();
-// 			},
-// 			getFEN: async () => {
-// 				return zkapp.getGameState().toFEN();
-// 			},
-// 			getPlayerRating: async (publicKey: string) => {
-// 				return Number(zkapp.getPlayerRating(PublicKey.fromBase58(publicKey)).toBigInt());
-// 			}
-// 	}
-// }
+		console.time('start');
+		jsonProof= (await PvPChessProgram.offerDraw(
+		initialRollupState,
+		PvPChessProgramProof.fromJSON(lastProofJSON),
+		PrivateKey.fromBase58(privateKey)
+		)).toJSON();
+	}
+	else{
+		console.log('worker | generating dummy move');
+		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
+		const gameState = lastProof.publicOutput;
+		const newGameState=GameState.from(
+			gameState.white,
+			gameState.black,
+			// gameState.turn,
+			gameState.turn.not(),
+			gameState.enpassant,
+			gameState.kingCastled,
+			gameState.column,
+			gameState.halfmove,
+			//gameState.canDraw,
+			Bool(true),
+			// gameState.result
+			Field(GameResult.ONGOING_OFFERED_DRAW)
+		  );
+		const proof= await PvPChessProgramProof.dummy(initialRollupState,newGameState,2);
+		jsonProof=proof.toJSON();
+	}
+	return jsonProof;
+}
 
 if (proofsEnabled) {
 	console.log('compiling PvPChessProgram');
