@@ -1,6 +1,6 @@
 {
   "name": "zkchess-interactive",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "play chess on mina blockchain using interactive proofs",
   "author": "rudrakpatra",
   "license": "Apache-2.0",
