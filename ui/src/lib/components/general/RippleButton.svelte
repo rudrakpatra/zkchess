@@ -13,7 +13,7 @@ class={
 		p-2 text-lg font-semibold\
 		bg-secondary text-background\
 		ring-4 ring-inset ring-secondary\
-		focus:contrast-75 focus:brightness-110\
+		focus-visible:ring-primary\
 		disabled:opacity-50 disabled:pointer-events-none\
 		`,
 		$$restProps.class

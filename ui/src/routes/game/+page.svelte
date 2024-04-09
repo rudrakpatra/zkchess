@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ToastModal from '$lib/components/general/ToastModal/Renderable.svelte';
 	import { get } from 'svelte/store';
 	import { dev } from '$app/environment';
 	import ellipsis from '$lib/ellipsis';
@@ -24,6 +25,7 @@
 		PvPChessProgramProof
 	} from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
+	import { toastModal } from '$lib/components/general/ToastModal';
 
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -44,6 +46,8 @@
 
 	let timeLog: TimeLog;
 
+
+	let drawPending=false;
 	let offerDraw = async () => {
 		timeLog.start('offering draw');
 		timeLog.stop('offering draw');
@@ -170,6 +174,22 @@
 									},
 									error: (e) => {
 										matchFailed_UI = true;
+										toastModal({
+											prompt:e,
+
+											options:[
+												{
+													label:"↻ Retry",
+													action:async()=>{connectionTries.push(true)}
+												},
+												{
+													label:"⟳ Reload",
+													action:async()=>{
+														location.reload();
+													}
+												}
+											]
+										})
 										return 'Match failed';
 									}
 								}
@@ -219,20 +239,84 @@
 			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
+		gameMachine.onOngoing=()=>{
+			if(drawPending){
+				drawPending=false;
+				toast.success('draw offer withdrawn');
+			}
+		}
+		gameMachine.onDrawOffered=()=>{
+			// const threeSeconds= ()=> new Promise((res)=>setTimeout(res,3000));
+			toastModal({
+					prompt: 'Opponent has offered a draw',
+					options: [
+						{ 
+							label: '👍 accept',
+						 	action: ()=>
+								toast.promise(
+									acceptDraw(),
+										{
+											loading:"Accepting Draw",
+											success:"Accepted!",
+											error:"Could not accept Draw"
+										}
+									)
+						},
+						{ 	label: '👎 decline', 
+							action:()=>
+								toast.promise(
+									rejectDraw(),
+										{
+											loading:"Declining Draw",
+											success:"Declined!",
+											error:"Could not decline Draw"
+										}
+									)
+						}
+					]
+				}
+			);
+		}
+		gameMachine.onDraw=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.success('draw!');
+		}
+		gameMachine.onWin=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.success('won!');
+		}
+		gameMachine.onLoose=()=>{
+			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+			toast.error('lost!');
+		}
+
+		const checkTurn=()=>{
+			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean()
+			const myTurn= turn===!playAsBlack;
+			if(!myTurn){
+				toast.error("Not your turn");
+				return true;
+			}
+			return false;
+		}
 		//draw
 		offerDraw = async () => {
+			if (checkTurn()) return
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.offerDraw(lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			drawPending=true;
 		};
 		acceptDraw = async () => {
+			if (checkTurn()) return
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(true,lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
 		rejectDraw = async () => {
+			if (checkTurn()) return
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(false,lastProof, privateKey);
@@ -240,6 +324,7 @@
 		};
 		//resign
 		resign = async () => {
+			if (checkTurn()) return
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.resign(lastProof, privateKey);
@@ -254,7 +339,7 @@
 	});
 	$: chessgroundAPI && chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
 
-	$:gameStarted_UI && timeLog.stop((fen.match(" w")?"White":"Black")+'s turn');
+	$:gameStarted_UI && timeLog.stop((fen.match(" w")?"White":"Black")+'\'s turn');
 </script>
 
 <svelte:head>
@@ -293,25 +378,6 @@
 			{#if matchFound_UI}
 				{#if gameStarted_UI}
 					<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
-						<!-- <button
-								use:ripple 
-								class="button flex-1"
-					
-								on:click={() => {
-									toast(ToastModal, {
-										props: {
-											prompt: 'opponent has offered a draw',
-											options: [
-												{ label: '👍 accept', label: () => toast.success('accepted draw') },
-												{ label: '👎 decline', label: () => toast.error('declined draw') }
-											]
-										},
-										duration: Infinity
-									});
-								}}	
-							>
-								⭐test draw
-							</button>  -->
 						<RippleButton class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
 						<RippleButton class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
 					</div>

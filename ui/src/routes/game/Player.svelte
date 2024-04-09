@@ -1,5 +1,6 @@
 <script lang="ts">
-	import ellipsis from '$lib/ellipsis';
+	import RippleButton from '$lib/components/general/RippleButton.svelte';
+import ellipsis from '$lib/ellipsis';
 	import { Icon } from 'svelte-icons-pack';
 	import { TrOutlineExternalLink } from 'svelte-icons-pack/tr';
 	export let username = 'Not found';
@@ -22,29 +23,22 @@
 		{Number.isFinite(rating) ? rating : '?'}
 	</span>
 	<span
-		class="text-lg font-medium flex-1 min-w-0 self-center px-4 whitespace-nowrap
-	
-	
-	
-	
-	"
+		class="text-lg font-medium flex-1 min-w-0 self-center px-4 whitespace-nowrap"
 	>
 		<span class="long text-center overflow-hidden text-ellipsis"> {username} </span>
 		<span class="short overflow-hidden text-ellipsis" title={username}>
 			{ellipsis(username, 12)}
 		</span>
 	</span>
-	<a
-		class=" rounded-md
-		bg-secondary text-chess-200
-		text-sm font-bold
-		grid place-items-center
-		px-1 min-w-[40px]
-		"
-		href={link}
-		title={'view player profile'}
-	>
-		<Icon src={TrOutlineExternalLink} size={20} />
+	<a tabindex="-1" href={link} title={'view player profile'}>
+		<RippleButton class="
+			bg-secondary text-chess-200
+			text-sm font-bold
+			grid place-items-center
+			px-1 min-w-[40px] h-full
+			">
+			<Icon src={TrOutlineExternalLink} size={20} />
+		</RippleButton>
 	</a>
 </div>
 
