@@ -54,8 +54,3 @@
 </script>
 
 <div class="absolute w-full h-full" use:chessgroundHook/>
-{#if !chessgroundAPI}
-<div class="absolute inset-0 grid place-content-center">
-	<Loader size={50} invert={true}/>
-</div>	
-{/if}

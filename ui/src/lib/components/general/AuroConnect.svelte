@@ -42,7 +42,7 @@
 				loading: 'Connecting...',
 				success: (accounts) => {
 					publicKey.set(accounts[0]);
-					return `Connected as ${ellipsis(get(publicKey), 36)}`;
+					return `Connected as ${ellipsis(get(publicKey), 20)}`;
 				},
 				error: (error) => {
 					return error.message;
