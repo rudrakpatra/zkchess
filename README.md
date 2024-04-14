@@ -56,6 +56,27 @@ Now the functionalities are divided into a zkprogram namely `PvPChessProgram` an
 
 Take a look at the [contract](https://github.com/rudrakpatra/zkchess/tree/gameloop/contracts#readme) for other methods that handles possible disputes.
 
+
+## How does multiplayer work?
+
+Take a look at the example scenario of Alice and Bob playing a game of zkchess.
+
+<img src="https://raw.githubusercontent.com/rudrakpatra/zkchess/10bbf77ddf629540902020d7b03de85e3b5586d4/multiplayer.svg" style="min-width:100%"/>
+A few things to note:
+1. Once a match is started the invite link is not longer valid.
+2. If during the match if anyone leaves the page the game is stalled idefinitely (they cannot rejoin as of now).
+3. If the Game Machine somehow receives an invalid proof, it simply ignores it expecting a valid version of the same proof to come next.
+
+## Future Aspects
+## Utilizing the ZK aspect
+### Transcendental Chess
+Rethinking the possibilities of chess with this groundbreaking zk technology.
+1. Chess pieces can move into different realms becoming invisible to the opponent.
+2. Switch realms to evade enemy strikes and execute unexpected assaults.
+3. With so many options checkmating may be difficult so kings cannot shift realms when under check.
+
+There is a lot of crazy ideas to think about.
+
 # Contributing Is Easy
 1. clone this repository 
 2. go to contracts folder.
