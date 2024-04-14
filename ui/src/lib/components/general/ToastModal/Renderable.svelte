@@ -30,6 +30,7 @@
 		{#each options as option, i}
 			<RippleButton 
 				class="flex-1"
+				tabindex={1}
 				bind:el={actionEls[i]}
 				on:click={async () => {
 					toast_.dismiss(toast.id);

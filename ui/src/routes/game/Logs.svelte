@@ -24,10 +24,16 @@
 		}
 	};
 	const scrollIntoView = (node: HTMLElement) => {
+		
+		//calculate if fraction the parent dom rect is visible
+		const parent=node.parentElement;
+		if(!parent)return;
 		//calculate the scroll distance of the element
 		// const scrollDistance= node.offsetTop -(node.parentElement?.scrollTop || 0);
 		// if(scrollDistance<200)
-			node.scrollIntoView({ behavior: 'smooth', block: 'end'});
+		node.animate([{scale:.8},{}], {duration: 150});
+		node.animate([{backgroundColor: 'white'},{}], {duration: 1000});
+		parent.scrollBy({top: node.offsetTop, behavior: 'smooth'});
 	};
 </script>
 

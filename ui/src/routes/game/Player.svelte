@@ -24,14 +24,15 @@ import ellipsis from '$lib/ellipsis';
 	</span>
 	<span
 		class="text-lg font-medium flex-1 min-w-0 self-center px-4 whitespace-nowrap"
+		title={username}
 	>
 		<span class="long text-center overflow-hidden text-ellipsis"> {username} </span>
-		<span class="short overflow-hidden text-ellipsis" title={username}>
+		<span class="short overflow-hidden text-ellipsis">
 			{ellipsis(username, 12)}
 		</span>
 	</span>
 	<a tabindex="-1" href={link} title={'view player profile'}>
-		<RippleButton class="
+		<RippleButton tabindex={-1} class="
 			bg-secondary text-chess-200
 			text-sm font-bold
 			grid place-items-center

@@ -19,7 +19,7 @@
 			>
 				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">MINA</div>
 				<div class="heading text-2xl md:text-4xl bg-primary -rotate-2">zkchess</div>
-				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">v0.1.1</div>
+				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">v0.1.2</div>
 			</div>
 			<h1 class="mx-10 font-bold text-2xl md:text-5xl text-balance">Secured Onchain Chess</h1>
 			<p class="mx-10 mt-5 text-sm md:text-xl max-w-md whitespace-nowrap">

@@ -49,35 +49,20 @@
 
 	let drawPending=false;
 	let offerDraw = async () => {
-		timeLog.start('offering draw');
-		timeLog.stop('offering draw');
-		toast.success('offered draw!');
+		toast.error('action not allowed!');
 	};
 	let acceptDraw = async () => {
-		timeLog.start('accepting draw');
-		// await client.acceptDraw();
-
-		timeLog.stop('accepting draw');
-		toast.success('accepted draw!');
+		toast.error('action not allowed!');
 	};
 	let rejectDraw = async () => {
-		timeLog.start('declining draw');
-		// await client.rejectDraw();
-
-		timeLog.stop('declining draw');
-		toast.success('declined draw!');
+		toast.error('action not allowed!');
 	};
 	let resign = async () => {
-		timeLog.start('resigning');
-		// await client.resign();
-
-		timeLog.stop('resigning');
-		toast.success('resigned!');
+		toast.error('action not allowed!');
 	};
 
-	//_______________________________________________________________________________________
-	let startPeer = new Sync<boolean>();
 	let linkCopied=false;
+	let startMatchMaker = new Sync<boolean>();
 	const copyInviteLink = () => {
 		let link = location.href;
 		//add params to link
@@ -89,7 +74,7 @@
 			success: 'Copied invite link to clipboard!',
 			error: 'Failed to copy invite link to clipboard!'
 		});
-		startPeer.push(true);
+		startMatchMaker.push(true);
 		linkCopied=true;
 	};
 
@@ -126,8 +111,9 @@
 	let fen = startingFen;
 
 	let placeMove: any;
-	let connectionTries = new Sync<boolean>();
-	connectionTries.push(true);
+	let connectionTriesSync = new Sync<boolean>();
+	connectionTriesSync.push(true);
+	let gameSync=new Sync<boolean>();
 	onMount(async () => {
 		chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
 		const [workerClient, matchFound] = await Promise.all([
@@ -154,12 +140,10 @@
 					timeLog.start('MatchMaker Loaded');
 					await matchmaker.setup(startingFen, selfPubKey, selfPvtKey);
 					timeLog.stop('MatchMaker Loaded');
-
-					timeLog.start('Match found');
-
-					while (await connectionTries.consume()) {
+					while (await connectionTriesSync.consume()) {
 						try {
-							!opponentPubKeyBase58 && await startPeer.consume()
+							!opponentPubKeyBase58 && await startMatchMaker.consume()
+							timeLog.start('Match found');
 							const match = await toast.promise(
 								opponentPubKeyBase58
 									? matchmaker.accept(opponentPubKeyBase58)
@@ -180,7 +164,7 @@
 											options:[
 												{
 													label:"↻ Retry",
-													action:async()=>{connectionTries.push(true)}
+													action:async()=>{connectionTriesSync.push(true)}
 												},
 												{
 													label:"⟳ Reload",
@@ -210,23 +194,18 @@
 				}
 			})
 		]);
-
+		matchFound.conn.on("close",()=>toast.error("Opponent disconnected") && location.assign("/game"));
+		matchFound.conn.on('data',(data)=>(typeof data==='string') && gameSync.push(true));
 		const white = playAsBlack ? matchFound.opponent : matchFound.self;
 		const black = playAsBlack ? matchFound.self : matchFound.opponent;
-
-		timeLog.start('Generated starting proof');
+		timeLog.start('Generating proof');
+		if(playAsBlack)await new Promise((res)=>setTimeout(res,10000));
 		const startingProof = await workerClient.start(white, black, startingFen);
-		timeLog.stop('Generated starting proof');
-
+		timeLog.stop('Generating proof');
 		const gameMachine = new GameMachine(PvPChessProgramProof.fromJSON(startingProof));
-
 		gameMachine.fen.subscribe((newFen) => (fen = newFen));
-		//attach peer
-		matchFound.conn.on('data', (msg) => {
-			const jsonProof = msg as JsonProof;
-			gameMachine.network.push(PvPChessProgramProof.fromJSON(jsonProof));
-		});
 		//attach input
+		timeLog.start('Starting game');
 		placeMove = async (e: unknown) => {
 			const move = (e as any).detail as Move;
 			const moveJson ={
@@ -239,14 +218,16 @@
 			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
+		gameMachine.onStart=()=>{
+			gameStarted_UI = true;
+		}
 		gameMachine.onOngoing=()=>{
 			if(drawPending){
 				drawPending=false;
-				toast.success('draw offer withdrawn');
+				toast.error('Draw offer withdrawn');
 			}
 		}
 		gameMachine.onDrawOffered=()=>{
-			// const threeSeconds= ()=> new Promise((res)=>setTimeout(res,3000));
 			toastModal({
 					prompt: 'Opponent has offered a draw',
 					options: [
@@ -279,22 +260,20 @@
 		}
 		gameMachine.onDraw=()=>{
 			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
-			toast.success('draw!');
+			toast.success('Draw!');
 		}
 		gameMachine.onWin=()=>{
-			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
-			toast.success('won!');
+			toast.success('Congrats You Won!');
 		}
 		gameMachine.onLoose=()=>{
-			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
-			toast.error('lost!');
+			toast.error('Oops You Lost!');
 		}
 
 		const checkTurn=()=>{
 			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean()
 			const myTurn= turn===!playAsBlack;
 			if(!myTurn){
-				toast.error("Not your turn");
+				toast.error("Not Your Turn");
 				return true;
 			}
 			return false;
@@ -330,9 +309,19 @@
 			const newProof = await workerClient.resign(lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
-
-		gameStarted_UI = true;
-
+		matchFound.conn.send("setupAllCallbacks");
+		await gameSync.consume();
+		matchFound.conn.on('data', (msg) => {
+			if(typeof msg==="object"){
+				const jsonProof = msg as JsonProof;
+				gameMachine.network.push(PvPChessProgramProof.fromJSON(jsonProof));
+			}
+		});
+		matchFound.conn.send("listeningForStartingProof");
+		await gameSync.consume();
+		timeLog.stop('Starting game');
+		matchFound.conn.send(startingProof);
+		
 		playAsBlack
 			? gameMachine.playAsBlack(matchFound.conn)
 			: gameMachine.playAsWhite(matchFound.conn);
@@ -345,7 +334,7 @@
 <svelte:head>
 	<title>Mina zkChess game</title>
 </svelte:head>
-
+<!-- <svelte:window on:keydown={e => timeLog.stop('Space pressed')}/> -->
 <DashboardLayout>
 	<div class="slot" slot="logs">
 		<Logs bind:timeLog />
@@ -358,40 +347,52 @@
 			{playAsBlack}
 			gameStarted={gameStarted_UI}
 		/>
-		{#if !opponentPubKeyBase58 && chessgroundAPI}
-			<div
-				class="absolute inset-0 grid place-content-center rounded-md bg-chess-400 bg-opacity-60 z-50"
-			>
+		{#if !chessgroundAPI}
+			<div class="overlay">
+				<p class="label">Loading Game Assets...</p>
+				<div class="grid place-content-center">
+					<Loader size={50} />
+				</div>
+			</div>
+		{:else if !opponentPubKeyBase58}
+			<div class="overlay">
 				<p class="label">Invite someone using link</p>
 				<div class="grid place-content-center">
-					<RippleButton on:click={copyInviteLink}>Copy Invite Link</RippleButton>
+					<RippleButton tabindex={1} on:click={copyInviteLink}>Copy Invite Link</RippleButton>
+				</div>
+			</div>
+		{:else if !gameStarted_UI}
+			<div class="overlay">
+				<p class="label">Starting Game...</p>
+				<div class="grid place-content-center">
+					<Loader size={50} />
 				</div>
 			</div>
 		{/if}
 	</div>
 	<div class="slot" slot="playerB">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={opponentPubKeyBase58} rating={opponentRating} link={'/player'} />
+		<Player username={opponentPubKeyBase58} rating={opponentRating} link={`/player?key=${opponentPubKeyBase58}`} />
 	</div>
 	<div class="slot" slot="actions">
-		<div class="absolute inset-1 grid place-content-center">
+		<div class="overlay">
 			{#if matchFound_UI}
 				{#if gameStarted_UI}
-					<div class="absolute inset-0 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
-						<RippleButton class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
-						<RippleButton class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
+					<div class="absolute inset-1 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
+						<RippleButton tabindex={2}  class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
+						<RippleButton tabindex={2}  class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
 					</div>
 				{:else}
-					<p class="label">Starting Game...</p>
+					<p class="label">Setting up...</p>
 					<div class="grid place-content-center">
-						<Loader />
+						<RippleButton on:click={() => window.location.assign("/game")}>Cancel</RippleButton>
 					</div>
 				{/if}
 			{:else if opponentPubKeyBase58}
 				{#if matchFailed_UI}
 					<p class="label">Match failed</p>
 					<div class="grid place-content-center">
-						<RippleButton on:click={() => connectionTries.push(true)}>Retry</RippleButton>
+						<RippleButton on:click={() => connectionTriesSync.push(true)}>Retry</RippleButton>
 					</div>
 				{:else}
 					<p class="label">Waiting for opponent to accept</p>
@@ -402,7 +403,7 @@
 			{:else}
 				<p class="label">Switch Side</p>
 				<div class="grid place-content-center">
-					<RippleButton on:click={trySwitchingSide} class="w-[15ch] text-center text-white">
+					<RippleButton tabindex={2} on:click={trySwitchingSide} class="w-[15ch] text-center text-white">
 						Play as {playAsBlack ? 'White' : 'Black'}
 					</RippleButton>
 				</div>
@@ -411,11 +412,14 @@
 	</div>
 	<div class="slot" slot="playerA">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={selfPubKeyBase58} rating={selfRating} link={'/player'} />
+		<Player username={selfPubKeyBase58} rating={selfRating} link={`/player?key=${selfPubKeyBase58}`} />
 	</div>
 </DashboardLayout>
 
 <style lang="scss">
+	.overlay{
+		@apply absolute inset-0 grid place-content-center rounded-md bg-chess-400 bg-opacity-60 z-50;
+	}
 	.label {
 		@apply text-balance p-2 text-center text-lg;
 	}
