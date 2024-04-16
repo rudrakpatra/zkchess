@@ -31,7 +31,7 @@ export default class MatchMaker {
 		this.peer = new Peer(this.self.publicKey, {
 			host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
 			secure: true,
-			debug: 2
+			debug: 3
 		});
 	}
 	async connect() {
@@ -82,12 +82,12 @@ export default class MatchMaker {
 				setTimeout(() => {
 					console.log('MatchMaker accept: Connecting to opponent... ');
 					const connection = this.peer.connect(opponentPubKey, { reliable: true });
-					const c = setTimeout(() => {
-						//cancel connection
-						rejectMatchFound('Could Not Connect to Opponent');
-					}, 1500);
+					// const c = setTimeout(() => {
+					// 	//cancel connection
+					// 	rejectMatchFound('Could Not Connect to Opponent');
+					// }, 1500);
 					connection.on('open', () => {
-						clearTimeout(c);
+						// clearTimeout(c);
 						console.log('MatchMaker accept: Connected to opponent');
 						this.connected = true;
 						this.conn = connection;
@@ -112,7 +112,7 @@ export default class MatchMaker {
 						console.error('MatchMaker accept: not innitiator error: ' + err);
 						this.connected = false;
 					});
-				}, 1500);
+				}, 5000);
 			}).then((newConn) => {
 				//send signature to opponent
 				console.log('MatchMaker accept: Sending Signature... ');
