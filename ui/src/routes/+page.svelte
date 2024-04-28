@@ -11,7 +11,7 @@
 </svelte:head>
 
 <main class="fixed inset-0 -top-1 p-1 bg-background grid place-content-center">
-	<div class=" w-screen overflow-y-scroll overscroll-contain py-2">
+	<div class=" w-screen overflow-y-scroll overscroll-contain py-8">
 		<div class="container flex flex-col items-center mx-auto text-center">
 			<img class="h-32 mb-10 opacity-20 hidden md:block" src="king.png" alt="" />
 			<div
@@ -19,7 +19,7 @@
 			>
 				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">MINA</div>
 				<div class="heading text-2xl md:text-4xl bg-primary -rotate-2">zkchess</div>
-				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">v0.1.2</div>
+				<div class="heading text-xl md:text-2xl bg-secondary rotate-2">v0.1.3</div>
 			</div>
 			<h1 class="mx-10 font-bold text-2xl md:text-5xl text-balance">Secured Onchain Chess</h1>
 			<p class="mx-10 mt-5 text-sm md:text-xl max-w-md whitespace-nowrap">
@@ -31,13 +31,13 @@
 					let:connect
 					let:mina
 					on:connection={() => {
-						goto('/game');
+						goto('/rated');
 					}}
 				>
-					<RippleButton class="w-full" on:click={connect}>Connect And Play</RippleButton>
+					<RippleButton class="w-full" on:click={connect}>Play Rated</RippleButton>
 				</AuroConnect>
 				<span class="p-2 md:p-3"> or </span>
-				<RippleButton class="w-full " on:click={() => goto('/game')}>Play As Random</RippleButton>
+				<RippleButton class="w-full " on:click={() => goto('/unrated')}>Play Unrated</RippleButton>
 			</span>
 		</div>
 	</div>

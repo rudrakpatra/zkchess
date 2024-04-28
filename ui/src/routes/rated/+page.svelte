@@ -15,7 +15,7 @@
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
 	import MatchMaker, { type MatchFound } from '$lib/matchmaker/MatchMaker';
-	import { PrivateKey, type JsonProof } from 'o1js';
+	import { PrivateKey, type JsonProof, PublicKey } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
@@ -30,9 +30,15 @@
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
+
+	let auroKey = PublicKey.fromBase58($publicKey);
+	let auroKeyBase58 = $publicKey;
+
+	
 	let selfPvtKey = PrivateKey.random();
 	let selfPubKey = selfPvtKey.toPublicKey();
 
+	
 	let selfPubKeyBase58 = selfPubKey.toBase58();
 	let opponentPubKeyBase58 = data.challenger;
 
@@ -194,7 +200,7 @@
 				}
 			})
 		]);
-		matchFound.conn.on("close",()=>toast.error("Opponent disconnected") && location.assign("/game"));
+		matchFound.conn.on("close",()=>toast.error("Opponent disconnected") && location.assign("/"));
 		matchFound.conn.on('data',(data)=>(typeof data==='string') && gameSync.push(true));
 		const white = playAsBlack ? matchFound.opponent : matchFound.self;
 		const black = playAsBlack ? matchFound.self : matchFound.opponent;
@@ -385,7 +391,7 @@
 				{:else}
 					<p class="label">Setting up...</p>
 					<div class="grid place-content-center">
-						<RippleButton on:click={() => window.location.assign("/game")}>Cancel</RippleButton>
+						<RippleButton on:click={() => window.location.assign("/")}>Cancel</RippleButton>
 					</div>
 				{/if}
 			{:else if opponentPubKeyBase58}

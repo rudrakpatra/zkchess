@@ -25,7 +25,7 @@ describe('Chess', () => {
     zkApp: Chess;
 
   beforeAll(async () => {
-    console.log(Chess.analyzeMethods());
+    console.log(Object.values(Chess.analyzeMethods()).reduce((acc, method) => acc + method.rows,0)+" total rows");
     if (proofsEnabled) await Chess.compile();
   });
 

@@ -1,5 +1,7 @@
 import { Field, Provable } from 'o1js';
 
+export const DEFAULT_PRECISION = 5;
+export const DEFAULT_DECIMALS = 10;
 const taylorCoeffs = [
   [1n, 2n],
   [-1n, 4n],
@@ -90,8 +92,8 @@ export function fieldDivMod(x: Field, y: Field, assert = false): Field {
 export function calcEloChange(
   diff: Field,
   assert = false,
-  precision = 5,
-  decimals = 10
+  precision = DEFAULT_PRECISION,
+  decimals = DEFAULT_DECIMALS
 ) {
   const K = Field(20);
   const x = fieldDivMod(diff, Field(400), assert);
