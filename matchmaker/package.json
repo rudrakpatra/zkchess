@@ -1,0 +1,21 @@
+{
+  "name": "matchmaker",
+  "description": "matchmaking server",
+  "main": "build/main.js",
+  "scripts": {
+    "start": "node build/main.js",
+    "dev": "nodemon src/main.ts",
+    "build": "tsc -p src"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
