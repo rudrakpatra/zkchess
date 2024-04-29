@@ -6,6 +6,8 @@ import {
   PublicKey,
   Account,
   UInt64,
+  TokenContract,
+  AccountUpdateForest,
 } from 'o1js';
 import { GameResult } from '../GameState/GameState.js';
 import { DEFAULT_PRECISION, calcEloChange } from '../EloRating/EloRating.js';
@@ -13,24 +15,29 @@ import { PvPChessProgramProof } from '../PvPChessProgram/PvPChessProgram.js';
 
 const DEFAULT_RATING = 1200 * 10 ** DEFAULT_PRECISION;
 
-export class ChessContract extends SmartContract {
-  @method init() {
+export class ChessContract extends TokenContract {
+  @method async init() {
     super.init();
   }
+  public async approveBase(forest: AccountUpdateForest) {
+    this.checkZeroBalanceChange(forest);
+  }
+
   /**
    * Enable rankings for the sender
    * Throws error if already enabled
    */
-  @method enableRankings() {
-    const account = Account(this.sender, this.token.id);
-    const balance = account.balance.getAndRequireEquals();
-    balance.equals(UInt64.from(0)).assertTrue('Rankings already enabled');
-    this.token.mint({
-      address: this.sender,
+  @method async enableRankings() {
+    const sender = this.sender.getAndRequireSignature();
+    this.getPlayerRating(sender)
+      .equals(UInt64.from(0))
+      .assertTrue('Rankings already enabled');
+    this.internal.mint({
+      address: sender,
       amount: UInt64.from(DEFAULT_RATING),
     });
   }
-  @method submitMatchResult(proof: PvPChessProgramProof) {
+  @method async submitMatchResult(proof: PvPChessProgramProof) {
     proof.verify();
     const result = proof.publicOutput.result;
     [
@@ -45,8 +52,8 @@ export class ChessContract extends SmartContract {
       )
       .assertTrue('Invalid game result');
 
-    const white = proof.publicInput.white;
-    const black = proof.publicInput.black;
+    const white = proof.publicInput.whiteUser;
+    const black = proof.publicInput.blackUser;
     const whiteRating = this.getPlayerRating(white);
     const blackRating = this.getPlayerRating(black);
     const whiteGreaterThanBlack = whiteRating.greaterThan(blackRating);
@@ -85,17 +92,17 @@ export class ChessContract extends SmartContract {
     ].reduce(Bool.or);
     const amount = Provable.if(
       draw,
-      UInt64.from(ratingChange).div(2),
-      UInt64.from(ratingChange)
+      UInt64.Unsafe.fromField(ratingChange).div(2),
+      UInt64.Unsafe.fromField(ratingChange)
     );
     const minter = Provable.if(draw, lower, winner);
     const burner = Provable.if(draw, higher, loser);
 
-    this.token.mint({ address: minter, amount });
-    this.token.burn({ address: burner, amount });
+    this.internal.mint({ address: minter, amount });
+    this.internal.burn({ address: burner, amount });
   }
   public getPlayerRating(address: PublicKey) {
-    const account = Account(address, this.token.id);
+    const account = this.sender.self.account;
     return account.balance.getAndRequireEquals();
   }
 }

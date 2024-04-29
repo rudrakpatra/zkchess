@@ -13,13 +13,16 @@ await PvPChessProgram.compile();
 console.log('PvPChessProgramNodeTest: compiled');
 
 const whiteKey = PrivateKey.random();
+const whiteProxy = PrivateKey.random();
 const blackKey = PrivateKey.random();
-
+const blackProxy = PrivateKey.random();
 const initialGameState = GameState.fromFEN();
 const rollupstate = RollupState.from(
   initialGameState,
   whiteKey.toPublicKey(),
-  blackKey.toPublicKey()
+  whiteProxy.toPublicKey(),
+  blackKey.toPublicKey(),
+  blackProxy.toPublicKey()
 );
 const proof0 = await PvPChessProgram.start(
   rollupstate,

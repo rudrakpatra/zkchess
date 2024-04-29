@@ -15,11 +15,25 @@ import { GameObject } from '../GameLogic/GameLogic.js';
 
 export class RollupState extends Struct({
   initialGameState: GameState,
-  white: PublicKey,
-  black: PublicKey,
+  whiteProxy: PublicKey,
+  whiteUser: PublicKey,
+  blackProxy: PublicKey,
+  blackUser: PublicKey,
 }) {
-  static from(initialGameState: GameState, white: PublicKey, black: PublicKey) {
-    return new RollupState({ initialGameState, white, black });
+  static from(
+    initialGameState: GameState,
+    whiteUser: PublicKey,
+    whiteProxy: PublicKey,
+    blackUser: PublicKey,
+    blackProxy: PublicKey
+  ) {
+    return new RollupState({
+      initialGameState,
+      whiteUser,
+      blackUser,
+      whiteProxy,
+      blackProxy,
+    });
   }
 }
 
@@ -28,8 +42,8 @@ const PvPChessProgramRoutines = {
     state: RollupState,
     proof: SelfProof<RollupState, GameState>
   ) => {
-    state.black.assertEquals(proof.publicInput.black);
-    state.white.assertEquals(proof.publicInput.white);
+    state.blackProxy.assertEquals(proof.publicInput.blackProxy);
+    state.whiteProxy.assertEquals(proof.publicInput.whiteProxy);
     const intialGSFields = state.initialGameState.toFields();
     const proofGSFields = proof.publicInput.initialGameState.toFields();
     for (let i = 0; i < 2; i++)
@@ -42,8 +56,8 @@ const PvPChessProgramRoutines = {
   ) => {
     Provable.if(
       earlierProof.publicOutput.turn,
-      state.white,
-      state.black
+      state.whiteProxy,
+      state.blackProxy
     ).assertEquals(playerPrivateKey.toPublicKey());
   },
 };
@@ -61,18 +75,18 @@ export const PvPChessProgram = ZkProgram({
     // their signatures
     start: {
       privateInputs: [Signature, Signature],
-      method(
+      async method(
         state: RollupState,
         whitePlayerSignature: Signature,
         blackPlayerSignature: Signature
       ) {
         // TODO include time/block number, game information in signature
-        whitePlayerSignature.verify(
-          state.white,
-          state.initialGameState.toFields()
-        );
+        whitePlayerSignature.verify(state.whiteUser, [
+          ...state.whiteProxy.toFields(),
+          ...state.initialGameState.toFields(),
+        ]);
         blackPlayerSignature.verify(
-          state.black,
+          state.blackProxy,
           state.initialGameState.toFields()
         );
         return state.initialGameState;
@@ -81,7 +95,7 @@ export const PvPChessProgram = ZkProgram({
     // players need to use their privateKey to prove move is from them
     move: {
       privateInputs: [SelfProof, Move, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         move: Move,
@@ -136,7 +150,7 @@ export const PvPChessProgram = ZkProgram({
 
     offerDraw: {
       privateInputs: [SelfProof, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         playerPrivateKey: PrivateKey
@@ -172,7 +186,7 @@ export const PvPChessProgram = ZkProgram({
     },
     resolveDraw: {
       privateInputs: [SelfProof, Bool, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         accept: Bool,
@@ -213,7 +227,7 @@ export const PvPChessProgram = ZkProgram({
     },
     reportIllegalCastling: {
       privateInputs: [SelfProof, Move, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         move: Move,
@@ -258,15 +272,15 @@ export const PvPChessProgram = ZkProgram({
       },
     },
 
-    // //TODO: IMPLEMENT STALEMATE
-    // //PROVING STALEMATE AS CURRENTLY A 3 STEP PROCESS
-    // //1. CLAIM STALEMATE + ACKNOWLEDGE STALEMATE
-    // //2. OPPONENT REPORTS FALSE STALEMATE CLAIM
-    // //3. DEFEND STALEMATE
+    // IMPLEMENT STALEMATE
+    // PROVING STALEMATE AS CURRENTLY A 3 STEP PROCESS
+    // 1. CLAIM STALEMATE + ACKNOWLEDGE STALEMATE
+    // 2. OPPONENT REPORTS FALSE STALEMATE CLAIM
+    // 3. DEFEND STALEMATE
 
     claimStalemate: {
       privateInputs: [SelfProof, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         playerPrivateKey: PrivateKey
@@ -302,7 +316,7 @@ export const PvPChessProgram = ZkProgram({
 
     acknowledgeStalemateClaim: {
       privateInputs: [SelfProof, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         playerPrivateKey: PrivateKey
@@ -340,7 +354,7 @@ export const PvPChessProgram = ZkProgram({
 
     overrideStalemateClaimByCapturingKing: {
       privateInputs: [SelfProof, Move, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         move: Move,
@@ -386,7 +400,7 @@ export const PvPChessProgram = ZkProgram({
 
     reportStalemateClaimByValidOpponentMove: {
       privateInputs: [SelfProof, Move, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         move: Move,
@@ -441,7 +455,7 @@ export const PvPChessProgram = ZkProgram({
 
     defendStalemateClaim: {
       privateInputs: [SelfProof, Move, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         move: Move,
@@ -501,7 +515,7 @@ export const PvPChessProgram = ZkProgram({
     },
     resign: {
       privateInputs: [SelfProof, PrivateKey],
-      method(
+      async method(
         state: RollupState,
         earlierProof: SelfProof<RollupState, GameState>,
         playerPrivateKey: PrivateKey

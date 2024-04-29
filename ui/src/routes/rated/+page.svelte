@@ -29,9 +29,8 @@
 
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-	// generate a hot wallet , not using AURO Wallet for now
 
-	let auroKey = PublicKey.fromBase58($publicKey);
+	let auroKey = $publicKey?PublicKey.fromBase58($publicKey):null;
 	let auroKeyBase58 = $publicKey;
 
 	
