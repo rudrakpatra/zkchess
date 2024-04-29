@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node build/main.js",
     "dev": "nodemon src/main.ts",
-    "build": "tsc -p src"
+    "build": "tsc -p ./"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
