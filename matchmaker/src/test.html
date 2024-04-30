@@ -13,7 +13,12 @@
     <button id="endGame">endGame</button>
     <script type="module">
       import { io } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js'
-      const socket = io('http://localhost:8080', {
+      const servers = [
+        // 'http://localhost:8080',
+        'https://zkchess-matchmaker.onrender.com:5000',
+      ]
+      console.log('using server', servers[0])
+      const socket = io(servers[0], {
         // auth: {
         //   serverOffset: 0,
         // },
