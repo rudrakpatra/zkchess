@@ -9,37 +9,29 @@
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';
-	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
-	import type { PageData } from './$types';
+	import AuroConnect, {
+		mina,
+		publicKey as AuroWalletKeyBase58
+	} from '$lib/components/general/AuroConnect.svelte';
 	import { onMount } from 'svelte';
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
-	import MatchMaker, { type MatchFoundEvent } from '$lib/matchmaker/MatchMaker';
+	import MatchMaker, { PlayerConsent, type MatchInfo } from '$lib/matchmaker/MatchMaker';
 	import { PrivateKey, type JsonProof, PublicKey } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
-	import {
-		type PromotionRankAsChar,
-		PvPChessProgramProof
-	} from 'zkchess-interactive';
+	import { type PromotionRankAsChar, PvPChessProgramProof, GameState } from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
-
-	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-
-	let auroKey = $publicKey?PublicKey.fromBase58($publicKey):null;
-	let auroKeyBase58 = $publicKey;
-
-	
+	// generate a hot wallet , not using AURO Wallet for now
 	let selfPvtKey = PrivateKey.random();
 	let selfPubKey = selfPvtKey.toPublicKey();
 
-	
 	let selfPubKeyBase58 = selfPubKey.toBase58();
-	let opponentPubKeyBase58 = data.challenger;
+	let opponentPubKeyBase58: string;
 
 	let selfRating: number;
 	let opponentRating: number;
@@ -47,12 +39,11 @@
 	let matchFound_UI = false;
 	let matchFailed_UI = false;
 	// game synchronization variables
-	let gameStarted_UI = false;
+	let userCanStartPlaying = false;
 
 	let timeLog: TimeLog;
 
-
-	let drawPending=false;
+	let drawPending = false;
 	let offerDraw = async () => {
 		toast.error('action not allowed!');
 	};
@@ -66,62 +57,19 @@
 		toast.error('action not allowed!');
 	};
 
-	let linkCopied=false;
 	let startMatchMaker = new Sync<boolean>();
-	const copyInviteLink = () => {
-		let link = location.href;
-		//add params to link
-		link += '?challenger=' + selfPubKeyBase58;
-		link += '&playAsBlack=' + !playAsBlack;
-		//copy link to clipboard
-		toast.promise(copyToClipboard(link), {
-			loading: 'Copying invite link to clipboard...',
-			success: 'Copied invite link to clipboard!',
-			error: 'Failed to copy invite link to clipboard!'
-		});
-		startMatchMaker.push(true);
-		linkCopied=true;
-	};
 
-	function copyToClipboard(text: string) {
-		if (dev) {
-			const textArea = document.createElement('textarea');
-			textArea.value = text;
-			document.body.appendChild(textArea);
-			textArea.focus({ preventScroll: true });
-			textArea.select();
-			return new Promise<void>((res, rej) => {
-				if (document.execCommand('copy')) res();
-				else rej();
-				document.body.removeChild(textArea);
-			});
-		} else {
-			return navigator.clipboard.writeText(text);
-		}
-	}
-
+	let playAsBlack: boolean;
 	let chessgroundAPI: ChessgroundAPI;
 
-	let playAsBlack = data.playAsBlack;
-	const trySwitchingSide = () => {
-		if(linkCopied){
-			toast.error('Cannot switch sides now');
-		}
-		else{
-			playAsBlack = !playAsBlack;
-			const msg='Switched to '+(playAsBlack ? 'Black' : 'White');
-			toast.success(msg);
-		}
-	};
 	let fen = startingFen;
 
 	let placeMove: any;
 	let connectionTriesSync = new Sync<boolean>();
 	connectionTriesSync.push(true);
-	let gameSync=new Sync<boolean>();
+	let gameSync = new Sync<boolean>();
 	onMount(async () => {
-		chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
-		const [workerClient, matchFound] = await Promise.all([
+		const [workerClient, matchInfo] = await Promise.all([
 			new Promise<workerClientAPI>(async (res, rej) => {
 				try {
 					timeLog.start('Imported Contracts');
@@ -139,52 +87,63 @@
 					rej(e);
 				}
 			}),
-			new Promise<MatchFoundEvent>(async (res, rej) => {
+			new Promise<MatchInfo>(async (res, rej) => {
 				try {
 					const matchmaker = new MatchMaker();
 					timeLog.start('MatchMaker Loaded');
-					await matchmaker.setup(startingFen, selfPubKey, selfPvtKey);
+					const auroWalletKeySync = new Sync<string>();
+					AuroWalletKeyBase58.subscribe((x) => auroWalletKeySync.push(x));
+					await auroWalletKeySync.consume();
+					const content = [...selfPubKey.toFields(), ...GameState.fromFEN(startingFen).toFields()];
+
+					const signResult = await mina.signFields({ message: content.map((x) => x.toString()) });
+					if (signResult instanceof Error) {
+						console.error(signResult);
+						toast.error('sign failed!');
+						return;
+					}
+					const consent = new PlayerConsent(
+						get(AuroWalletKeyBase58),
+						selfPubKeyBase58,
+						JSON.stringify(signResult)
+					);
+					await matchmaker.setup();
 					timeLog.stop('MatchMaker Loaded');
 					while (await connectionTriesSync.consume()) {
 						try {
-							!opponentPubKeyBase58 && await startMatchMaker.consume()
 							timeLog.start('Match found');
-							const match = await toast.promise(
-								opponentPubKeyBase58
-									? matchmaker.accept(opponentPubKeyBase58)
-									: matchmaker.connect(),
-								{
-									loading: 'Waiting for opponent',
-									success: (match) => {
-										opponentPubKeyBase58 = match.opponent.publicKey;
-										matchFound_UI = true;
-										const t = timeLog.stop('Match found').toPrecision(3);
-										return 'Match found in ' + t + 's';
-									},
-									error: (e) => {
-										matchFailed_UI = true;
-										toastModal({
-											prompt:e,
+							const match = await toast.promise(matchmaker.findMatch(consent), {
+								loading: 'Waiting for opponent',
+								success: (match) => {
+									opponentPubKeyBase58 = match.opponent.publicKey;
+									matchFound_UI = true;
+									const t = timeLog.stop('Match found').toPrecision(3);
+									return 'Match found in ' + t + 's';
+								},
+								error: (e) => {
+									matchFailed_UI = true;
+									toastModal({
+										prompt: e,
 
-											options:[
-												{
-													label:"↻ Retry",
-													action:async()=>{connectionTriesSync.push(true)}
-												},
-												{
-													label:"⟳ Reload",
-													action:async()=>{
-														location.reload();
-													}
+										options: [
+											{
+												label: '↻ Retry',
+												action: async () => {
+													connectionTriesSync.push(true);
 												}
-											]
-										})
-										return 'Match failed';
-									}
+											},
+											{
+												label: '⟳ Reload',
+												action: async () => {
+													location.reload();
+												}
+											}
+										]
+									});
+									return 'Match failed';
 								}
-							);
+							});
 							if (match) {
-								match.conn.removeAllListeners();
 								res(match);
 								break;
 							}
@@ -199,141 +158,147 @@
 				}
 			})
 		]);
-		matchFound.conn.on("close",()=>toast.error("Opponent disconnected") && location.assign("/"));
-		matchFound.conn.on('data',(data)=>(typeof data==='string') && gameSync.push(true));
-		const white = playAsBlack ? matchFound.opponent : matchFound.self;
-		const black = playAsBlack ? matchFound.self : matchFound.opponent;
+		matchInfo.socket.on(
+			'endGame',
+			() => toast.error('Opponent disconnected') && location.assign('/')
+		);
+		matchInfo.socket.on('move', (data) => {
+			console.log('data', data);
+			typeof data === 'string' && gameSync.push(true);
+		});
+		playAsBlack = matchInfo.playAsBlack;
+		opponentPubKeyBase58 = matchInfo.opponent.publicKey;
+		const white = playAsBlack ? matchInfo.opponent : matchInfo.self;
+		const black = matchInfo.playAsBlack ? matchInfo.self : matchInfo.opponent;
 		timeLog.start('Generating proof');
-		if(playAsBlack)await new Promise((res)=>setTimeout(res,10000));
+		if (playAsBlack) await new Promise((res) => setTimeout(res, 10000));
 		const startingProof = await workerClient.start(white, black, startingFen);
 		timeLog.stop('Generating proof');
-		const gameMachine = new GameMachine(PvPChessProgramProof.fromJSON(startingProof));
+		const gameMachine = new GameMachine(await PvPChessProgramProof.fromJSON(startingProof));
 		gameMachine.fen.subscribe((newFen) => (fen = newFen));
 		//attach input
 		timeLog.start('Starting game');
 		placeMove = async (e: unknown) => {
 			const move = (e as any).detail as Move;
-			const moveJson ={
-				to:move.to,
-				from:move.from,
-				promotion:(move.promotion || 'q') as PromotionRankAsChar
+			const moveJson = {
+				to: move.to,
+				from: move.from,
+				promotion: (move.promotion || 'q') as PromotionRankAsChar
 			} as JsonMove;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
-		gameMachine.onStart=()=>{
-			gameStarted_UI = true;
-		}
-		gameMachine.onOngoing=()=>{
-			if(drawPending){
-				drawPending=false;
+		gameMachine.onStart = () => {
+			userCanStartPlaying = true;
+		};
+		gameMachine.onOngoing = () => {
+			if (drawPending) {
+				drawPending = false;
 				toast.error('Draw offer withdrawn');
 			}
-		}
-		gameMachine.onDrawOffered=()=>{
+		};
+		gameMachine.onDrawOffered = () => {
 			toastModal({
-					prompt: 'Opponent has offered a draw',
-					options: [
-						{ 
-							label: '👍 accept',
-						 	action: ()=>
-								toast.promise(
-									acceptDraw(),
-										{
-											loading:"Accepting Draw",
-											success:"Accepted!",
-											error:"Could not accept Draw"
-										}
-									)
-						},
-						{ 	label: '👎 decline', 
-							action:()=>
-								toast.promise(
-									rejectDraw(),
-										{
-											loading:"Declining Draw",
-											success:"Declined!",
-											error:"Could not decline Draw"
-										}
-									)
-						}
-					]
-				}
-			);
-		}
-		gameMachine.onDraw=()=>{
-			chessgroundAPI.set({turnColor:undefined,movable:{color:undefined}});
+				prompt: 'Opponent has offered a draw',
+				options: [
+					{
+						label: '👍 accept',
+						action: () =>
+							toast.promise(acceptDraw(), {
+								loading: 'Accepting Draw',
+								success: 'Accepted!',
+								error: 'Could not accept Draw'
+							})
+					},
+					{
+						label: '👎 decline',
+						action: () =>
+							toast.promise(rejectDraw(), {
+								loading: 'Declining Draw',
+								success: 'Declined!',
+								error: 'Could not decline Draw'
+							})
+					}
+				]
+			});
+		};
+		gameMachine.onDraw = () => {
+			chessgroundAPI.set({ turnColor: undefined, movable: { color: undefined } });
 			toast.success('Draw!');
-		}
-		gameMachine.onWin=()=>{
+		};
+		gameMachine.onWin = () => {
 			toast.success('Congrats You Won!');
-		}
-		gameMachine.onLoose=()=>{
+		};
+		gameMachine.onLoose = () => {
 			toast.error('Oops You Lost!');
-		}
+		};
 
-		const checkTurn=()=>{
-			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean()
-			const myTurn= turn===!playAsBlack;
-			if(!myTurn){
-				toast.error("Not Your Turn");
+		const checkTurn = () => {
+			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean();
+			const myTurn = turn === !playAsBlack;
+			if (!myTurn) {
+				toast.error('Not Your Turn');
 				return true;
 			}
 			return false;
-		}
+		};
 		//draw
 		offerDraw = async () => {
-			if (checkTurn()) return
+			if (checkTurn()) return;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.offerDraw(lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
-			drawPending=true;
+			drawPending = true;
 		};
 		acceptDraw = async () => {
-			if (checkTurn()) return
+			if (checkTurn()) return;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
-			const newProof = await workerClient.acceptDraw(true,lastProof, privateKey);
+			const newProof = await workerClient.acceptDraw(true, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
 		rejectDraw = async () => {
-			if (checkTurn()) return
+			if (checkTurn()) return;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
-			const newProof = await workerClient.acceptDraw(false,lastProof, privateKey);
+			const newProof = await workerClient.acceptDraw(false, lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
 		//resign
 		resign = async () => {
-			if (checkTurn()) return
+			if (checkTurn()) return;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.resign(lastProof, privateKey);
 			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
 		};
-		matchFound.conn.send("setupAllCallbacks");
+		console.log('assigned');
+		matchInfo.socket.emit('move', 'setupAllCallbacks');
 		await gameSync.consume();
-		matchFound.conn.on('data', (msg) => {
-			if(typeof msg==="object"){
+		console.log('set move');
+		matchInfo.socket.on('move', async (msg) => {
+			console.log('move NEW', msg);
+			if (typeof msg === 'object') {
 				const jsonProof = msg as JsonProof;
 				gameMachine.network.push(PvPChessProgramProof.fromJSON(jsonProof));
 			}
 		});
-		matchFound.conn.send("listeningForStartingProof");
+		matchInfo.socket.emit('move', 'listeningForStartingProof');
 		await gameSync.consume();
+		console.log('starting start');
 		timeLog.stop('Starting game');
-		matchFound.conn.send(startingProof);
-		
+		matchInfo.socket.emit('move', startingProof);
+
 		playAsBlack
-			? gameMachine.playAsBlack(matchFound.conn)
-			: gameMachine.playAsWhite(matchFound.conn);
+			? gameMachine.playAsBlack(matchInfo.socket)
+			: gameMachine.playAsWhite(matchInfo.socket);
 	});
 	$: chessgroundAPI && chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
 
-	$:gameStarted_UI && timeLog.stop((fen.match(" w")?"White":"Black")+'\'s turn');
+	$: userCanStartPlaying && timeLog.stop((fen.match(' w') ? 'White' : 'Black') + "'s turn");
 </script>
 
 <svelte:head>
@@ -350,7 +315,7 @@
 			bind:chessgroundAPI
 			{fen}
 			{playAsBlack}
-			gameStarted={gameStarted_UI}
+			gameStarted={userCanStartPlaying}
 		/>
 		{#if !chessgroundAPI}
 			<div class="overlay">
@@ -361,12 +326,12 @@
 			</div>
 		{:else if !opponentPubKeyBase58}
 			<div class="overlay">
-				<p class="label">Invite someone using link</p>
+				<p class="label">Looking for Players...</p>
 				<div class="grid place-content-center">
-					<RippleButton tabindex={1} on:click={copyInviteLink}>Copy Invite Link</RippleButton>
+					<Loader size={50} />
 				</div>
 			</div>
-		{:else if !gameStarted_UI}
+		{:else if !userCanStartPlaying}
 			<div class="overlay">
 				<p class="label">Starting Game...</p>
 				<div class="grid place-content-center">
@@ -377,20 +342,28 @@
 	</div>
 	<div class="slot" slot="playerB">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={opponentPubKeyBase58} rating={opponentRating} link={`/player?key=${opponentPubKeyBase58}`} />
+		<Player
+			username={opponentPubKeyBase58}
+			rating={opponentRating}
+			link={`/player?key=${opponentPubKeyBase58}`}
+		/>
 	</div>
 	<div class="slot" slot="actions">
 		<div class="overlay">
 			{#if matchFound_UI}
-				{#if gameStarted_UI}
+				{#if userCanStartPlaying}
 					<div class="absolute inset-1 flex flex-col overflow-x-hidden overflow-y-scroll gap-1">
-						<RippleButton tabindex={2}  class="flex-1 w-full" on:click={offerDraw}>🤝 offer draw</RippleButton>
-						<RippleButton tabindex={2}  class="flex-1 w-full" on:click={resign}>😖 resign</RippleButton>
+						<RippleButton tabindex={2} class="flex-1 w-full" on:click={offerDraw}
+							>🤝 offer draw</RippleButton
+						>
+						<RippleButton tabindex={2} class="flex-1 w-full" on:click={resign}
+							>😖 resign</RippleButton
+						>
 					</div>
 				{:else}
 					<p class="label">Setting up...</p>
 					<div class="grid place-content-center">
-						<RippleButton on:click={() => window.location.assign("/")}>Cancel</RippleButton>
+						<RippleButton on:click={() => window.location.assign('/')}>Cancel</RippleButton>
 					</div>
 				{/if}
 			{:else if opponentPubKeyBase58}
@@ -408,7 +381,7 @@
 			{:else}
 				<p class="label">Switch Side</p>
 				<div class="grid place-content-center">
-					<RippleButton tabindex={2} on:click={trySwitchingSide} class="w-[15ch] text-center text-white">
+					<RippleButton tabindex={2} class="w-[15ch] text-center text-white">
 						Play as {playAsBlack ? 'White' : 'Black'}
 					</RippleButton>
 				</div>
@@ -417,13 +390,17 @@
 	</div>
 	<div class="slot" slot="playerA">
 		<!-- TODO use custom tokens for rating -->
-		<Player username={selfPubKeyBase58} rating={selfRating} link={`/player?key=${selfPubKeyBase58}`} />
+		<Player
+			username={selfPubKeyBase58}
+			rating={selfRating}
+			link={`/player?key=${selfPubKeyBase58}`}
+		/>
 	</div>
 </DashboardLayout>
 
 <style lang="scss">
-	.overlay{
-		@apply absolute inset-0 grid place-content-center rounded-md bg-chess-400 bg-opacity-60 z-50;
+	.overlay {
+		@apply bg-chess-400 absolute inset-0 z-50 grid place-content-center rounded-md bg-opacity-60;
 	}
 	.label {
 		@apply text-balance p-2 text-center text-lg;

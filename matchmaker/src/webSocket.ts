@@ -3,7 +3,13 @@ import { BST } from 'data-structure-typed'
 import crypto from 'crypto'
 
 type RoomId = string
-type PlayerInfo = { entryTime: number; publicKey: string; socket: Socket }
+type PlayerInfo = {
+  entryTime: number
+  publicKey: string
+  proxyKey: string
+  jsonSign: string
+  socket: Socket
+}
 type GameInfo = {
   roomId: RoomId
   whitePlayer: PlayerInfo
@@ -25,16 +31,21 @@ export const startingThreshold = 40
 export const socketConnectionHandler = (socket: Socket) => {
   console.log('socket connected, id:', socket.id)
 
-  socket.once('find', (msg: { publicKey: string }) => {
-    console.log('finding match for', msg.publicKey.substring(0, 7) + '...')
-    // TODO find elo rating
-    const elo = 1000 + Math.random() * 400
-    unmatchedPlayers.add(elo, {
-      entryTime: Date.now(),
-      publicKey: msg.publicKey,
-      socket,
-    })
-  })
+  socket.once(
+    'find',
+    (publicKey: string, proxyKey: string, jsonSign: string) => {
+      console.log('finding match for', publicKey.substring(0, 7) + '...')
+      // TODO find elo rating
+      const elo = 1000 + Math.random() * 400
+      unmatchedPlayers.add(elo, {
+        entryTime: Date.now(),
+        publicKey: publicKey,
+        proxyKey: proxyKey,
+        jsonSign: jsonSign,
+        socket,
+      })
+    },
+  )
 
   socket.on('disconnect', () => {
     console.log('socket disconnected, id:', socket.id)
@@ -125,6 +136,22 @@ function startGame(player0: PlayerInfo, player1: PlayerInfo) {
     player1.socket.to(gameInfo.roomId).emit('move', msg),
   )
   // notify players
-  player0.socket.emit('startGame', { roomId, opponentKey: player1.publicKey })
-  player1.socket.emit('startGame', { roomId, opponentKey: player0.publicKey })
+  player0.socket.emit('startGame', {
+    roomId,
+    playAsBlack: false,
+    opponent: {
+      publicKey: player1.publicKey,
+      proxyKey: player1.proxyKey,
+      jsonSign: player1.jsonSign,
+    },
+  })
+  player1.socket.emit('startGame', {
+    roomId,
+    playAsBlack: true,
+    opponent: {
+      publicKey: player0.publicKey,
+      proxyKey: player0.proxyKey,
+      jsonSign: player0.jsonSign,
+    },
+  })
 }
