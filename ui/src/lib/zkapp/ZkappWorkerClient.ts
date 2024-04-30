@@ -3,7 +3,7 @@ import ZkappWorker from './ZkappWorkerDummy?worker';
 import type { API } from './ZkappWorkerDummy';
 
 export const worker = new ZkappWorker();
-export const workerClient = Comlink.wrap<API>(worker);
+export const workerClient: Comlink.Remote<API> = Comlink.wrap<API>(worker);
 export type workerClientAPI = typeof workerClient;
 export const awaitWorker = async () => {
 	await new Promise<void>((resolve) => {

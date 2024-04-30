@@ -15,21 +15,14 @@
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
 	import MatchMaker, { PlayerConsent, type MatchFoundEvent } from '$lib/matchmaker/MatchMaker';
-	import { PrivateKey, Signature, type JsonProof } from 'o1js';
+	import { PrivateKey, type JsonProof, PublicKey } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
-	import {
-		type PromotionRankAsChar,
-		PvPChessProgramProof,
-
-		GameState
-
-	} from 'zkchess-interactive';
+	import {type PromotionRankAsChar,PvPChessProgramProof, GameState} from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
-
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
@@ -141,12 +134,22 @@
 				try {
 					const matchmaker = new MatchMaker();
 					timeLog.start('MatchMaker Loaded');
+					console.log('AuroWalletKeyBase58',get(AuroWalletKeyBase58));
+					const content=[...selfPubKey.toFields(),...GameState.fromFEN(startingFen).toFields()]
+
+					const signResult = await mina
+						.signFields({message:content.map(x=>x.toString())})
+					if(signResult instanceof Error){
+						console.error(signResult);
+						toast.error("sign failed!");
+						return;
+					}
 					const consent=new PlayerConsent(
 						get(AuroWalletKeyBase58), 
 						selfPubKeyBase58,
-						Signature.create(selfPvtKey,GameState.fromFEN(startingFen).toFields()).toJSON()
-						)
-					await matchmaker.setup(startingFen, selfPubKey );
+						JSON.stringify(signResult)
+					)
+					await matchmaker.setup(startingFen, consent );
 					timeLog.stop('MatchMaker Loaded');
 					while (await connectionTriesSync.consume()) {
 						try {
@@ -210,7 +213,7 @@
 		if(playAsBlack)await new Promise((res)=>setTimeout(res,10000));
 		const startingProof = await workerClient.start(white, black, startingFen);
 		timeLog.stop('Generating proof');
-		const a=PvPChessProgramProof.fromJSON(startingProof);
+		const a=await PvPChessProgramProof.fromJSON(startingProof);
 
 		const gameMachine = new GameMachine(await a);
 		gameMachine.fen.subscribe((newFen) => (fen = newFen));
@@ -294,7 +297,7 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.offerDraw(lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 			drawPending=true;
 		};
 		acceptDraw = async () => {
@@ -302,14 +305,14 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(true,lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		rejectDraw = async () => {
 			if (checkTurn()) return
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(false,lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		//resign
 		resign = async () => {
@@ -317,14 +320,14 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.resign(lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		matchFound.conn.send("setupAllCallbacks");
 		await gameSync.consume();
-		matchFound.conn.on('data', (msg) => {
+		matchFound.conn.on('data', async (msg) => {
 			if(typeof msg==="object"){
 				const jsonProof = msg as JsonProof;
-				gameMachine.network.push(PvPChessProgramProof.fromJSON(jsonProof));
+				gameMachine.network.push(await PvPChessProgramProof.fromJSON(jsonProof));
 			}
 		});
 		matchFound.conn.send("listeningForStartingProof");
