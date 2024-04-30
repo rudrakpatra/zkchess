@@ -1,15 +1,17 @@
 import { Socket } from 'socket.io'
-import { BST, BSTNode } from 'data-structure-typed'
+import { BST } from 'data-structure-typed'
+import crypto from 'crypto'
 
+type RoomId = string
 type PlayerInfo = { entryTime: number; publicKey: string; socket: Socket }
+type GameInfo = {
+  roomId: RoomId
+  whitePlayer: PlayerInfo
+  blackPlayer: PlayerInfo
+}
 const unmatchedPlayers = new BST<number, PlayerInfo>() // elo ratin => player info
-const games = new Map<
-  string,
-  {
-    whitePlayer: PlayerInfo
-    blackPlayer: PlayerInfo
-  }
->() // game room id => game info
+
+const games = new Map<string, GameInfo>() // socket id => game info
 
 export const startingThreshold = 40
 
@@ -23,7 +25,7 @@ export const startingThreshold = 40
 export const socketConnectionHandler = (socket: Socket) => {
   console.log('socket connected, id:', socket.id)
 
-  socket.on('find', (msg: { publicKey: string }) => {
+  socket.once('find', (msg: { publicKey: string }) => {
     console.log('finding match for', msg.publicKey.substring(0, 7) + '...')
     // TODO find elo rating
     const elo = 1000 + Math.random() * 400
@@ -36,20 +38,25 @@ export const socketConnectionHandler = (socket: Socket) => {
 
   socket.on('disconnect', () => {
     console.log('socket disconnected, id:', socket.id)
-    // no need to remove player from unmatchedPlayers, handled by job
-    // if player (not viewer) already in a game, end the game, notify other players
-    socket.rooms.forEach((room) => {
-      if (room == socket.id) return
-
+    const gameInfo = games.get(socket.id)
+    if (!gameInfo) return
+    const { whitePlayer, blackPlayer } = gameInfo
+    // send a endGame event to all rooms
+    ;[
+      // in white player's rooms
+      ...whitePlayer.socket.rooms,
+      // and in black player's rooms
+      ...blackPlayer.socket.rooms,
+    ].forEach((room) => {
       socket.to(room).emit('endGame')
-      // remove from games
-      games.delete(room)
+      games.delete(socket.id)
     })
   })
 }
 
 // a job that runs every 10s to match players
 setInterval(() => {
+  console.log('job running')
   // @ts-ignore
   let players: [number, PlayerInfo][] = Array.from(
     unmatchedPlayers.entries(),
@@ -58,11 +65,15 @@ setInterval(() => {
     return p[1].socket.connected
   })
   //   console.log('players:', players)
-
+  console.log(
+    'current unmatchedPlayers',
+    Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
+  )
   if (players.length < 2) return
 
   let remainingPlayers: [number, PlayerInfo][] = []
-  for (let i = 0; i < players.length - 1; i++) {
+  let i
+  for (i = 0; i < players.length - 1; i++) {
     const player0 = players[i]
     const player1 = players[i + 1]
     // threshold increase as time goes by
@@ -71,36 +82,49 @@ setInterval(() => {
       startingThreshold
     // if player0 and player1 elo rating < threshold then match
     if (Math.abs(player0[0] - player1[0]) < player0Threshold) {
+      console.log('matched', player0[1].publicKey, player1[1].publicKey)
       startGame(player0[1], player1[1])
+      i++ // skip player1
     } else {
       remainingPlayers.push(player0)
     }
   }
-
+  if (i === players.length - 1) {
+    remainingPlayers.push(players[players.length - 1])
+  }
   // update unmatchedPlayers BST if some games started this round
+
   unmatchedPlayers.clear()
-  console.log('unmatchedPlayers', unmatchedPlayers.values())
   unmatchedPlayers.addMany(remainingPlayers)
-  console.log('unmatchedPlayers', unmatchedPlayers.values())
+  console.log(
+    'updated unmatchedPlayers',
+    Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
+  )
 }, 10000)
 
 function startGame(player0: PlayerInfo, player1: PlayerInfo) {
-  const gameID = Math.random().toString(36).substring(10)
-  games.set(gameID, {
+  const roomId = crypto.randomBytes(8).toString('hex')
+  console.log('game started', roomId)
+  // both players join a socket room
+  player0.socket.join(roomId)
+  player1.socket.join(roomId)
+
+  const gameInfo: GameInfo = {
+    roomId,
     whitePlayer: player0,
     blackPlayer: player1,
-  })
-  // both players join a socket room
-  player0.socket.join(gameID)
-  player1.socket.join(gameID)
-  // setup relayer
-  player0.socket.on('move', (msg) => {
-    player0.socket.to(gameID).emit('move', msg)
-  })
-  player1.socket.on('move', (msg) => {
-    player1.socket.to(gameID).emit('move', msg)
-  })
+  }
+  games.set(player0.socket.id, gameInfo)
+  games.set(player1.socket.id, gameInfo)
+
+  // setup relays for move events
+  player0.socket.on('move', (msg) =>
+    player0.socket.to(gameInfo.roomId).emit('move', msg),
+  )
+  player1.socket.on('move', (msg) =>
+    player1.socket.to(gameInfo.roomId).emit('move', msg),
+  )
   // notify players
-  player0.socket.emit('startGame', { gameID, side: 'white' })
-  player1.socket.emit('startGame', { gameID, side: 'black' })
+  player0.socket.emit('startGame', { roomId, opponentKey: player1.publicKey })
+  player1.socket.emit('startGame', { roomId, opponentKey: player0.publicKey })
 }

@@ -1,7 +1,7 @@
-import express, { Application, Response, Request, NextFunction } from 'express'
+// import express, { Application, Response, Request, NextFunction } from 'express'
 import env from 'dotenv'
-import { Home, Find } from './routes'
-import cors from 'cors'
+// import { Home, Find } from './routes'
+// import cors from 'cors'
 import { Server, Socket } from 'socket.io'
 import { createServer } from 'http'
 import { socketConnectionHandler } from './webSocket'
@@ -10,15 +10,15 @@ import { socketConnectionHandler } from './webSocket'
 env.config()
 
 //express
-const app: Application = express()
+// const app: Application = express()
 
-const PORT = process.env.PORT || 1337
+const PORT = process.env.PORT || 8080
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost'
-app.use(cors())
-app.use('/', Home)
+// app.use(cors())
+// app.use('/', Home)
 // app.use('/find', Find)
 
-const server = createServer(app)
+const server = createServer()
 server.listen(PORT, () => {
   console.log(`Service starting at ${SERVER_URL}:${PORT}`)
 })
