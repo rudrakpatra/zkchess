@@ -23,10 +23,10 @@ export const startingThreshold = 40
  * endGame - to end a game, sent by a player, relayed to all other players
  */
 export const socketConnectionHandler = (socket: Socket) => {
-  // console.log('socket connected, id:', socket.id)
+  console.log('socket connected, id:', socket.id)
 
   socket.once('find', (msg: { publicKey: string }) => {
-    // console.log('finding match for', msg.publicKey.substring(0, 7) + '...')
+    console.log('finding match for', msg.publicKey.substring(0, 7) + '...')
     // TODO find elo rating
     const elo = 1000 + Math.random() * 400
     unmatchedPlayers.add(elo, {
@@ -37,7 +37,7 @@ export const socketConnectionHandler = (socket: Socket) => {
   })
 
   socket.on('disconnect', () => {
-    // console.log('socket disconnected, id:', socket.id)
+    console.log('socket disconnected, id:', socket.id)
     const gameInfo = games.get(socket.id)
     if (!gameInfo) return
     const { whitePlayer, blackPlayer } = gameInfo
@@ -56,7 +56,7 @@ export const socketConnectionHandler = (socket: Socket) => {
 
 // a job that runs every 10s to match players
 setInterval(() => {
-  // console.log('job running')
+  console.log('job running')
   // @ts-ignore
   let players: [number, PlayerInfo][] = Array.from(
     unmatchedPlayers.entries(),
@@ -65,10 +65,10 @@ setInterval(() => {
     return p[1].socket.connected
   })
   //   console.log('players:', players)
-  // console.log(
-  //   'current unmatchedPlayers',
-  //   Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
-  // )
+  console.log(
+    'current unmatchedPlayers',
+    Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
+  )
   if (players.length < 2) return
 
   let remainingPlayers: [number, PlayerInfo][] = []
@@ -96,15 +96,15 @@ setInterval(() => {
 
   unmatchedPlayers.clear()
   unmatchedPlayers.addMany(remainingPlayers)
-  // console.log(
-  //   'updated unmatchedPlayers',
-  //   Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
-  // )
+  console.log(
+    'updated unmatchedPlayers',
+    Array.from(unmatchedPlayers.entries()).map((p) => p[1]?.publicKey),
+  )
 }, 10000)
 
 function startGame(player0: PlayerInfo, player1: PlayerInfo) {
   const roomId = crypto.randomBytes(8).toString('hex')
-  // console.log('game started', roomId)
+  console.log('game started', roomId)
   // both players join a socket room
   player0.socket.join(roomId)
   player1.socket.join(roomId)
