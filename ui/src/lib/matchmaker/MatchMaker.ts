@@ -2,12 +2,31 @@ import { GameState } from 'zkchess-interactive';
 import type { Peer, DataConnection } from 'peerjs';
 import { PrivateKey, PublicKey, Signature } from 'o1js';
 
-export type PlayerConsent = {
+export class PlayerConsent {
 	publicKey: string;
+	proxyKey: string;
 	jsonSignature: string;
-};
+	constructor(publicKey: string, proxyKey: string, jsonSignature: string) {
+		this.publicKey = publicKey;
+		this.proxyKey = proxyKey;
+		this.jsonSignature = jsonSignature;
+	}
+	static fromJSON(json: string): PlayerConsent {
+		return new PlayerConsent(...(JSON.parse(json) as [string, string, string]));
+	}
+	static toJSON(pc: PlayerConsent): string {
+		return JSON.stringify(pc);
+	}
+	static empty(): PlayerConsent {
+		return new PlayerConsent('', '', '');
+	}
+}
 
-export type MatchFound = { self: PlayerConsent; opponent: PlayerConsent; conn: DataConnection };
+export type MatchFoundEvent = {
+	self: PlayerConsent;
+	opponent: PlayerConsent;
+	conn: DataConnection;
+};
 
 export default class MatchMaker {
 	private peer: Peer;
@@ -17,16 +36,10 @@ export default class MatchMaker {
 	private self: PlayerConsent;
 	private opponent: PlayerConsent;
 
-	async setup(startingFEN: string, selfPubKey: PublicKey, selfPvtKey: PrivateKey) {
+	async setup(startingFEN: string, self: PlayerConsent) {
 		this.startingFEN = startingFEN;
-		this.self = {
-			publicKey: selfPubKey.toBase58(),
-			jsonSignature: Signature.create(
-				selfPvtKey,
-				GameState.fromFEN(this.startingFEN).toFields()
-			).toJSON()
-		};
-		this.opponent = { publicKey: '', jsonSignature: '' };
+		this.self = self;
+		this.opponent = PlayerConsent.empty();
 		const { Peer } = await import('peerjs');
 		this.peer = new Peer(this.self.publicKey, {
 			host: 'peerjs.92k.de', // TODO: use own peerjs server, https://github.com/Raunaque97/peerjs-server#running-in-google-app-engine
@@ -37,7 +50,7 @@ export default class MatchMaker {
 	async connect() {
 		const { PeerError } = await import('peerjs');
 		//return after successful connection
-		return await new Promise<MatchFound>((resolveMatchFound) => {
+		return await new Promise<MatchFoundEvent>((resolveMatchFound) => {
 			new Promise<DataConnection>((resolveConn) => {
 				this.peer.on('connection', async (newConnection) => {
 					if (this.connected) {
@@ -75,7 +88,7 @@ export default class MatchMaker {
 		});
 	}
 	async accept(opponentPubKey: string) {
-		return await new Promise<MatchFound>((resolveMatchFound, rejectMatchFound) => {
+		return await new Promise<MatchFoundEvent>((resolveMatchFound, rejectMatchFound) => {
 			new Promise<DataConnection>((resolve) => {
 				this.opponent.publicKey = opponentPubKey;
 				//give peerjs some time to set up sockets

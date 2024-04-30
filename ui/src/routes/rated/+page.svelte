@@ -14,7 +14,7 @@
 	import { onMount } from 'svelte';
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
-	import MatchMaker, { type MatchFound } from '$lib/matchmaker/MatchMaker';
+	import MatchMaker, { type MatchFoundEvent } from '$lib/matchmaker/MatchMaker';
 	import { PrivateKey, type JsonProof, PublicKey } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
@@ -139,7 +139,7 @@
 					rej(e);
 				}
 			}),
-			new Promise<MatchFound>(async (res, rej) => {
+			new Promise<MatchFoundEvent>(async (res, rej) => {
 				try {
 					const matchmaker = new MatchMaker();
 					timeLog.start('MatchMaker Loaded');

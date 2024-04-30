@@ -9,20 +9,23 @@
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';
-	import AuroConnect, { publicKey } from '$lib/components/general/AuroConnect.svelte';
+	import AuroConnect, { mina, publicKey as AuroWalletKeyBase58 } from '$lib/components/general/AuroConnect.svelte';
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
 	import type { Move } from 'chess.js';
 	import Loader from '$lib/components/general/Loader.svelte';
-	import MatchMaker, { type MatchFound } from '$lib/matchmaker/MatchMaker';
-	import { PrivateKey, type JsonProof } from 'o1js';
+	import MatchMaker, { PlayerConsent, type MatchFoundEvent } from '$lib/matchmaker/MatchMaker';
+	import { PrivateKey, Signature, type JsonProof } from 'o1js';
 	import GameMachine from '$lib/core/GameMachine';
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
 	import {
 		type PromotionRankAsChar,
-		PvPChessProgramProof
+		PvPChessProgramProof,
+
+		GameState
+
 	} from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
@@ -134,11 +137,16 @@
 					rej(e);
 				}
 			}),
-			new Promise<MatchFound>(async (res, rej) => {
+			new Promise<MatchFoundEvent>(async (res, rej) => {
 				try {
 					const matchmaker = new MatchMaker();
 					timeLog.start('MatchMaker Loaded');
-					await matchmaker.setup(startingFen, selfPubKey, selfPvtKey);
+					const consent=new PlayerConsent(
+						get(AuroWalletKeyBase58), 
+						selfPubKeyBase58,
+						Signature.create(selfPvtKey,GameState.fromFEN(startingFen).toFields()).toJSON()
+						)
+					await matchmaker.setup(startingFen, selfPubKey );
 					timeLog.stop('MatchMaker Loaded');
 					while (await connectionTriesSync.consume()) {
 						try {
@@ -202,7 +210,9 @@
 		if(playAsBlack)await new Promise((res)=>setTimeout(res,10000));
 		const startingProof = await workerClient.start(white, black, startingFen);
 		timeLog.stop('Generating proof');
-		const gameMachine = new GameMachine(PvPChessProgramProof.fromJSON(startingProof));
+		const a=PvPChessProgramProof.fromJSON(startingProof);
+
+		const gameMachine = new GameMachine(await a);
 		gameMachine.fen.subscribe((newFen) => (fen = newFen));
 		//attach input
 		timeLog.start('Starting game');
@@ -216,7 +226,7 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		gameMachine.onStart=()=>{
 			gameStarted_UI = true;
