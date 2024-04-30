@@ -1,2 +1,3 @@
 import Home from './home'
-export { Home }
+import Find from './find'
+export { Home, Find }
