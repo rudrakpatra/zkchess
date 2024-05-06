@@ -37,7 +37,10 @@
 
 
 	const connect = async () => {
-		if(!mina) toast.error(`Mina is not Available!`);
+		if(!mina) {
+			toast.error(`Mina is not Available!`);
+			return
+		}
 		await toast.promise<Array<string>>(
 			new Promise((res,rej)=>mina.requestAccounts().then(x=>Array.isArray(x)?res(x):rej(x))),
 			{

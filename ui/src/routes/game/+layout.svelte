@@ -8,6 +8,7 @@
 	const browserThemeColor = (browser && twExtend.colors.background) || null;
 
 	onMount(async () => {
+		//getting auro wallet unless available
 		if (!get(publicKey)) await getAccount();
 		if (!get(publicKey)) goto('/');
 	});

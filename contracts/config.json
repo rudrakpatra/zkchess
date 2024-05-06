@@ -7,7 +7,7 @@
       "feepayerKeyPath": "C:\\Users\\rudrak/.cache/zkapp-cli/keys/03-deploy.json",
       "feepayerAlias": "03-deploy",
       "fee": "0.2",
-      "smartContract": "Chess"
+      "smartContract": "ChessContract"
     }
   }
 }

@@ -41,10 +41,13 @@ export default class MatchMaker {
 	private socket: Socket;
 
 	async setup() {
-		this.socket = io('http://localhost:8080');
+		// const src = 'https://8080-rudrakpatra-zkchessmatc-d6cg868efcz.ws-us110.gitpod.io/';
+		// const src= "http://localhost:8080"
+		const src = 'http://192.168.29.154:8080';
+		this.socket = io(src);
 	}
 	async findMatch(consent: PlayerConsent) {
-		console.log('findMatch');
+		console.log('finding a match...');
 		return await new Promise<MatchInfo>((res) => {
 			this.socket.on('startGame', ({ roomId, playAsBlack, opponent }: ServerStartGame) => {
 				this.roomId = roomId;

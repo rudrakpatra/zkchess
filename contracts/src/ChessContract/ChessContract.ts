@@ -8,6 +8,7 @@ import {
   UInt64,
   TokenContract,
   AccountUpdateForest,
+  AccountUpdate,
 } from 'o1js';
 import { GameResult } from '../GameState/GameState.js';
 import { DEFAULT_PRECISION, calcEloChange } from '../EloRating/EloRating.js';
@@ -102,7 +103,7 @@ export class ChessContract extends TokenContract {
     this.internal.burn({ address: burner, amount });
   }
   public getPlayerRating(address: PublicKey) {
-    const account = this.sender.self.account;
-    return account.balance.getAndRequireEquals();
+    const account = AccountUpdate.create(address, this.tokenId).account;
+    return account.balance.get();
   }
 }
