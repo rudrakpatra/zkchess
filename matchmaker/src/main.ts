@@ -1,24 +1,20 @@
-// import express, { Application, Response, Request, NextFunction } from 'express'
-import env from 'dotenv'
-// import { Home, Find } from './routes'
-// import cors from 'cors'
-import { Server, Socket } from 'socket.io'
+import express, { Application, Response, Request, NextFunction } from 'express'
+import { Server } from 'socket.io'
 import { createServer } from 'http'
-import { socketConnectionHandler } from './webSocket'
-
-//.env
-env.config()
+import cors from 'cors'
+import { socketConnectionHandler as handleSocketConnection } from './webSocket'
 
 //express
-// const app: Application = express()
+const app: Application = express()
 
-const PORT = process.env.PORT || 8080
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost'
-// app.use(cors())
-// app.use('/', Home)
-// app.use('/find', Find)
+const PORT = 8080
+const SERVER_URL = 'http://localhost'
+app.use(cors())
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).send('health check')
+})
 
-const server = createServer()
+const server = createServer(app)
 server.listen(PORT, () => {
   console.log(`Service starting at ${SERVER_URL}:${PORT}`)
 })
@@ -34,4 +30,4 @@ const io = new Server(server, {
     // credentials: true,
   },
 })
-io.on('connection', socketConnectionHandler)
+io.on('connection', handleSocketConnection)

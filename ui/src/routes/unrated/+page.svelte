@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ToastModal from '$lib/components/general/ToastModal/Renderable.svelte';
+	import ToastModal from '$lib/components/ToastModal/Renderable.svelte';
 	import { get } from 'svelte/store';
 	import { dev } from '$app/environment';
 	import ellipsis from '$lib/ellipsis';
@@ -22,7 +22,7 @@
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
 	import { type PromotionRankAsChar, PvPChessProgramProof } from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
-	import { toastModal } from '$lib/components/general/ToastModal';
+	import { toastModal } from '$lib/components/ToastModal';
 
 	export let data: PageData;
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -114,86 +114,6 @@
 	let gameSync = new Sync<boolean>();
 	onMount(async () => {
 		chessgroundAPI.set({ orientation: playAsBlack ? 'black' : 'white' });
-		const [workerClient, matchFound] = await Promise.all([
-			new Promise<workerClientAPI>(async (res, rej) => {
-				try {
-					timeLog.start('Imported Contracts');
-					const { workerClient, awaitWorker } = await import('$lib/zkapp/ZkappWorkerClient');
-					timeLog.stop('Imported Contracts');
-
-					timeLog.start('Compiled Contracts');
-					await awaitWorker();
-					timeLog.stop('Compiled Contracts');
-
-					res(workerClient);
-				} catch (e) {
-					console.error(e);
-					toast.error('Worker failed');
-					rej(e);
-				}
-			}),
-			new Promise<MatchInfo>(async (res, rej) => {
-				try {
-					const matchmaker = new MatchMaker();
-					timeLog.start('MatchMaker Loaded');
-					await matchmaker.setup(startingFen, selfPubKey, selfPvtKey);
-					timeLog.stop('MatchMaker Loaded');
-					while (await connectionTriesSync.consume()) {
-						try {
-							!opponentPubKeyBase58 && (await startMatchMaker.consume());
-							timeLog.start('Match found');
-							const match = await toast.promise(
-								opponentPubKeyBase58
-									? matchmaker.accept(opponentPubKeyBase58)
-									: matchmaker.findMatch(),
-								{
-									loading: 'Waiting for opponent',
-									success: (match) => {
-										opponentPubKeyBase58 = match.opponent.publicKey;
-										matchFound_UI = true;
-										const t = timeLog.stop('Match found').toPrecision(3);
-										return 'Match found in ' + t + 's';
-									},
-									error: (e) => {
-										matchFailed_UI = true;
-										toastModal({
-											prompt: e,
-
-											options: [
-												{
-													label: '↻ Retry',
-													action: async () => {
-														connectionTriesSync.push(true);
-													}
-												},
-												{
-													label: '⟳ Reload',
-													action: async () => {
-														location.reload();
-													}
-												}
-											]
-										});
-										return 'Match failed';
-									}
-								}
-							);
-							if (match) {
-								match.conn.removeAllListeners();
-								res(match);
-								break;
-							}
-						} catch (e) {
-							continue;
-						}
-					}
-				} catch (e) {
-					console.error(e);
-					matchFound_UI = false;
-					rej(e);
-				}
-			})
-		]);
 		matchFound.conn.on('close', () => toast.error('Opponent disconnected') && location.assign('/'));
 		matchFound.conn.on('data', (data) => typeof data === 'string' && gameSync.push(true));
 		const white = playAsBlack ? matchFound.opponent : matchFound.self;

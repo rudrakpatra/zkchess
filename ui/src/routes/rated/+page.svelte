@@ -1,15 +1,12 @@
 <script lang="ts">
-	import ToastModal from '$lib/components/general/ToastModal/Renderable.svelte';
 	import { get } from 'svelte/store';
-	import { dev } from '$app/environment';
-	import ellipsis from '$lib/ellipsis';
 	import toast from 'svelte-french-toast';
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
 	import DashboardLayout from './DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
 	import Board from './Board.svelte';
 	import Player from './Player.svelte';
-	import AuroConnect, {
+	import {
 		mina,
 		publicKey as AuroWalletKeyBase58
 	} from '$lib/components/general/AuroConnect.svelte';
@@ -24,7 +21,7 @@
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
 	import { type PromotionRankAsChar, PvPChessProgramProof, GameState } from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
-	import { toastModal } from '$lib/components/general/ToastModal';
+	import { toastModal } from '$lib/components/ToastModal';
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
 	let selfPvtKey = PrivateKey.random();
@@ -107,6 +104,7 @@
 						selfPubKeyBase58,
 						JSON.stringify(signResult)
 					);
+					console.log(consent);
 					await matchmaker.setup();
 					timeLog.stop('MatchMaker Loaded');
 					while (await connectionTriesSync.consume()) {
@@ -188,7 +186,7 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.move(moveJson, lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		gameMachine.onStart = () => {
 			userCanStartPlaying = true;
@@ -250,7 +248,7 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.offerDraw(lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 			drawPending = true;
 		};
 		acceptDraw = async () => {
@@ -258,14 +256,14 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(true, lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		rejectDraw = async () => {
 			if (checkTurn()) return;
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.acceptDraw(false, lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		//resign
 		resign = async () => {
@@ -273,7 +271,7 @@
 			const lastProof = get(gameMachine.lastProof).toJSON();
 			const privateKey = selfPvtKey.toBase58();
 			const newProof = await workerClient.resign(lastProof, privateKey);
-			gameMachine.local.push(PvPChessProgramProof.fromJSON(newProof));
+			gameMachine.local.push(await PvPChessProgramProof.fromJSON(newProof));
 		};
 		console.log('assigned');
 		matchInfo.socket.emit('move', 'setupAllCallbacks');
@@ -283,7 +281,7 @@
 			console.log('move NEW', msg);
 			if (typeof msg === 'object') {
 				const jsonProof = msg as JsonProof;
-				gameMachine.network.push(PvPChessProgramProof.fromJSON(jsonProof));
+				gameMachine.network.push(await PvPChessProgramProof.fromJSON(jsonProof));
 			}
 		});
 		matchInfo.socket.emit('move', 'listeningForStartingProof');

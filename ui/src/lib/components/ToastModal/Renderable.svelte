@@ -11,7 +11,7 @@
 	import { onMount } from 'svelte';
 	import toast_ from 'svelte-french-toast';
 	import type { Toast } from 'svelte-french-toast';
-	import RippleButton from '../RippleButton.svelte';
+	import RippleButton from '../general/RippleButton.svelte';
 
 	export let toast: Toast;
 	let { prompt, options } = (toast as any).props as ToastModalProps;
