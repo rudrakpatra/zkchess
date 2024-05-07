@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client';
-import { env } from '$env/dynamic/public';
 
 export class PlayerConsent {
 	publicKey: string;
@@ -41,8 +40,8 @@ export default class MatchMaker {
 	opponent: PlayerConsent;
 	private socket: Socket;
 
-	async setup() {
-		this.socket = io(env.PUBLIC_MATCHMAKER_URL);
+	async setup(server: string) {
+		this.socket = io(server);
 	}
 	async findMatch(consent: PlayerConsent) {
 		console.log('finding a match...');
