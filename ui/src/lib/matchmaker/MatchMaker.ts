@@ -1,4 +1,6 @@
 import { io, Socket } from 'socket.io-client';
+//@ts-ignore
+import { PUBLIC_MATCHMAKER_URL } from '$env/static/public';
 
 export class PlayerConsent {
 	publicKey: string;
@@ -41,10 +43,7 @@ export default class MatchMaker {
 	private socket: Socket;
 
 	async setup() {
-		// const src = 'https://8080-rudrakpatra-zkchessmatc-d6cg868efcz.ws-us110.gitpod.io/';
-		// const src= "http://localhost:8080"
-		const src = 'http://192.168.29.154:8080';
-		this.socket = io(src);
+		this.socket = io(PUBLIC_MATCHMAKER_URL);
 	}
 	async findMatch(consent: PlayerConsent) {
 		console.log('finding a match...');
