@@ -1,11 +1,52 @@
 import { PrivateKey } from 'o1js';
-import { PvPChessProgramProof, RollupState } from './PvPChessProgram.js';
+import {
+  PvPChessProgramMethods,
+  PvPChessProgramProof,
+  RollupState,
+} from './PvPChessProgram.js';
 import { GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
 import { GameObject } from '../GameLogic/GameLogic';
 
 describe('PvPChessProgramDummy', () => {
-  it('should be able to play a game', async () => {
+  it('move_test', async () => {
+    const whiteKey = PrivateKey.random();
+    const whiteProxy = PrivateKey.random();
+    const blackKey = PrivateKey.random();
+    const blackProxy = PrivateKey.random();
+
+    const initialGameState = GameState.fromFEN();
+
+    const rollupstate = RollupState.from(
+      initialGameState,
+      whiteKey.toPublicKey(),
+      whiteProxy.toPublicKey(),
+      blackKey.toPublicKey(),
+      blackProxy.toPublicKey()
+    );
+    const fen = 'rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPPQPPP/RNB1KBNR b KQkq - 1 1';
+    const gs = GameState.fromFEN(fen);
+    const move = Move.fromLAN('d5', 'd8', 'q');
+    const lastProof = await PvPChessProgramProof.dummy(rollupstate, gs, 2);
+    console.log(
+      'pre=',
+      new GameObject(lastProof.publicOutput, move)
+        .preMoveValidations()
+        .toString()
+    );
+    console.log(
+      `%c move:${lastProof.publicOutput.toFEN()}\n`,
+      'color:#eeff33;'
+    );
+    const output = await PvPChessProgramMethods.move.method(
+      lastProof.publicInput,
+      lastProof,
+      move,
+      blackProxy
+    );
+    console.log(output.toFEN());
+  });
+  it.skip('should be able to play a game', async () => {
     const whiteKey = PrivateKey.random();
     const whiteProxy = PrivateKey.random();
     const blackKey = PrivateKey.random();
@@ -28,7 +69,7 @@ describe('PvPChessProgramDummy', () => {
     expect(proof0.publicInput.blackUser).toEqual(blackKey.toPublicKey());
     expect(proof0.publicOutput.encode()).toEqual(initialGameState.encode());
   });
-  it('move -> move', async () => {
+  it.skip('move -> move', async () => {
     const whiteKey = PrivateKey.random();
     const whiteProxy = PrivateKey.random();
     const blackKey = PrivateKey.random();

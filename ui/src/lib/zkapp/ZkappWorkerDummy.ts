@@ -16,7 +16,8 @@ import {
 	RollupState,
 	type PromotionRankAsChar,
 	Move,
-	ChessContract
+	ChessContract,
+	GameObject
 } from 'zkchess-interactive';
 import * as Comlink from 'comlink';
 
@@ -41,6 +42,7 @@ async function start(white: PlayerConsent, black: PlayerConsent, fen?: string): 
 		PublicKey.fromBase58(black.publicKey),
 		PublicKey.fromBase58(black.proxyKey)
 	);
+	console.log(`%c start:${fen}\n`, 'color:#eeff33;');
 	const whiteSign = Signature.fromBase58(JSON.parse(white.jsonSignature).signature);
 	const blackSign = Signature.fromBase58(JSON.parse(black.jsonSignature).signature);
 	const output = await PvPChessProgramMethods.start.method(
@@ -59,17 +61,15 @@ async function move(
 	const move = Move.fromLAN(moveJson.from, moveJson.to, moveJson.promotion || 'q');
 	const lastProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
-	const output = await PvPChessProgramMethods.move.method(
-		lastProof.publicInput,
-		lastProof,
-		move,
-		privateKey
-	);
+
+	const output = new GameObject(lastProof.publicOutput, move).getNextGameState();
+
 	return (await PvPChessProgramProof.dummy(initialRollupState, output, 2)).toJSON();
 }
 
 async function offerDraw(lastProofJSON: JsonProof, privateKeyBase58: string): Promise<JsonProof> {
 	const earlierProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
+	console.log(`%c offerdraw:${earlierProof.publicOutput.toFEN()}\n`, 'color:#eeff33;');
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
 	const output = await PvPChessProgramMethods.offerDraw.method(
 		earlierProof.publicInput,
@@ -84,6 +84,7 @@ async function acceptDraw(
 	privateKeyBase58: string
 ): Promise<JsonProof> {
 	const earlierProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
+	console.log(`%c acceptDraw:${earlierProof.publicOutput.toFEN()}\n`, 'color:#eeff33;');
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
 	const output = await PvPChessProgramMethods.resolveDraw.method(
 		earlierProof.publicInput,
@@ -95,6 +96,7 @@ async function acceptDraw(
 }
 async function resign(lastProofJSON: JsonProof, privateKeyBase58: string): Promise<JsonProof> {
 	const earlierProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
+	console.log(`%c resign:${earlierProof.publicOutput.toFEN()}\n`, 'color:#eeff33;');
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
 	const output = await PvPChessProgramMethods.resign.method(
 		earlierProof.publicInput,

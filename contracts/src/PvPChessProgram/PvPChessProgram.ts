@@ -13,7 +13,6 @@ import {
 import { GameResult, GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
 import { GameObject } from '../GameLogic/GameLogic.js';
-import { Tuple } from 'o1js/dist/node/lib/util/types.js';
 
 export class RollupState extends Struct({
   initialGameState: GameState,

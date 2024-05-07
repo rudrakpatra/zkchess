@@ -76,7 +76,7 @@ class GameMachine {
 		while (true) {
 			const proofLocal = await this.local.consume();
 			if (await this.verify(proofLocal)) {
-				console.log(`%c${proofLocal.publicOutput.toAscii()}`, 'color:pink;');
+				console.log(`%c${proofLocal.publicOutput.toAscii()}\n - LOCAL`, 'color:#e4ff24;');
 				this.fen.set(proofLocal.publicOutput.toFEN());
 				socket.emit('move', proofLocal.toJSON());
 				this.lastProof.set(proofLocal);
@@ -89,7 +89,7 @@ class GameMachine {
 		while (true) {
 			const proofNetwork = await this.network.consume();
 			if (await this.verify(proofNetwork)) {
-				console.log(`%c${proofNetwork.publicOutput.toAscii()}`, 'color:green;');
+				console.log(`%c${proofNetwork.publicOutput.toAscii()}\n - NETWORK`, 'color:#4adaff;');
 				this.fen.set(proofNetwork.publicOutput.toFEN());
 				this.lastProof.set(proofNetwork);
 				break;
