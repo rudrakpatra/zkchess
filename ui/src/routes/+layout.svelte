@@ -5,6 +5,8 @@
 	import { Toaster } from 'svelte-french-toast';
 	import { browser } from '$app/environment';
 	import twExtend from "$lib/twExtend";
+	import { inject } from '@vercel/analytics'
+	inject();
 	const browserThemeColor = browser && twExtend.colors.secondary;
 </script>
 

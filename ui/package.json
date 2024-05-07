@@ -40,6 +40,7 @@
 	},
 	"dependencies": {
 		"@aurowallet/mina-provider": "^1.0.2",
+		"@vercel/analytics": "^1.2.2",
 		"chess.js": "^1.0.0-beta.7",
 		"chessground": "^9.0.4",
 		"comlink": "^4.4.1",
