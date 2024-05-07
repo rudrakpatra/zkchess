@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 //@ts-ignore
-import { PUBLIC_MATCHMAKER_URL } from '$env/static/public';
+import { PUBLIC_MATCHMAKER_URL } from '$env/dynamic/public';
 
 export class PlayerConsent {
 	publicKey: string;
