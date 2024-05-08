@@ -57,7 +57,7 @@ Now the functionalities are divided into a zkprogram namely `PvPChessProgram` an
 Take a look at the [contract](https://github.com/rudrakpatra/zkchess/tree/gameloop/contracts#readme) for other methods that handles possible disputes.
 
 
-## How does multiplayer work?
+## How does multiplayer work? ( revoked on some branches )
 
 Take a look at the example scenario of Alice and Bob playing a game of zkchess.
 
