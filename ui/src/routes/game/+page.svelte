@@ -138,12 +138,10 @@
 						}
 					}
 					userHasSigned = true;
-					const server=get(page).url.searchParams.get('server');
-					if(!server){
-						toast.error('You must provide a server in the url!');
-						throw new Error('You must provide a server in the url!');
-					}
+					//TODO: use env variable but vercel is shitty with env variables
+					const server="http://steel-wharf-422500-a0.el.r.appspot.com/"
 					await matchmaker.setup(server);
+					
 					timeLog.stop('MatchMaker Loaded');
 					timeLog.start('Match found');
 					const match = await toast.promise(matchmaker.findMatch(consent!), {
