@@ -139,7 +139,7 @@
 					}
 					userHasSigned = true;
 					//TODO: use env variable but vercel is shitty with env variables
-					const server="http://steel-wharf-422500-a0.el.r.appspot.com/"
+					const server="https://steel-wharf-422500-a0.el.r.appspot.com/"
 					await matchmaker.setup(server);
 					
 					timeLog.stop('MatchMaker Loaded');
