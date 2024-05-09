@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Socket.IO chat</title>
+  </head>
+  <body>
+    <form id="find" action="">
+      <input id="input" autocomplete="off" />
+      <button>Send</button>
+    </form>
+    <button id="move">move</button>
+    <button id="endGame">endGame</button>
+    <script type="module">
+      import { io } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js'
+      const servers = [
+        // 'http://localhost:8080',
+        // 'https://zkchess-matchmaker.onrender.com:5000',
+        'https://steel-wharf-422500-a0.el.r.appspot.com',
+      ]
+      console.log('using server', servers[0])
+      const socket = io(servers[0], {
+        // auth: {
+        //   serverOffset: 0,
+        // },
+        // ackTimeout: 10000,
+        // retries: 1,
+      })
+
+      const find = document.getElementById('find')
+      const move = document.getElementById('move')
+      const endGame = document.getElementById('endGame')
+
+      find.addEventListener('submit', (e) => {
+        e.preventDefault()
+        if (input.value) {
+          socket.emit('find', { publicKey: input.value })
+          input.value = ''
+        }
+      })
+
+      socket.on('startGame', (msg) => {
+        console.log('startGame', msg)
+      })
+
+      socket.on('move', (msg) => {
+        console.log('move', msg)
+      })
+
+      move.addEventListener('click', (e) => {
+        const move = Math.random().toString(36).substring(10)
+        console.log('move', move)
+        socket.emit('move', move)
+      })
+
+      socket.on('endGame', (msg) => {
+        console.log('endGame', msg)
+      })
+
+      endGame.addEventListener('click', (e) => {
+        const move = Math.random().toString(36).substring(10)
+        console.log('endGame', move)
+        socket.emit('endGame', move)
+      })
+    </script>
+  </body>
+</html>
