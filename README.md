@@ -69,7 +69,7 @@ A few things to note:
 3. If the Game Machine somehow receives an invalid proof, it simply ignores it expecting a valid version of that proof to come next.
 
 ### Option 2 : MatchMaker Server + Web Sockets for comms.
-Please checkout the server folder.
+Please checkout branch `v0.1.4` -> server folder.
 
 ## Future Aspects
 ### Utilizing the ZK aspect with "Transcendental Chess"
