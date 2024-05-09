@@ -1,30 +1,16 @@
-import { Chess } from './ChessContract/Chess.js';
-import { GameState, GameResult } from './GameState/GameState.js';
-import { GameObject } from './GameLogic/GameLogic.js';
-import { PlayerState } from './PlayerState/PlayerState.js';
-import { Move } from './Move/Move.js';
-import { Position } from './Position/Position.js';
-import { Piece } from './Piece/Piece.js';
-import { RANKS, RankAsChar, PromotionRankAsChar } from './Piece/Rank.js';
-import {
+export { ChessContract } from './ChessContract/ChessContract.js';
+export { GameState, GameResult } from './GameState/GameState.js';
+export { GameObject } from './GameLogic/GameLogic.js';
+export { PlayerState } from './PlayerState/PlayerState.js';
+export { Move } from './Move/Move.js';
+export { Position } from './Position/Position.js';
+export { Piece } from './Piece/Piece.js';
+export { RANKS, RankAsChar, PromotionRankAsChar } from './Piece/Rank.js';
+export {
   PvPChessProgramProof,
   PvPChessProgram,
+  PvPChessProgramMethods,
   RollupState,
 } from './PvPChessProgram/PvPChessProgram.js';
 
-export {
-  Chess,
-  Move,
-  GameObject,
-  GameState,
-  GameResult,
-  PlayerState,
-  Position,
-  Piece,
-  RANKS,
-  RankAsChar,
-  PromotionRankAsChar,
-  RollupState,
-  PvPChessProgram,
-  PvPChessProgramProof,
-};
+export { DEFAULT_DECIMALS, DEFAULT_PRECISION } from './EloRating/EloRating.js';

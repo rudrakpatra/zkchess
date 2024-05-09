@@ -6,8 +6,8 @@
 	import { Chessground } from 'chessground'
 	import { createEventDispatcher } from 'svelte';
 	import type { Api as ChessgroundAPI} from 'chessground/api';
-	import Loader from '$lib/components/general/Loader.svelte';
 
+	export let disabled=false;
 	export let fen:string;
 	export let chessgroundAPI : ChessgroundAPI;
 	export let playAsBlack:boolean;
@@ -53,4 +53,10 @@
 	const dispatch=createEventDispatcher();
 </script>
 
-<div class="absolute w-full h-full" use:chessgroundHook/>
+<div class="absolute w-full h-full" class:disabled use:chessgroundHook/>
+
+<style>
+	.disabled{
+		@apply opacity-50 pointer-events-none;
+	}
+</style>

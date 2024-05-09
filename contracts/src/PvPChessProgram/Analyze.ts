@@ -4,7 +4,7 @@ console.time('methods analyzed');
 const methods = [
   {
     name: 'PvPChessProgram',
-    result: PvPChessProgram.analyzeMethods(),
+    result: await PvPChessProgram.analyzeMethods(),
     skip: true,
   },
 ];

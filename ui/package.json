@@ -39,18 +39,21 @@
 		"svelte": "^4.0.5"
 	},
 	"dependencies": {
+		"@aurowallet/mina-provider": "^1.0.2",
+		"@vercel/analytics": "^1.2.2",
 		"chess.js": "^1.0.0-beta.7",
 		"chessground": "^9.0.4",
 		"comlink": "^4.4.1",
-		"o1js": "^0.17.0",
+		"o1js": "^1.0.1",
 		"peerjs": "^1.5.2",
 		"sass": "^1.70.0",
 		"scss": "^0.2.4",
+		"socket.io-client": "^4.7.5",
 		"svelte-french-toast": "^1.2.0",
 		"svelte-icons-pack": "^3.1.3",
 		"svelte-ripple-action": "^1.0.5",
 		"tailwind-merge": "^2.2.2",
 		"tailwindcss-text-balance": "^0.0.7",
-		"zkchess-interactive": "^0.1.2"
+		"zkchess-interactive": "^0.1.3"
 	}
 }

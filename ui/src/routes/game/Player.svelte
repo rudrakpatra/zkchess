@@ -1,11 +1,11 @@
 <script lang="ts">
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
-import ellipsis from '$lib/ellipsis';
+	import ellipsis from '$lib/ellipsis';
 	import { Icon } from 'svelte-icons-pack';
 	import { TrOutlineExternalLink } from 'svelte-icons-pack/tr';
-	export let username = 'Not found';
+	export let publicKeybase58 :string;
 	export let rating: number;
-	export let link: string;
+	export let link= publicKeybase58? "/player?key="+publicKeybase58: null;
 </script>
 
 <div id="player" class="absolute inset-1 layout">
@@ -24,14 +24,14 @@ import ellipsis from '$lib/ellipsis';
 	</span>
 	<span
 		class="text-lg font-medium flex-1 min-w-0 self-center px-4 whitespace-nowrap"
-		title={username}
+		title={publicKeybase58|| 'no public key found'}
 	>
-		<span class="long text-center overflow-hidden text-ellipsis"> {username} </span>
-		<span class="short overflow-hidden text-ellipsis">
-			{ellipsis(username, 12)}
+		<span class="long text-center overflow-hidden text-ellipsis"> {publicKeybase58 || "-"} </span>
+		<span class="short text-center overflow-hidden text-ellipsis">
+			{ellipsis(publicKeybase58 || "-", 12)}
 		</span>
 	</span>
-	<a tabindex="-1" href={link} title={'view player profile'}>
+	<a tabindex="-1" class:disabled-link={!link} href={link} title={'view player profile'}>
 		<RippleButton tabindex={-1} class="
 			bg-secondary text-chess-200
 			text-sm font-bold
@@ -44,6 +44,10 @@ import ellipsis from '$lib/ellipsis';
 </div>
 
 <style lang="scss">
+	.disabled-link{
+		pointer-events: none;
+		filter:contrast(.8);
+	}
 	#player {
 		container-type: inline-size;
 		.long {

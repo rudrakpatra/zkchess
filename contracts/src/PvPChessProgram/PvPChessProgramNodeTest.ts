@@ -4,18 +4,25 @@ import { GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
 
 console.log('PvPChessProgramNodeTest');
-console.log(Object.entries(await PvPChessProgram.analyzeMethods()).map(([k, v]) => k + ' ' + v.rows).join('\n'));
+console.log(
+  Object.entries(await PvPChessProgram.analyzeMethods())
+    .map(([k, v]) => k + ' ' + v.rows)
+    .join('\n')
+);
 await PvPChessProgram.compile();
 console.log('PvPChessProgramNodeTest: compiled');
 
 const whiteKey = PrivateKey.random();
+const whiteProxy = PrivateKey.random();
 const blackKey = PrivateKey.random();
-
+const blackProxy = PrivateKey.random();
 const initialGameState = GameState.fromFEN();
 const rollupstate = RollupState.from(
   initialGameState,
   whiteKey.toPublicKey(),
-  blackKey.toPublicKey()
+  whiteProxy.toPublicKey(),
+  blackKey.toPublicKey(),
+  blackProxy.toPublicKey()
 );
 const proof0 = await PvPChessProgram.start(
   rollupstate,

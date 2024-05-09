@@ -1,5 +1,6 @@
 <script context="module" lang="ts">
-	export let mina: any;
+	import type MinaProvider from '@aurowallet/mina-provider';
+	export let mina:MinaProvider;
 	export const publicKey = writable<string>();
 	export const getAccount = async () => {
 		mina = (window as any)?.mina;
@@ -32,19 +33,23 @@
 	import { createEventDispatcher } from 'svelte';
 	import { get, writable } from 'svelte/store';
 	import RippleButton from './RippleButton.svelte';
+	import type { ProviderError } from '@aurowallet/mina-provider';
 
 
 	const connect = async () => {
-		if(!mina) toast.error(`Mina is not Available!`);
+		if(!mina) {
+			toast.error(`Mina is not Available!`);
+			return
+		}
 		await toast.promise<Array<string>>(
-			mina.requestAccounts(),
+			new Promise((res,rej)=>mina.requestAccounts().then(x=>Array.isArray(x)?res(x):rej(x))),
 			{
 				loading: 'Connecting...',
 				success: (accounts) => {
 					publicKey.set(accounts[0]);
 					return `Connected as ${ellipsis(get(publicKey), 20)}`;
 				},
-				error: (error) => {
+				error: (error:ProviderError) => {
 					return error.message;
 				}
 			},
