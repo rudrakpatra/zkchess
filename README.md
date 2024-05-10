@@ -72,7 +72,10 @@ Now the functionalities are divided into a zkprogram namely `PvPChessProgram` an
 Take a look at the [contract](https://github.com/rudrakpatra/zkchess/tree/gameloop/contracts#readme) for other methods that handles possible disputes.
 
 ## How does multiplayer work?
-### Option 1 : Peer.js + Link sharing
+### Option 1 : MatchMaker Server + Web Sockets for comms.
+Please checkout branch `v0.1.4` -> server folder.
+
+### Option 2 : Peer.js + Link sharing
 Take a look at the example scenario of Alice and Bob playing a game of zkchess.
 
 <img src="https://raw.githubusercontent.com/rudrakpatra/zkchess/10bbf77ddf629540902020d7b03de85e3b5586d4/multiplayer.svg" style="min-width:100%"/>
@@ -81,9 +84,6 @@ A few things to note:
 1. Once a match is started the invite link is not longer valid.
 2. If during the match if anyone leaves the page the game is stalled idefinitely (they cannot rejoin as of now).
 3. If the Game Machine somehow receives an invalid proof, it simply ignores it expecting a valid version of that proof to come next.
-
-### Option 2 : MatchMaker Server + Web Sockets for comms.
-Please checkout branch `v0.1.4` -> server folder.
 
 ## Future Aspects
 
