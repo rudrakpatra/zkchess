@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client';
-
 export class PlayerConsent {
 	publicKey: string;
 	proxyKey: string;
@@ -41,10 +40,15 @@ export default class MatchMaker {
 	private socket: Socket;
 
 	async setup(server: string) {
+		console.info('setting up socket.io');
 		this.socket = io(server);
 	}
+	async abort() {
+		console.info('aborting...');
+		this.socket.disconnect();
+	}
 	async findMatch(consent: PlayerConsent) {
-		console.log('finding a match...');
+		console.info('finding a match...');
 		return await new Promise<MatchInfo>((res) => {
 			this.socket.on('startGame', ({ roomId, playAsBlack, opponent }: ServerStartGame) => {
 				this.roomId = roomId;

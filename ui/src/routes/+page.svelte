@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	import AuroConnect from '$lib/components/general/AuroConnect.svelte';
+	import AuroConnect,{publicKey} from '$lib/components/general/AuroConnect.svelte';
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
-	import ellipsis from '$lib/ellipsis';
 </script>
 
 <svelte:head>
@@ -13,7 +12,7 @@
 <main class="fixed inset-0 -top-1 bg-background grid place-content-center">
 	<div class=" w-screen overflow-y-scroll overscroll-contain py-8">
 		<div class="container flex flex-col items-center mx-auto text-center">
-			<img class="h-32 mb-10 opacity-20 hidden md:block" src="king.png" alt="" />
+			<img class="h-32 mb-10 hidden md:block contrast-50 brightness-75 opacity-40 select-none" src="logo.svg" alt="" />
 			<div
 				class="flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-3 mb-10 text-white"
 			>
@@ -26,14 +25,22 @@
 				✅️ Chess matches are verified <span class="font-semibold">onchain</span>.<br />
 				✅️ Player ratings can be <span class=" font-semibold">trusted</span>.
 			</p>
-			<span class="mt-10 flex flex-col items-stretch">
+			<span class="mt-10 flex flex-col items-stretch w-[200px]">
 				<AuroConnect
 					let:connect
 					on:connection={() => {
 						goto('/game?rated=true');
 					}}
 				>
-					<RippleButton class="w-full" on:click={connect}>Play Now</RippleButton>
+				{#if $publicKey}
+					<RippleButton class="w-full text-xl font-bold" on:click={()=>goto('/game?rated=true')}>
+						Play Now
+					</RippleButton>
+					{:else}
+					<RippleButton class="w-full text-xl font-bold" on:click={connect}>
+						Connect & Play
+					</RippleButton>
+					{/if}
 				</AuroConnect>
 				<!-- <span class="p-2 md:p-3"> or </span> -->
 				<!-- <RippleButton class="w-full " on:click={() => goto('/unrated')}>Play Unrated</RippleButton> -->

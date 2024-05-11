@@ -3,7 +3,7 @@
 	import { get } from 'svelte/store';
 	// import { dev } from '$app/environment';
 	// import ellipsis from '$lib/ellipsis';
-	import toast from 'svelte-french-toast';
+	import toast, { useToaster } from 'svelte-french-toast';
 	import RippleButton from '$lib/components/general/RippleButton.svelte';
 	import DashboardLayout from './DashboardLayout.svelte';
 	import Logs, { type TimeLog } from './Logs.svelte';
@@ -23,6 +23,16 @@
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
 	import getLogger from '$lib/VerboseLogger';
+	import { goto, onNavigate } from '$app/navigation';
+
+	const toaster=useToaster();
+
+	onNavigate(()=>{
+		get(toaster.toasts).forEach(t=>{
+			toast.dismiss(t.id);
+		});
+		leave();
+	});
 
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
@@ -60,6 +70,9 @@
 		toast.error('action not allowed!');
 	};
 	let submit = async () => {
+		toast.error('action not allowed!');
+	};
+	let leave= async ()=>{
 		toast.error('action not allowed!');
 	};
 	let playAsBlack: boolean;
@@ -149,6 +162,9 @@
 					//TODO: use env variable but vercel is shitty with env variables
 					const server="https://steel-wharf-422500-a0.el.r.appspot.com/"
 					await matchmaker.setup(server);
+					leave=async()=>{
+						await matchmaker.abort();
+					};
 					
 					timeLog.stop('MatchMaker Loaded');
 					timeLog.start('Match found');
@@ -192,7 +208,7 @@
 				options: [
 					{
 						label: 'Exit',
-						action: async()=>location.assign('/')
+						action: async()=>goto('/')
 					}
 				]
 			})
@@ -387,12 +403,12 @@
 				options: [
 					{
 						label: 'Play Again',
-						action: async()=>location.assign('/game?rated=true')
+						action: async()=>goto('/game?rated=true')
 					},
 					{
 						label: 'Exit',
 						action: async()=>{
-							location.assign('/');
+							goto('/');
 						}
 					}
 				]
@@ -435,7 +451,7 @@
 		[
 			{
 				label: 'Exit',
-				action: async()=>location.assign('/')
+				action: async()=>goto('/')
 			},
 			{
 				label: 'Submit',
@@ -447,11 +463,11 @@
 		[
 			{
 				label: 'Exit',
-				action: async()=>location.assign('/')
+				action: async()=>goto('/')
 			},
 			{
 				label: 'Play Again',
-				action: async()=>location.assign('/game?rated=true')
+				action: async()=>goto('/game?rated=true')
 			}
 		]
 	});
@@ -527,7 +543,7 @@
 				{:else}
 					<p class="label">Setting up...</p>
 					<div class="grid place-content-center">
-						<RippleButton on:click={() => location.assign('/')}>Cancel</RippleButton>
+						<RippleButton on:click={() => goto('/')}>Cancel</RippleButton>
 					</div>
 				{/if}
 			{:else if opponentPubKeyBase58}
