@@ -22,6 +22,7 @@
 	import { type PromotionRankAsChar, PvPChessProgramProof, GameState,DEFAULT_PRECISION } from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
+	import getLogger from '$lib/VerboseLogger';
 
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
@@ -70,7 +71,11 @@
 	let consentTriesSync = new Sync<boolean>();
 	consentTriesSync.push(true);
 	let gameSync = new Sync<boolean>();
-	onMount(async () => {
+
+	const verbose=Number($page.url.searchParams.get('verbose')||0) as 0|1|2;
+	const log= getLogger(verbose);
+
+	onMount(async () => {	
 		const [workerClient, matchInfo] = await Promise.all([
 			new Promise<workerClientAPI>(async (res, rej) => {
 				try {
@@ -84,7 +89,7 @@
 					workerClient.getRating(get(AuroWalletKeyBase58)).then((rating) => {
 						selfRating = Number(rating)/10 ** DEFAULT_PRECISION;
 					});
-
+					log(['loaded workerClient'],1);
 					res(workerClient);
 				} catch (e) {
 					console.error(e);
@@ -101,6 +106,8 @@
 					while(await consentTriesSync.consume()){
 						try{
 							//signing the consent
+							log(['signing consent'],1);
+
 							const content = [...selfPubKey.toFields(), ...GameState.fromFEN(startingFen).toFields()];
 							const signResult = await mina.signFields({ message: content.map((x) => x.toString()) });
 							if (signResult instanceof Error) {
@@ -113,6 +120,7 @@
 								selfPubKeyBase58,
 								JSON.stringify(signResult)
 							);
+							log(['signed!'],1);
 						}
 						catch(e){
 							//inform user consent failed
@@ -168,6 +176,7 @@
 								return 'Match failed';
 							}
 					});
+					log(['Match Info',match],1);
 					match && res(match);
 				} catch (e) {
 					console.error(e);
@@ -188,20 +197,22 @@
 				]
 			})
 		);
+		log(['endGame'],2);
 		matchInfo.socket.on('move', (data) => {
 			typeof data === 'string' && gameSync.push(true);
 		});
+		log(['listening for gameSync'],2);
 		playAsBlack = matchInfo.playAsBlack;
 		opponentPubKeyBase58 = matchInfo.opponent.publicKey;
 		//set opponent rating
 		workerClient.getRating(opponentPubKeyBase58).then((rating) => {
 			opponentRating = Number(rating)/10 ** DEFAULT_PRECISION;
+			log(['received opponent rating'],2);
 		});
 		// set white and black
 		const white = playAsBlack ? matchInfo.opponent : matchInfo.self;
 		const black = matchInfo.playAsBlack ? matchInfo.self : matchInfo.opponent;
 		timeLog.start('Generating proof');
-		if (playAsBlack) await new Promise((res) => setTimeout(res, 10000));
 		const startingProof = await workerClient.start(white, black, startingFen);
 		timeLog.stop('Generating proof');
 		const gameMachine = new GameMachine(await PvPChessProgramProof.fromJSON(startingProof));
@@ -272,6 +283,7 @@
 			toast.error('Oops You Lost!');
 			gameHasEnded=true;
 		};
+		log(['setting gameMachine event handlers'],2);
 
 		const checkTurn = () => {
 			const turn = get(gameMachine.lastProof).publicOutput.turn.toBoolean();
@@ -386,19 +398,28 @@
 				]
 			});
 		};
+		log(['setting ui event handlers'],2);
+
 		matchInfo.socket.emit('move', 'setupAllCallbacks');
+		log(['emitted setupAllCallbacks'],2);
 		await gameSync.consume();
+		log(['gameSync consumed'],2);
 		matchInfo.socket.on('move', async (msg) => {
 			if (typeof msg === 'object') {
 				const jsonProof = msg as JsonProof;
 				gameMachine.network.push(await PvPChessProgramProof.fromJSON(jsonProof));
 			}
 		});
+		log(['listening for moves'],2);
 		matchInfo.socket.emit('move', 'listeningForStartingProof');
+		log(['emitted listeningForStartingProof'],2);
 		await gameSync.consume();
+		log(['gameSync consumed'],2);
 		timeLog.stop('Starting game');
 		matchInfo.socket.emit('move', startingProof);
+		log(['emitted startingProof'],2);
 
+		log(['playing as',playAsBlack?'black':'white'],2);
 		playAsBlack
 			? gameMachine.playAsBlack(matchInfo.socket)
 			: gameMachine.playAsWhite(matchInfo.socket);
@@ -529,7 +550,7 @@
 	<div class="slot" slot="playerA">
 		<!-- TODO use custom tokens for rating -->
 		<Player
-			publicKeybase58={selfPubKeyBase58}
+			publicKeybase58={$AuroWalletKeyBase58}
 			rating={selfRating}
 		/>
 	</div>
