@@ -2,7 +2,6 @@ import { Bool, PrivateKey, Signature } from 'o1js';
 import { PvPChessProgram, RollupState } from './PvPChessProgram';
 import { GameResult, GameState } from '../GameState/GameState.js';
 import { Move } from '../Move/Move.js';
-console.time('PvPChessProgram');
 describe('PvPChessProgram', () => {
   beforeAll(async () => {
     console.log('analyizing methods');
@@ -449,7 +448,6 @@ describe('PvPChessProgram', () => {
     ).toStrictEqual(Bool(true));
   });
 });
-console.timeEnd('PvPChessProgram')
 
 // time logs
 /*
