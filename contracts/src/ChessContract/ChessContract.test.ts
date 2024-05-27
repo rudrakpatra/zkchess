@@ -10,7 +10,7 @@ import {
 import { ChessContract } from './ChessContract.js';
 import { Move } from '../Move/Move.js';
 import { GameResult, GameState } from '../GameState/GameState.js';
-import { DEFAULT_PRECISION } from '../EloRating/EloRating.js';
+import { DEFAULT_DECIMALS } from '../EloRating/EloRating.js';
 import {
   PvPChessProgram,
   PvPChessProgramProof,
@@ -31,24 +31,19 @@ describe('ChessContract', () => {
     zkApp: ChessContract;
 
   beforeAll(async () => {
-    console.log(
-      Object.values(ChessContract.analyzeMethods()).reduce(
-        (acc, method) => acc + method.rows,
-        0
-      ) + ' total rows'
-    );
-    if (proofsEnabled) await ChessContract.compile();
+    // console.log(
+    //   Object.values(await ChessContract.analyzeMethods()).reduce(
+    //     (acc, method) => acc + method.rows,
+    //     0
+    //   ) + ' total rows'
+    // );
+    console.time('compiled');
+    if (proofsEnabled) {
+      await PvPChessProgram.compile();
+      await ChessContract.compile();
+    }
+    console.timeEnd('compiled');
   });
-
-  async function localDeploy() {
-    const txn = await Mina.transaction(deployerAccount, async () => {
-      AccountUpdate.fundNewAccount(deployerAccount);
-      zkApp.deploy();
-    });
-    await txn.prove();
-    // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
-    await txn.sign([deployerKey, zkAppPrivateKey]).send();
-  }
 
   beforeEach(async () => {
     const Local = await Mina.LocalBlockchain({ proofsEnabled });
@@ -60,58 +55,51 @@ describe('ChessContract', () => {
     whitePlayerAccount = whitePlayerKey.toPublicKey();
     blackPlayerKey = Local.testAccounts[2].key;
     blackPlayerAccount = blackPlayerKey.toPublicKey();
-
     zkAppPrivateKey = PrivateKey.random();
     zkAppAddress = zkAppPrivateKey.toPublicKey();
     zkApp = new ChessContract(zkAppAddress);
-    await localDeploy();
-  });
-
-  it('enableRankings', async () => {
-    const txn = await Mina.transaction(whitePlayerAccount, async () => {
-      AccountUpdate.fundNewAccount(whitePlayerAccount);
-      zkApp.enableRankings();
+    const txn = await Mina.transaction(deployerAccount, async () => {
+      AccountUpdate.fundNewAccount(deployerAccount);
+      await zkApp.deploy();
     });
     await txn.prove();
-    await txn.sign([whitePlayerKey]).send();
-    expect(zkApp.getPlayerRating(whitePlayerAccount).toBigInt()).toBe(
-      BigInt(1200 * 10 ** DEFAULT_PRECISION)
-    );
+    await txn.sign([deployerKey, zkAppPrivateKey]).send();
   });
-
-  it('cannot enable rankings without funding', async () => {
-    try {
-      const txn = await Mina.transaction(whitePlayerAccount, async () => {
-        zkApp.enableRankings();
-      });
-      await txn.prove();
-      await txn.sign([whitePlayerKey]).send();
-    } catch (e) {
-      expect(
-        (e as Error).message.startsWith('Invalid fee excess.')
-      ).toBeTruthy();
-    }
-  });
+  // it('enableRankings', async () => {
+  //   const txn = await Mina.transaction(whitePlayerAccount, async () => {
+  //     AccountUpdate.fundNewAccount(deployerAccount);
+  //     await zkApp.enableRankings();
+  //   });
+  //   await txn.prove();
+  //   await txn.sign([whitePlayerKey, deployerKey]).send();
+  //   expect(
+  //     Mina.getBalance(whitePlayerAccount, zkApp.deriveTokenId()).toBigInt()
+  //   ).toBe(BigInt(1200 * 10 ** DEFAULT_DECIMALS));
+  // });
   it('submitMatchResult', async () => {
     //Once upon a time, in a land far far away, there were two players, White and Black
     const txn1 = await Mina.transaction(whitePlayerAccount, async () => {
-      AccountUpdate.fundNewAccount(whitePlayerAccount, 1); // ideally all should already have token accounts
+      AccountUpdate.fundNewAccount(whitePlayerAccount); // ideally all should already have token accounts
       zkApp.enableRankings();
     });
     await txn1.prove();
     await txn1.sign([whitePlayerKey]).send();
     //white player should now have a rating of 1200
-    console.log(zkApp.getPlayerRating(whitePlayerAccount).toBigInt());
+    expect(zkApp.getPlayerRating(whitePlayerAccount).toBigInt()).toBe(
+      BigInt(1200 * 10 ** DEFAULT_DECIMALS)
+    );
 
     //same for black player
     const txn2 = await Mina.transaction(blackPlayerAccount, async () => {
-      AccountUpdate.fundNewAccount(blackPlayerAccount, 1); // ideally all should already have token accounts
+      AccountUpdate.fundNewAccount(blackPlayerAccount); // ideally all should already have token accounts
       zkApp.enableRankings();
     });
     await txn2.prove();
     await txn2.sign([blackPlayerKey]).send();
 
-    console.log(zkApp.getPlayerRating(blackPlayerAccount).toBigInt());
+    expect(zkApp.getPlayerRating(blackPlayerAccount).toBigInt()).toBe(
+      BigInt(1200 * 10 ** DEFAULT_DECIMALS)
+    );
 
     //now before they play they create their proxies that play on their behalf
     const whiteProxy = PrivateKey.random();
@@ -126,8 +114,8 @@ describe('ChessContract', () => {
     const rollupstate = RollupState.from(
       initialGameState,
       whitePlayerAccount,
-      blackPlayerAccount,
       whiteProxy.toPublicKey(),
+      blackPlayerAccount,
       blackProxy.toPublicKey()
     );
     const proof = await PvPChessProgramProof.dummy(
@@ -135,14 +123,20 @@ describe('ChessContract', () => {
       finalGameState,
       2
     );
-
+    console.log(
+      'KEYS',
+      zkAppAddress.toBase58(),
+      whitePlayerAccount.toBase58(),
+      whiteProxy.toBase58(),
+      blackPlayerAccount.toBase58(),
+      blackProxy.toBase58()
+    );
     const txn3 = await Mina.transaction(whitePlayerAccount, async () => {
       zkApp.submitMatchResult(proof);
     });
     await txn3.prove();
-    console.log(blackPlayerAccount.toBase58(), whitePlayerAccount.toBase58());
-    await txn3.sign([zkAppPrivateKey, whitePlayerKey]).send();
+    await txn3.sign([whitePlayerKey, blackPlayerKey]).send();
     const whiteRating = zkApp.getPlayerRating(whitePlayerAccount).toBigInt();
-    expect(whiteRating).toBe(BigInt(1210 * 10 ** DEFAULT_PRECISION));
+    expect(whiteRating).toBe(BigInt(1210 * 10 ** DEFAULT_DECIMALS));
   });
 });

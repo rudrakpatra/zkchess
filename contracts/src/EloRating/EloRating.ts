@@ -1,6 +1,6 @@
 import { Field, Provable } from 'o1js';
 
-export const DEFAULT_PRECISION = 5;
+const DEFAULT_PRECISION = 5;
 export const DEFAULT_DECIMALS = 10;
 const taylorCoeffs = [
   [1n, 2n],

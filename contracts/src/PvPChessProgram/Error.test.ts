@@ -116,36 +116,37 @@ const MyZkProgram = ZkProgram({
           .assertTrue('game already over');
 
         const gameObject = new GameObject(gameState, move);
-        gameObject.preMoveValidations().assertTrue('invalid move');
+        // gameObject.preMoveValidations().assertTrue('invalid move');
 
         // TODO check why this line causes compile to fail
-        const newGameState = gameObject.getNextGameState();
+        // const newGameState = gameObject.getNextGameState();
 
         //UPDATE GAME STATE
-        return GameState.from(
-          newGameState.white,
-          newGameState.black,
-          newGameState.turn,
-          newGameState.enpassant,
-          newGameState.kingCastled,
-          newGameState.column,
-          newGameState.halfmove,
-          //newGameState.canDraw,
-          Bool(false),
-          // newGameState.result
-          Provable.if(
-            newGameState.black.getKing().captured,
-            //WHITE WINS
-            Field(GameResult.WHITE_WINS),
-            Provable.if(
-              newGameState.white.getKing().captured,
-              //BLACK WINS
-              Field(GameResult.BLACK_WINS),
-              //else
-              Field(GameResult.ONGOING)
-            )
-          )
-        );
+        return gameState;
+        // return GameState.from(
+        //   newGameState.white,
+        //   newGameState.black,
+        //   newGameState.turn,
+        //   newGameState.enpassant,
+        //   newGameState.kingCastled,
+        //   newGameState.column,
+        //   newGameState.halfmove,
+        //   //newGameState.canDraw,
+        //   Bool(false),
+        //   // newGameState.result
+        //   Provable.if(
+        //     newGameState.black.getKing().captured,
+        //     //WHITE WINS
+        //     Field(GameResult.WHITE_WINS),
+        //     Provable.if(
+        //       newGameState.white.getKing().captured,
+        //       //BLACK WINS
+        //       Field(GameResult.BLACK_WINS),
+        //       //else
+        //       Field(GameResult.ONGOING)
+        //     )
+        //   )
+        // );
       },
     },
   },

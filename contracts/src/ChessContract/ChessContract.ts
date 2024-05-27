@@ -9,12 +9,14 @@ import {
   TokenContract,
   AccountUpdateForest,
   AccountUpdate,
+  Permissions,
+  DeployArgs,
 } from 'o1js';
 import { GameResult } from '../GameState/GameState.js';
-import { DEFAULT_PRECISION, calcEloChange } from '../EloRating/EloRating.js';
+import { DEFAULT_DECIMALS, calcEloChange } from '../EloRating/EloRating.js';
 import { PvPChessProgramProof } from '../PvPChessProgram/PvPChessProgram.js';
 
-const DEFAULT_RATING = 1200 * 10 ** DEFAULT_PRECISION;
+const DEFAULT_RATING = 1200 * 10 ** DEFAULT_DECIMALS;
 
 export class ChessContract extends TokenContract {
   @method async init() {
@@ -22,6 +24,16 @@ export class ChessContract extends TokenContract {
   }
   public async approveBase(forest: AccountUpdateForest) {
     this.checkZeroBalanceChange(forest);
+  }
+  async deploy(args?: DeployArgs) {
+    await super.deploy(args);
+    this.account.tokenSymbol.set('ELO');
+
+    // make account non-upgradable forever
+    this.account.permissions.set({
+      ...Permissions.default(),
+      access: Permissions.proof(),
+    });
   }
 
   /**
@@ -100,10 +112,13 @@ export class ChessContract extends TokenContract {
     const burner = Provable.if(draw, higher, loser);
 
     this.internal.mint({ address: minter, amount });
-    this.internal.burn({ address: burner, amount });
+    this.internal.mint({ address: burner, amount });
   }
   public getPlayerRating(address: PublicKey) {
-    const account = AccountUpdate.create(address, this.tokenId).account;
-    return account.balance.get();
+    const tokenId = this.deriveTokenId();
+    return AccountUpdate.create(
+      address,
+      tokenId
+    ).account.balance.getAndRequireEquals();
   }
 }
