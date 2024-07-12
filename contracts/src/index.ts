@@ -13,4 +13,4 @@ export {
   RollupState,
 } from './PvPChessProgram/PvPChessProgram.js';
 
-export { DEFAULT_DECIMALS, DEFAULT_PRECISION } from './EloRating/EloRating.js';
+export { DEFAULT_DECIMALS} from './EloRating/EloRating.js';

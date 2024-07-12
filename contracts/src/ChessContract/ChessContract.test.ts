@@ -8,7 +8,6 @@ import {
 } from 'o1js';
 
 import { ChessContract } from './ChessContract.js';
-import { Move } from '../Move/Move.js';
 import { GameResult, GameState } from '../GameState/GameState.js';
 import { DEFAULT_DECIMALS } from '../EloRating/EloRating.js';
 import {
@@ -31,12 +30,12 @@ describe('ChessContract', () => {
     zkApp: ChessContract;
 
   beforeAll(async () => {
-    // console.log(
-    //   Object.values(await ChessContract.analyzeMethods()).reduce(
-    //     (acc, method) => acc + method.rows,
-    //     0
-    //   ) + ' total rows'
-    // );
+    console.log(
+      Object.values(await ChessContract.analyzeMethods()).reduce(
+        (acc, method) => acc + method.rows,
+        0
+      ) + ' total rows'
+    );
     console.time('compiled');
     if (proofsEnabled) {
       await PvPChessProgram.compile();
@@ -65,17 +64,17 @@ describe('ChessContract', () => {
     await txn.prove();
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   });
-  // it('enableRankings', async () => {
-  //   const txn = await Mina.transaction(whitePlayerAccount, async () => {
-  //     AccountUpdate.fundNewAccount(deployerAccount);
-  //     await zkApp.enableRankings();
-  //   });
-  //   await txn.prove();
-  //   await txn.sign([whitePlayerKey, deployerKey]).send();
-  //   expect(
-  //     Mina.getBalance(whitePlayerAccount, zkApp.deriveTokenId()).toBigInt()
-  //   ).toBe(BigInt(1200 * 10 ** DEFAULT_DECIMALS));
-  // });
+  it('enableRankings', async () => {
+    const txn = await Mina.transaction(whitePlayerAccount, async () => {
+      AccountUpdate.fundNewAccount(deployerAccount);
+      await zkApp.enableRankings();
+    });
+    await txn.prove();
+    await txn.sign([whitePlayerKey, deployerKey]).send();
+    expect(
+      Mina.getBalance(whitePlayerAccount, zkApp.deriveTokenId()).toBigInt()
+    ).toBe(BigInt(1200 * 10 ** DEFAULT_DECIMALS));
+  });
   it('submitMatchResult', async () => {
     //Once upon a time, in a land far far away, there were two players, White and Black
     const txn1 = await Mina.transaction(whitePlayerAccount, async () => {
@@ -122,14 +121,6 @@ describe('ChessContract', () => {
       rollupstate,
       finalGameState,
       2
-    );
-    console.log(
-      'KEYS',
-      zkAppAddress.toBase58(),
-      whitePlayerAccount.toBase58(),
-      whiteProxy.toBase58(),
-      blackPlayerAccount.toBase58(),
-      blackProxy.toBase58()
     );
     const txn3 = await Mina.transaction(whitePlayerAccount, async () => {
       zkApp.submitMatchResult(proof);
