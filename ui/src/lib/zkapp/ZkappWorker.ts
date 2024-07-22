@@ -1,18 +1,24 @@
-import * as Comlink from 'comlink';
-import { PublicKey, PrivateKey, Signature, Bool, Field, type JsonProof } from 'o1js';
+import type { PlayerConsent } from '$lib/matchmaker/MatchMaker';
+import {
+	PublicKey,
+	PrivateKey,
+	Signature,
+	Field,
+	type JsonProof,
+	Mina,
+	// AccountUpdate
+} from 'o1js';
 import {
 	GameState,
-	GameObject,
-	PvPChessProgram,
 	PvPChessProgramProof,
 	RollupState,
 	type PromotionRankAsChar,
 	Move,
-	GameResult
+	ChessContract,
+	GameObject,
+	PvPChessProgram
 } from 'zkchess-interactive';
-
-const proofsEnabled = false;
-
+import * as Comlink from 'comlink';
 
 let verificationKey:{
     data: string;
@@ -20,123 +26,143 @@ let verificationKey:{
 };
 let initialRollupState: RollupState;
 
-export type PlayerSignature = {
-	publicKey: string;
-	jsonSignature: string;
+export type JsonMove = {
+	from: string;
+	to: string;
+	promotion?: PromotionRankAsChar;
 };
 
-async function start(white: PlayerSignature, black: PlayerSignature, fen?: string) {
-	let jsonProof: JsonProof;
+async function start(white: PlayerConsent, black: PlayerConsent, fen?: string): Promise<JsonProof> {
 	initialRollupState = RollupState.from(
 		GameState.fromFEN(fen),
 		PublicKey.fromBase58(white.publicKey),
-		PublicKey.fromBase58(black.publicKey)
+		PublicKey.fromBase58(white.proxyKey),
+		PublicKey.fromBase58(black.publicKey),
+		PublicKey.fromBase58(black.proxyKey)
 	);
-	if (proofsEnabled) {
-		console.log('worker | generating real start');
-		console.time('start');
-		jsonProof = (
-			await PvPChessProgram.start(
-				initialRollupState,
-				Signature.fromJSON(white.jsonSignature),
-				Signature.fromJSON(black.jsonSignature)
-			)
-		).toJSON();
-		console.timeEnd('start');
-	} else {
-		console.log('worker | generating dummy start');
-		const proof= await PvPChessProgramProof.dummy(initialRollupState,GameState.fromFEN(fen),2)
-		jsonProof=proof.toJSON();
-	}
+	console.log(`%c start:${fen}\n`, 'color:#eeff33;');
+	console.log('start...');
+	console.time('start');
+	const jsonProof = (
+		await PvPChessProgram.start(
+			initialRollupState,
+			Signature.fromJSON(white.jsonSignature),
+			Signature.fromJSON(black.jsonSignature)
+		)
+	).toJSON();
+	console.timeEnd('start');
 	return jsonProof;
 }
-
 async function move(
-	from: string,
-	to: string,
-	promotion: PromotionRankAsChar,
+	moveJson: JsonMove,
 	lastProofJSON: JsonProof,
-	privateKey: string
-) {
-	let jsonProof: JsonProof;
-	const move=Move.fromLAN(from, to, promotion || 'q');
-	if (proofsEnabled) {
-		console.log('worker | generating real move');
-		console.time('start');
-		jsonProof = (
-			await PvPChessProgram.move(
-				initialRollupState,
-				PvPChessProgramProof.fromJSON(lastProofJSON),
-				move,
-				PrivateKey.fromBase58(privateKey)
-			)
-		).toJSON();
-		console.timeEnd('start');
-	} else {
-		console.log('worker | generating dummy move');
-		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
-		const newGameState = new GameObject(lastProof.publicOutput,move).getNextGameState();
-		const proof= await PvPChessProgramProof.dummy(initialRollupState,newGameState,2);
-		jsonProof=proof.toJSON();
-	}
+	privateKeyBase58: string
+): Promise<JsonProof> {
+	const move = Move.fromLAN(moveJson.from, moveJson.to, moveJson.promotion || 'q');
+	const lastProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
+	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
+
+	const output = new GameObject(lastProof.publicOutput, move).getNextGameState();
+	console.log('move...');
+	console.time('move');
+	const jsonProof = (
+		await PvPChessProgram.move(
+			initialRollupState,
+			PvPChessProgramProof.fromJSON(lastProofJSON),
+			move,
+			privateKey
+		)
+	).toJSON();
+	console.timeEnd('move');
 	return jsonProof;
 }
 
-async function offerDraw(lastProofJSON:JsonProof,privateKey:string) {
-	let jsonProof: JsonProof;
-	if(proofsEnabled){
-		console.log('worker | generating real offerDraw');
-
-		console.time('start');
-		jsonProof= (await PvPChessProgram.offerDraw(
+async function offerDraw(lastProofJSON:JsonProof,privateKey:string){
+	console.log('offerDraw...');
+	console.time('offerDraw');
+	const jsonProof= (await PvPChessProgram.offerDraw(
 		initialRollupState,
 		PvPChessProgramProof.fromJSON(lastProofJSON),
 		PrivateKey.fromBase58(privateKey)
-		)).toJSON();
-	}
-	else{
-		console.log('worker | generating dummy move');
-		const lastProof = PvPChessProgramProof.fromJSON(lastProofJSON);
-		const gameState = lastProof.publicOutput;
-		const newGameState=GameState.from(
-			gameState.white,
-			gameState.black,
-			// gameState.turn,
-			gameState.turn.not(),
-			gameState.enpassant,
-			gameState.kingCastled,
-			gameState.column,
-			gameState.halfmove,
-			//gameState.canDraw,
-			Bool(true),
-			// gameState.result
-			Field(GameResult.ONGOING_OFFERED_DRAW)
-		  );
-		const proof= await PvPChessProgramProof.dummy(initialRollupState,newGameState,2);
-		jsonProof=proof.toJSON();
-	}
+	)).toJSON();
+	console.timeEnd('offerDraw');
 	return jsonProof;
 }
 
-if (proofsEnabled) {
-	console.log('compiling PvPChessProgram');
-	console.time('compiling PvPChessProgram');
-	verificationKey=(await PvPChessProgram.compile()).verificationKey;
-	console.timeEnd('compiling PvPChessProgram');
-} else {
-	verificationKey={data: '', hash: Field.from(0)};
-	console.log('using PvPChessProgramDummy');
+async function acceptDraw(
+	accept: boolean,
+	lastProofJSON: JsonProof,
+	privateKeyBase58: string
+): Promise<JsonProof> {
+	console.log('acceptDraw...');
+	console.time('acceptDraw');
+	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
+	const jsonProof= (await PvPChessProgram.resolveDraw(
+		initialRollupState,
+		PvPChessProgramProof.fromJSON(lastProofJSON),
+		privateKey
+	)).toJSON();
+	console.timeEnd('acceptDraw');
+	return jsonProof;
+}
+async function resign(lastProofJSON: JsonProof, privateKeyBase58: string): Promise<JsonProof> {
+	console.log('resign...');
+	console.time('resign');
+	const earlierProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
+	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
+	const jsonProof= (await PvPChessProgram.resign(
+		initialRollupState,
+		PvPChessProgramProof.fromJSON(lastProofJSON),
+		privateKey
+	)).toJSON();
+	console.timeEnd('resign');
+	return jsonProof;
 }
 
+export type TransactionProof = string;
+
+const zkAppAddress=PublicKey.fromBase58('B62qkeMyPbYuwfwXkhwMXYLvphQLrgfKUcvkEhuMD1PYdcRyDsxDvuf');
+const zkApp = new ChessContract(zkAppAddress);
+async function proveTransactionJSON(transactionProof: TransactionProof) {
+	return (await Mina.Transaction.fromJSON(transactionProof).prove()).toJSON();
+}
+async function createrRegisterTransactionJSON(senderAddress: string) {
+	return (
+		await Mina.transaction(PublicKey.fromBase58(senderAddress), async () => {
+			zkApp.enableRankings();
+		})
+	).toJSON();
+}
+
+async function createSubmitTransactionJSON(proof: JsonProof,senderBase58:string) {
+	return (
+		await Mina.transaction(PublicKey.fromBase58(senderBase58), async () => {
+			zkApp.submitMatchResult(await PvPChessProgramProof.fromJSON(proof));
+		})
+	).toJSON();
+}
+async function getRating(publicKeyBase58: string) {
+	return zkApp.getPlayerRating(PublicKey.fromBase58(publicKeyBase58)).toString();
+}
+
+
+console.log('compiling PvPChessProgram...');
+console.time('compiling PvPChessProgram');
+verificationKey=(await PvPChessProgram.compile()).verificationKey;
+console.timeEnd('compiling PvPChessProgram');
+
 const api = {
+	//zkapp methods
 	start,
 	move,
-	// offerDraw,
-	// acceptDraw,
-	// rejectDraw,
-	// resign,
-	// getFEN,
-	// getPlayerRating
+	offerDraw,
+	acceptDraw,
+	resign,
+	//contract methods
+	proveTransaction: proveTransactionJSON,
+	createrRegisterTransactionJSON: createrRegisterTransactionJSON,
+	createSubmitTransaction: createSubmitTransactionJSON,
+	getRating,
 	verificationKey,
 	ready: true
 };

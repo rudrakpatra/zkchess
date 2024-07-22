@@ -19,7 +19,7 @@
 	import type { Api as ChessgroundAPI } from 'chessground/api';
 	import type { workerClientAPI } from '$lib/zkapp/ZkappWorkerClient';
 	import type { JsonMove } from '$lib/zkapp/ZkappWorkerDummy';
-	import { type PromotionRankAsChar, PvPChessProgramProof, GameState,DEFAULT_PRECISION } from 'zkchess-interactive';
+	import { type PromotionRankAsChar, PvPChessProgramProof, GameState } from 'zkchess-interactive';
 	import Sync from '$lib/Sync';
 	import { toastModal } from '$lib/components/general/ToastModal';
 	import getLogger from '$lib/VerboseLogger';
@@ -33,6 +33,7 @@
 		});
 		leave();
 	});
+	const PRECISION=10^5;
 
 	const startingFen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 	// generate a hot wallet , not using AURO Wallet for now
@@ -100,7 +101,7 @@
 					await awaitWorker();
 					timeLog.stop('Compiled Contracts');
 					workerClient.getRating(get(AuroWalletKeyBase58)).then((rating) => {
-						selfRating = Number(rating)/10 ** DEFAULT_PRECISION;
+						selfRating = Number(rating)/10 ** PRECISION;
 					});
 					log(['loaded workerClient'],1);
 					res(workerClient);
@@ -222,7 +223,7 @@
 		opponentPubKeyBase58 = matchInfo.opponent.publicKey;
 		//set opponent rating
 		workerClient.getRating(opponentPubKeyBase58).then((rating) => {
-			opponentRating = Number(rating)/10 ** DEFAULT_PRECISION;
+			opponentRating = Number(rating)/10 ** PRECISION;
 			log(['received opponent rating'],2);
 		});
 		// set white and black
@@ -397,7 +398,7 @@
 			console.log(`View transaction at ${transactionLink}`);
 			//update rating
 			const newRating=await workerClient.getRating(selfPubKeyBase58);
-			selfRating = Number(newRating)/10 ** DEFAULT_PRECISION;
+			selfRating = Number(newRating)/10 ** PRECISION;
 			toastModal({
 				prompt:'Rating updated to '+selfRating,
 				options: [

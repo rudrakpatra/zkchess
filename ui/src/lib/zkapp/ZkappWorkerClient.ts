@@ -1,6 +1,6 @@
 import * as Comlink from 'comlink';
-import ZkappWorker from './ZkappWorkerDummy?worker';
-import type { API } from './ZkappWorkerDummy';
+import ZkappWorker from './ZkappWorker?worker';
+import type { API } from './ZkappWorker';
 
 export const worker = new ZkappWorker();
 export const workerClient: Comlink.Remote<API> = Comlink.wrap<API>(worker);
