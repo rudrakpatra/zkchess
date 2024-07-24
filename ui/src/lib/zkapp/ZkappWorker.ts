@@ -20,7 +20,7 @@ import {
 } from 'zkchess-interactive';
 import * as Comlink from 'comlink';
 
-let verificationKey:{
+let chessProgramvkey:{
     data: string;
     hash: Field;
 };
@@ -119,10 +119,21 @@ async function resign(lastProofJSON: JsonProof, privateKeyBase58: string): Promi
 	return jsonProof;
 }
 
-export type TransactionProof = string;
+
+console.log('compiling PvPChessProgram...');
+console.time('compiling PvPChessProgram');
+const chessProgramVkey=(await PvPChessProgram.compile()).verificationKey;
+console.timeEnd('compiling PvPChessProgram');
+
+console.log('compiling ChessContract...');
+console.time('compiling ChessContract');
+const chessContractVKey=(await ChessContract.compile()).verificationKey;
+console.timeEnd('compiling ChessContract');
 
 const zkAppAddress=PublicKey.fromBase58('B62qkeMyPbYuwfwXkhwMXYLvphQLrgfKUcvkEhuMD1PYdcRyDsxDvuf');
 const zkApp = new ChessContract(zkAppAddress);
+
+export type TransactionProof = string;
 async function proveTransactionJSON(transactionProof: TransactionProof) {
 	return (await Mina.Transaction.fromJSON(transactionProof).prove()).toJSON();
 }
@@ -145,12 +156,6 @@ async function getRating(publicKeyBase58: string) {
 	return zkApp.getPlayerRating(PublicKey.fromBase58(publicKeyBase58)).toString();
 }
 
-
-console.log('compiling PvPChessProgram...');
-console.time('compiling PvPChessProgram');
-verificationKey=(await PvPChessProgram.compile()).verificationKey;
-console.timeEnd('compiling PvPChessProgram');
-
 const api = {
 	//zkapp methods
 	start,
@@ -163,7 +168,8 @@ const api = {
 	createrRegisterTransactionJSON: createrRegisterTransactionJSON,
 	createSubmitTransaction: createSubmitTransactionJSON,
 	getRating,
-	verificationKey,
+	chessProgramVkey,
+	chessContractVKey,
 	ready: true
 };
 export type API = typeof api;
