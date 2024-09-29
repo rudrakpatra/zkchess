@@ -5,7 +5,7 @@ import {
 	Signature,
 	Field,
 	type JsonProof,
-	Mina,
+	Mina
 	// AccountUpdate
 } from 'o1js';
 import {
@@ -20,9 +20,9 @@ import {
 } from 'zkchess-interactive';
 import * as Comlink from 'comlink';
 
-let chessProgramvkey:{
-    data: string;
-    hash: Field;
+let chessProgramvkey: {
+	data: string;
+	hash: Field;
 };
 let initialRollupState: RollupState;
 
@@ -77,14 +77,16 @@ async function move(
 	return jsonProof;
 }
 
-async function offerDraw(lastProofJSON:JsonProof,privateKey:string){
+async function offerDraw(lastProofJSON: JsonProof, privateKey: string) {
 	console.log('offerDraw...');
 	console.time('offerDraw');
-	const jsonProof= (await PvPChessProgram.offerDraw(
-		initialRollupState,
-		PvPChessProgramProof.fromJSON(lastProofJSON),
-		PrivateKey.fromBase58(privateKey)
-	)).toJSON();
+	const jsonProof = (
+		await PvPChessProgram.offerDraw(
+			initialRollupState,
+			PvPChessProgramProof.fromJSON(lastProofJSON),
+			PrivateKey.fromBase58(privateKey)
+		)
+	).toJSON();
 	console.timeEnd('offerDraw');
 	return jsonProof;
 }
@@ -97,11 +99,13 @@ async function acceptDraw(
 	console.log('acceptDraw...');
 	console.time('acceptDraw');
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
-	const jsonProof= (await PvPChessProgram.resolveDraw(
-		initialRollupState,
-		PvPChessProgramProof.fromJSON(lastProofJSON),
-		privateKey
-	)).toJSON();
+	const jsonProof = (
+		await PvPChessProgram.resolveDraw(
+			initialRollupState,
+			PvPChessProgramProof.fromJSON(lastProofJSON),
+			privateKey
+		)
+	).toJSON();
 	console.timeEnd('acceptDraw');
 	return jsonProof;
 }
@@ -110,27 +114,38 @@ async function resign(lastProofJSON: JsonProof, privateKeyBase58: string): Promi
 	console.time('resign');
 	const earlierProof = await PvPChessProgramProof.fromJSON(lastProofJSON);
 	const privateKey = PrivateKey.fromBase58(privateKeyBase58);
-	const jsonProof= (await PvPChessProgram.resign(
-		initialRollupState,
-		PvPChessProgramProof.fromJSON(lastProofJSON),
-		privateKey
-	)).toJSON();
+	const jsonProof = (
+		await PvPChessProgram.resign(
+			initialRollupState,
+			PvPChessProgramProof.fromJSON(lastProofJSON),
+			privateKey
+		)
+	).toJSON();
 	console.timeEnd('resign');
 	return jsonProof;
 }
 
+const MINAURL = 'https://proxy.devnet.minaexplorer.com/graphql';
+const ARCHIVEURL = 'https://archive.devnet.minaexplorer.com';
+const network = Mina.Network({
+	mina: MINAURL,
+	archive: ARCHIVEURL
+});
+Mina.setActiveInstance(network);
 
 console.log('compiling PvPChessProgram...');
 console.time('compiling PvPChessProgram');
-const chessProgramVkey=(await PvPChessProgram.compile()).verificationKey;
+const chessProgramVkey = (await PvPChessProgram.compile()).verificationKey;
 console.timeEnd('compiling PvPChessProgram');
 
 console.log('compiling ChessContract...');
 console.time('compiling ChessContract');
-const chessContractVKey=(await ChessContract.compile()).verificationKey;
+const chessContractVKey = (await ChessContract.compile()).verificationKey;
 console.timeEnd('compiling ChessContract');
 
-const zkAppAddress=PublicKey.fromBase58('B62qkeMyPbYuwfwXkhwMXYLvphQLrgfKUcvkEhuMD1PYdcRyDsxDvuf');
+const zkAppAddress = PublicKey.fromBase58(
+	'B62qkeMyPbYuwfwXkhwMXYLvphQLrgfKUcvkEhuMD1PYdcRyDsxDvuf'
+);
 const zkApp = new ChessContract(zkAppAddress);
 
 export type TransactionProof = string;
@@ -145,7 +160,7 @@ async function createrRegisterTransactionJSON(senderAddress: string) {
 	).toJSON();
 }
 
-async function createSubmitTransactionJSON(proof: JsonProof,senderBase58:string) {
+async function createSubmitTransactionJSON(proof: JsonProof, senderBase58: string) {
 	return (
 		await Mina.transaction(PublicKey.fromBase58(senderBase58), async () => {
 			zkApp.submitMatchResult(await PvPChessProgramProof.fromJSON(proof));
